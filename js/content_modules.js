@@ -22,3 +22,4 @@ function getTodayElham(){
 const ZAMANBANDI_LINK="https://taaghche.com/book/232958/به-زمان-بندی-خدا-اعتماد-کن";
 function getDailyZamanbandi(userId){const seed=`${userId}-zamanbandi-${todayStr()}`; return ZAMANBANDI_DATA[simpleHash(seed)%ZAMANBANDI_DATA.length];}
 function getZamanbandiById(id){return ZAMANBANDI_DATA.find(z=>z.id===id)||null;}
+function getRandomZamanbandi(){return ZAMANBANDI_DATA[Math.floor(Math.random()*ZAMANBANDI_DATA.length)];}

@@ -133,7 +133,7 @@ function showElham(){
       <div class="small-note">یک الهام ثابت در روز، بدون تکرار تا کل مجموعه تموم بشه.</div></div>`);
 }
 function showZamanbandi(){
-  const item=getSampleZamanbandi();
+  const item=getRandomZamanbandi();
   render(`${backBtn('showHome()')}<div class="card"><h2>⏳ به زمان‌بندی خدا اعتماد کن</h2>
       <p style="color:var(--gold-soft)">${item.time}</p>
       <div class="verse" style="line-height:2.1;margin-top:8px">${esc(item.quote)}</div>
