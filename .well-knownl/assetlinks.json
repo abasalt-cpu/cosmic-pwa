@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.abasalt_cpu.twa",
+        "sha256_cert_fingerprints": ["0C:F0:96:32:1E:65:3B:64:45:B4:38:63:F2:60:D4:FE:47:BC:EC:D2:15:22:19:DC:AD:C6:76:91:B5:9A:9F:64"]
+      }
+    }]
