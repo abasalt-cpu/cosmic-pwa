@@ -8,13 +8,14 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap');
 :root{--bg-top:#161233; --bg-bottom:#2b1a4a; --panel:#231a42cc; --gold:#e8b84b; --gold-soft:#f0c96a;
 --text:#f1eef9; --text-dim:#b9b0d6; --line:#3d3268; --radius:18px; font-family: Tahoma, sans-serif;}
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0; padding:0; height:100%;}
 body{background:radial-gradient(1200px 800px at 15% -10%, #3a2a63 0%, transparent 60%),
 radial-gradient(900px 700px at 100% 0%, #402458 0%, transparent 55%),
-linear-gradient(180deg, var(--bg-top), var(--bg-bottom) 70%); color:var(--text); min-height:100vh; padding-bottom:78px; overflow-x:hidden;}
+linear-gradient(180deg, var(--bg-top), var(--bg-bottom) 70%); color:var(--text); min-height:100vh; padding-bottom:calc(96px + env(safe-area-inset-bottom)); overflow-x:hidden;}
 .stars{position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.55;
 background-image:radial-gradient(1.5px 1.5px at 20px 30px, #fff, transparent),
 radial-gradient(1px 1px at 90px 120px, #fff, transparent),
@@ -40,6 +41,9 @@ padding:16px 10px; text-align:center; cursor:pointer; transition:transform .15s 
 .menu-tile .emoji{font-size:26px; display:block; margin-bottom:8px;}
 .menu-tile .label{font-size:13px; font-weight:600;}
 .menu-tile.gold{border-color:var(--gold); box-shadow:0 0 0 1px #e8b84b33 inset;}
+.menu-tile .icon-img{width:52px; height:52px; border-radius:14px; display:block; margin:0 auto 8px; object-fit:cover; box-shadow:0 4px 14px #00000055;}
+.brand-icon{width:34px; height:34px; border-radius:9px; vertical-align:middle; margin-inline-end:8px; object-fit:cover;}
+
 label{display:block; font-size:13px; color:var(--text-dim); margin:12px 0 6px;}
 input[type=text], input[type=number], select{width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line);
 background:#140f28; color:var(--text); font-size:15px; font-family:inherit;}
@@ -75,7 +79,7 @@ nav.bottom .nav-btn.active{color:var(--gold-soft);}
 </head>
 <body>
 <div class="stars"></div>
-<header class="top"><div class="brand">🌌 عدد کیهانی</div><div class="sub">عددشناسی، طالع‌بینی و الهام‌های روزانه</div></header>
+<header class="top"><div class="brand"><img src="icons/icon-192.png" class="brand-icon"> عدد کیهانی</div><div class="sub">عددشناسی، طالع‌بینی و الهام‌های روزانه</div></header>
 <main id="app"></main>
 <nav class="bottom">
   <button class="nav-btn active" data-nav="home"><span class="ic">🏠</span>خانه</button>
