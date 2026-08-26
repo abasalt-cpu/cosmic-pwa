@@ -27,33 +27,33 @@ function showHome(){
       <p class="desc">${last?`آخرین محاسبه: <b>${esc(last.firstName)} ${esc(last.familyName)}</b>`:'هنوز محاسبه‌ای انجام ندادی. از «عدد کیهانی» شروع کن.'}</p>
       <button class="btn" onclick="showCosmicForm()">🔢 محاسبه‌ی عدد کیهانی</button></div>
     <div class="grid-menu">
-      <div class="menu-tile gold" onclick="showHafez()"><span class="emoji">🔮</span><span class="label">فال حافظ</span></div>
-      <div class="menu-tile gold" onclick="showZodiacEntry()"><span class="emoji">♈️</span><span class="label">طالع‌بینی</span></div>
-      <div class="menu-tile" onclick="showElham()"><span class="emoji">🌅</span><span class="label">الهام روز</span></div>
-      <div class="menu-tile" onclick="showMunajat()"><span class="emoji">🕊</span><span class="label">مناجات</span></div>
-      <div class="menu-tile" onclick="showNatalEntry()"><span class="emoji">🌌</span><span class="label">زایچه‌ی تقریبی</span></div>
-      <div class="menu-tile" onclick="showBabyNameForm()"><span class="emoji">👶</span><span class="label">اسم فرزند</span></div>
-      <div class="menu-tile" onclick="showCompareEntry()"><span class="emoji">🔗</span><span class="label">مقایسه‌ی دو نفر</span></div>
-      <div class="menu-tile" onclick="showZamanbandi()"><span class="emoji">⏳</span><span class="label">زمان‌بندی خدا</span></div>
+      <div class="menu-tile gold" onclick="showHafez()"><img src="icons/menu/icon_hafez.png" class="icon-img"><span class="label">فال حافظ</span></div>
+      <div class="menu-tile gold" onclick="showZodiacEntry()"><img src="icons/menu/icon_zodiac.png" class="icon-img"><span class="label">طالع‌بینی</span></div>
+      <div class="menu-tile" onclick="showElham()"><img src="icons/menu/icon_elham.png" class="icon-img"><span class="label">الهام روز</span></div>
+      <div class="menu-tile" onclick="showMunajat()"><img src="icons/menu/icon_munajat.png" class="icon-img"><span class="label">مناجات</span></div>
+      <div class="menu-tile" onclick="showNatalEntry()"><img src="icons/menu/icon_natal.png" class="icon-img"><span class="label">زایچه‌ی تقریبی</span></div>
+      <div class="menu-tile" onclick="showBabyNameForm()"><img src="icons/menu/icon_baby.png" class="icon-img"><span class="label">اسم فرزند</span></div>
+      <div class="menu-tile" onclick="showCompareEntry()"><img src="icons/menu/icon_compare.png" class="icon-img"><span class="label">مقایسه‌ی دو نفر</span></div>
+      <div class="menu-tile" onclick="showZamanbandi()"><img src="icons/menu/icon_zamanbandi.png" class="icon-img"><span class="label">زمان‌بندی خدا</span></div>
     </div>`);
 }
 function showDailyMenu(){
   setNav('daily');
   render(`<div class="grid-menu">
-      <div class="menu-tile gold" onclick="showHafez()"><span class="emoji">🔮</span><span class="label">فال حافظ</span></div>
-      <div class="menu-tile gold" onclick="showZodiacEntry()"><span class="emoji">♈️</span><span class="label">طالع‌بینی امروز</span></div>
-      <div class="menu-tile" onclick="showElham()"><span class="emoji">🌅</span><span class="label">الهام روز</span></div>
-      <div class="menu-tile" onclick="showMunajat()"><span class="emoji">🕊</span><span class="label">مناجات</span></div>
-      <div class="menu-tile" onclick="showZamanbandi()"><span class="emoji">⏳</span><span class="label">زمان‌بندی خدا</span></div>
+      <div class="menu-tile gold" onclick="showHafez()"><img src="icons/menu/icon_hafez.png" class="icon-img"><span class="label">فال حافظ</span></div>
+      <div class="menu-tile gold" onclick="showZodiacEntry()"><img src="icons/menu/icon_zodiac.png" class="icon-img"><span class="label">طالع‌بینی امروز</span></div>
+      <div class="menu-tile" onclick="showElham()"><img src="icons/menu/icon_elham.png" class="icon-img"><span class="label">الهام روز</span></div>
+      <div class="menu-tile" onclick="showMunajat()"><img src="icons/menu/icon_munajat.png" class="icon-img"><span class="label">مناجات</span></div>
+      <div class="menu-tile" onclick="showZamanbandi()"><img src="icons/menu/icon_zamanbandi.png" class="icon-img"><span class="label">زمان‌بندی خدا</span></div>
     </div>`);
 }
 function showMoreMenu(){
   setNav('more');
   render(`<div class="grid-menu">
-      <div class="menu-tile" onclick="showNatalEntry()"><span class="emoji">🌌</span><span class="label">زایچه‌ی تقریبی</span></div>
-      <div class="menu-tile" onclick="showBabyNameForm()"><span class="emoji">👶</span><span class="label">اسم فرزند</span></div>
-      <div class="menu-tile" onclick="showCompareEntry()"><span class="emoji">🔗</span><span class="label">مقایسه‌ی دو نفر</span></div>
-      <div class="menu-tile" onclick="showSavedProfiles()"><span class="emoji">📇</span><span class="label">پروفایل‌های من</span></div>
+      <div class="menu-tile" onclick="showNatalEntry()"><img src="icons/menu/icon_natal.png" class="icon-img"><span class="label">زایچه‌ی تقریبی</span></div>
+      <div class="menu-tile" onclick="showBabyNameForm()"><img src="icons/menu/icon_baby.png" class="icon-img"><span class="label">اسم فرزند</span></div>
+      <div class="menu-tile" onclick="showCompareEntry()"><img src="icons/menu/icon_compare.png" class="icon-img"><span class="label">مقایسه‌ی دو نفر</span></div>
+      <div class="menu-tile" onclick="showSavedProfiles()"><img src="icons/menu/icon_profiles.png" class="icon-img"><span class="label">پروفایل‌های من</span></div>
     </div>
     <div class="small-note">این یه اپ کاملاً محلیه — هیچ اطلاعاتی به سروری فرستاده نمی‌شه، همه چیز روی خود گوشیت ذخیره می‌مونه.</div>`);
 }
@@ -133,7 +133,7 @@ function showElham(){
       <div class="small-note">یک الهام ثابت در روز، بدون تکرار تا کل مجموعه تموم بشه.</div></div>`);
 }
 function showZamanbandi(){
-  const item=getRandomZamanbandi();
+  const item=getSampleZamanbandi();
   render(`${backBtn('showHome()')}<div class="card"><h2>⏳ به زمان‌بندی خدا اعتماد کن</h2>
       <p style="color:var(--gold-soft)">${item.time}</p>
       <div class="verse" style="line-height:2.1;margin-top:8px">${esc(item.quote)}</div>
