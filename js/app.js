@@ -1,15 +1,18 @@
 const PERSIAN_MONTHS=["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
 const state={lastProfile:JSON.parse(localStorage.getItem('lastProfile')||'null'), savedProfiles:JSON.parse(localStorage.getItem('savedProfiles')||'[]')};
+
 function saveProfile(p){
   state.lastProfile=p; localStorage.setItem('lastProfile',JSON.stringify(p));
   state.savedProfiles=state.savedProfiles.filter(x=>!(x.firstName===p.firstName&&x.familyName===p.familyName));
   state.savedProfiles.unshift(p); state.savedProfiles=state.savedProfiles.slice(0,15);
   localStorage.setItem('savedProfiles',JSON.stringify(state.savedProfiles));
 }
+
 const app=document.getElementById('app');
 function render(html){app.innerHTML=html; window.scrollTo(0,0);}
 function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function nl2br(s){return esc(s).replace(/\n/g,'<br>');}
+
 document.querySelectorAll('nav.bottom .nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('nav.bottom .nav-btn').forEach(b=>b.classList.remove('active'));
@@ -19,45 +22,122 @@ document.querySelectorAll('nav.bottom .nav-btn').forEach(btn=>{
     else if(target==='daily')showDailyMenu(); else if(target==='more')showMoreMenu();
   });
 });
+
 function setNav(key){document.querySelectorAll('nav.bottom .nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.nav===key));}
+
+/* تابع اصلی صفحه اول — چیدمان ۳ ستونه مطابق عکس */
 function showHome(){
   setNav('home'); const last=state.lastProfile;
   render(`
-    <div class="card"><h2>خوش اومدی 👋</h2>
-      <p class="desc">${last?`آخرین محاسبه: <b>${esc(last.firstName)} ${esc(last.familyName)}</b>`:'هنوز محاسبه‌ای انجام ندادی. از «عدد کیهانی» شروع کن.'}</p>
-      <button class="btn" onclick="showCosmicForm()">🔢 محاسبه‌ی عدد کیهانی</button></div>
+    <div class="hero-card">
+      <div class="hero-info">
+        <div class="hero-title">خوش اومدی 👋</div>
+        <div class="hero-sub">${last?`آخرین محاسبه: <b>${esc(last.firstName)} ${esc(last.familyName)}</b>`:'هنوز محاسبه‌ای انجام ندادی. از «عدد کیهانی» شروع کن.'}</div>
+        <button class="btn" onclick="showCosmicForm()">🔢 محاسبه‌ی عدد کیهانی</button>
+      </div>
+    </div>
+
     <div class="grid-menu">
-      <div class="menu-tile gold" onclick="showHafez()"><img src="icons/menu/icon_hafez.png" class="icon-img"><span class="label">فال حافظ</span></div>
-      <div class="menu-tile gold" onclick="showZodiacEntry()"><img src="icons/menu/icon_zodiac.png" class="icon-img"><span class="label">طالع‌بینی</span></div>
-      <div class="menu-tile" onclick="showElham()"><img src="icons/menu/icon_elham.png" class="icon-img"><span class="label">الهام روز</span></div>
-      <div class="menu-tile" onclick="showMunajat()"><img src="icons/menu/icon_munajat.png" class="icon-img"><span class="label">مناجات</span></div>
-      <div class="menu-tile" onclick="showNatalEntry()"><img src="icons/menu/icon_natal.png" class="icon-img"><span class="label">زایچه‌ی تقریبی</span></div>
-      <div class="menu-tile" onclick="showBabyNameForm()"><img src="icons/menu/icon_baby.png" class="icon-img"><span class="label">اسم فرزند</span></div>
-      <div class="menu-tile" onclick="showCompareEntry()"><img src="icons/menu/icon_compare.png" class="icon-img"><span class="label">مقایسه‌ی دو نفر</span></div>
-      <div class="menu-tile" onclick="showZamanbandi()"><img src="icons/menu/icon_zamanbandi.png" class="icon-img"><span class="label">زمان‌بندی خدا</span></div>
-    </div>`);
+      <div class="menu-tile" onclick="showHafez()">
+        <div class="icon-placeholder"></div>
+        <div class="label">فال حافظ</div>
+        <div class="sub-label">تفال به دیوان حافظ</div>
+      </div>
+      <div class="menu-tile" onclick="showZodiacEntry()">
+        <div class="icon-placeholder"></div>
+        <div class="label">طالع‌بینی</div>
+        <div class="sub-label">طالع روزانه و شخصی</div>
+      </div>
+      <div class="menu-tile" onclick="showMunajat()">
+        <div class="icon-placeholder"></div>
+        <div class="label">مناجات</div>
+        <div class="sub-label">متون معنوی و مناجات</div>
+      </div>
+
+      <div class="menu-tile" onclick="showElham()">
+        <div class="icon-placeholder"></div>
+        <div class="label">الهام روز</div>
+        <div class="sub-label">پیام و الهام روزانه</div>
+      </div>
+      <div class="menu-tile" onclick="showBabyNameForm()">
+        <div class="icon-placeholder"></div>
+        <div class="label">اسم فرزند</div>
+        <div class="sub-label">انتخاب اسم با معنا</div>
+      </div>
+      <div class="menu-tile" onclick="showNatalEntry()">
+        <div class="icon-placeholder"></div>
+        <div class="label">زایچه‌ی تقویمی</div>
+        <div class="sub-label">تقویم شخصی شما</div>
+      </div>
+    </div>
+
+    <div class="bottom-banner">
+      <div class="banner-title">هر عددی، داستانی از تو را روایت می‌کند...</div>
+      <div class="banner-sub">کشف کن، بشناس و آگاهانه انتخاب کن.</div>
+    </div>
+  `);
 }
+
 function showDailyMenu(){
   setNav('daily');
   render(`<div class="grid-menu">
-      <div class="menu-tile gold" onclick="showHafez()"><img src="icons/menu/icon_hafez.png" class="icon-img"><span class="label">فال حافظ</span></div>
-      <div class="menu-tile gold" onclick="showZodiacEntry()"><img src="icons/menu/icon_zodiac.png" class="icon-img"><span class="label">طالع‌بینی امروز</span></div>
-      <div class="menu-tile" onclick="showElham()"><img src="icons/menu/icon_elham.png" class="icon-img"><span class="label">الهام روز</span></div>
-      <div class="menu-tile" onclick="showMunajat()"><img src="icons/menu/icon_munajat.png" class="icon-img"><span class="label">مناجات</span></div>
-      <div class="menu-tile" onclick="showZamanbandi()"><img src="icons/menu/icon_zamanbandi.png" class="icon-img"><span class="label">زمان‌بندی خدا</span></div>
+      <div class="menu-tile" onclick="showHafez()">
+        <div class="icon-placeholder"></div>
+        <div class="label">فال حافظ</div>
+        <div class="sub-label">تفال به دیوان حافظ</div>
+      </div>
+      <div class="menu-tile" onclick="showZodiacEntry()">
+        <div class="icon-placeholder"></div>
+        <div class="label">طالع‌بینی</div>
+        <div class="sub-label">طالع روزانه و شخصی</div>
+      </div>
+      <div class="menu-tile" onclick="showElham()">
+        <div class="icon-placeholder"></div>
+        <div class="label">الهام روز</div>
+        <div class="sub-label">پیام و الهام روزانه</div>
+      </div>
+      <div class="menu-tile" onclick="showMunajat()">
+        <div class="icon-placeholder"></div>
+        <div class="label">مناجات</div>
+        <div class="sub-label">متون معنوی و مناجات</div>
+      </div>
+      <div class="menu-tile" onclick="showZamanbandi()">
+        <div class="icon-placeholder"></div>
+        <div class="label">زمان‌بندی خدا</div>
+        <div class="sub-label">کلام آرامش‌بخش</div>
+      </div>
     </div>`);
 }
+
 function showMoreMenu(){
   setNav('more');
   render(`<div class="grid-menu">
-      <div class="menu-tile" onclick="showNatalEntry()"><img src="icons/menu/icon_natal.png" class="icon-img"><span class="label">زایچه‌ی تقریبی</span></div>
-      <div class="menu-tile" onclick="showBabyNameForm()"><img src="icons/menu/icon_baby.png" class="icon-img"><span class="label">اسم فرزند</span></div>
-      <div class="menu-tile" onclick="showCompareEntry()"><img src="icons/menu/icon_compare.png" class="icon-img"><span class="label">مقایسه‌ی دو نفر</span></div>
-      <div class="menu-tile" onclick="showSavedProfiles()"><img src="icons/menu/icon_profiles.png" class="icon-img"><span class="label">پروفایل‌های من</span></div>
+      <div class="menu-tile" onclick="showNatalEntry()">
+        <div class="icon-placeholder"></div>
+        <div class="label">زایچه‌ی تقویمی</div>
+        <div class="sub-label">تقویم شخصی شما</div>
+      </div>
+      <div class="menu-tile" onclick="showBabyNameForm()">
+        <div class="icon-placeholder"></div>
+        <div class="label">اسم فرزند</div>
+        <div class="sub-label">انتخاب اسم با معنا</div>
+      </div>
+      <div class="menu-tile" onclick="showCompareEntry()">
+        <div class="icon-placeholder"></div>
+        <div class="label">مقایسه‌ی دو نفر</div>
+        <div class="sub-label">سنجش اشتراکات عددی</div>
+      </div>
+      <div class="menu-tile" onclick="showSavedProfiles()">
+        <div class="icon-placeholder"></div>
+        <div class="label">پروفایل‌های من</div>
+        <div class="sub-label">لیست محاسبات قبلی</div>
+      </div>
     </div>
     <div class="small-note">این یه اپ کاملاً محلیه — هیچ اطلاعاتی به سروری فرستاده نمی‌شه، همه چیز روی خود گوشیت ذخیره می‌مونه.</div>`);
 }
+
 function backBtn(fn,label){return `<button class="back-btn" onclick="${fn}">→ ${label||'بازگشت'}</button>`;}
+
 function showCosmicForm(){
   setNav('cosmic');
   render(`<div class="card"><h2>🔢 محاسبه‌ی عدد کیهانی</h2>
@@ -72,6 +152,7 @@ function showCosmicForm(){
       </div>
       <button class="btn" onclick="submitCosmicForm()">محاسبه کن</button></div>`);
 }
+
 function submitCosmicForm(){
   const firstName=document.getElementById('cf-first').value.trim();
   const familyName=document.getElementById('cf-family').value.trim();
@@ -84,6 +165,7 @@ function submitCosmicForm(){
   saveProfile({firstName,familyName,motherName,jy,jm,jd,report,date:new Date().toISOString()});
   showCosmicResult(firstName,familyName,report);
 }
+
 function showCosmicResult(firstName,familyName,r){
   render(`${backBtn('showCosmicForm()')}
     <div class="card"><h2>👤 ${esc(firstName)} ${esc(familyName)}</h2>
@@ -98,25 +180,31 @@ function showCosmicResult(firstName,familyName,r){
         <button class="btn secondary" onclick='shareText(${JSON.stringify(`گزارش عدد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}`)})'>اشتراک‌گذاری</button>
       </div></div>`);
 }
+
 function shareText(text){ if(navigator.share){navigator.share({text});} else {navigator.clipboard.writeText(text); alert('متن کپی شد.');} }
+
 function showHafez(){
   render(`${backBtn('showHome()')}<div class="card"><h2>🔮 فال حافظ</h2>
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
       <button class="btn" onclick="revealHafez()">🔮 فالم رو بگیر</button>
       <div id="hafez-result"></div></div>`);
 }
+
 function getDeviceId(){let id=localStorage.getItem('deviceId'); if(!id){id='dev-'+Math.random().toString(36).slice(2); localStorage.setItem('deviceId',id);} return id;}
+
 function revealHafez(){
   const g=getDailyFal(getDeviceId());
   document.getElementById('hafez-result').innerHTML=`<div class="result-block"><div class="verse">${g.verses.join('<br>')}</div>
     <p style="margin-top:10px">📖 <b>تفسیر:</b><br>${esc(g.interpretation)}</p>
     <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button></div>`;
 }
+
 function showFullGhazal(id){
   const g=getGhazalById(id);
   render(`${backBtn('showHafez()')}<div class="card"><h2>📜 غزل شماره‌ی ${id.replace('hafez-extra-','')} حافظ</h2>
       <div class="verse" style="line-height:2.2">${(g.full_verses||g.verses).join('<br>')}</div></div>`);
 }
+
 function showMunajat(){
   const item=getRandomMunajat();
   render(`${backBtn('showHome()')}<div class="card"><h2>🕊 مناجات</h2>
@@ -124,6 +212,7 @@ function showMunajat(){
       <p style="text-align:left;color:var(--text-dim);margin-top:10px">— خواجه عبدالله انصاری</p>
       <button class="btn secondary" onclick="showMunajat()">🔄 مناجات دیگر</button></div>`);
 }
+
 function showElham(){
   const item=getTodayElham();
   render(`${backBtn('showHome()')}<div class="card"><h2>🌅 الهام روز</h2>
@@ -132,6 +221,7 @@ function showElham(){
       <p style="margin-top:10px">📖 <b>تفسیر:</b><br>${esc(item.interpretation)}</p>
       <div class="small-note">یک الهام ثابت در روز، بدون تکرار تا کل مجموعه تموم بشه.</div></div>`);
 }
+
 function showZamanbandi(){
   const item=getSampleZamanbandi();
   render(`${backBtn('showHome()')}<div class="card"><h2>⏳ به زمان‌بندی خدا اعتماد کن</h2>
@@ -141,6 +231,7 @@ function showZamanbandi(){
       <a href="${ZAMANBANDI_LINK}" target="_blank" style="color:var(--gold-soft)">برای خوندن کامل کتاب اینجا بزن</a></p>
       <button class="btn secondary" onclick="showZamanbandi()">🔄 یکی دیگه</button></div>`);
 }
+
 function showZodiacEntry(){
   if(state.savedProfiles.length>1){
     render(`${backBtn('showHome()')}<div class="card"><h2>♈️ طالع‌بینی — کدوم پروفایل؟</h2>
@@ -149,14 +240,17 @@ function showZodiacEntry(){
   } else if(state.lastProfile){ showZodiac(state.lastProfile.jm); }
   else { showMonthPickerForZodiac(); }
 }
+
 function showMonthPickerForZodiac(){
   render(`${backBtn('showHome()')}<div class="card"><h2>ماه تولدت رو انتخاب کن:</h2>
       <div class="chip-row">${PERSIAN_MONTHS.map((m,i)=>`<div class="chip" onclick="showZodiac(${i+1})">${m}</div>`).join('')}</div></div>`);
 }
+
 function showZodiac(jm){
   const text=formatHoroscope(jm);
   render(`${backBtn('showHome()')}<div class="card"><div class="verse" style="white-space:pre-line; line-height:2.1">${esc(text)}</div></div>`);
 }
+
 function showNatalEntry(){
   if(!state.lastProfile){
     render(`${backBtn('showHome()')}<div class="card"><h2>🌌 زایچه‌ی تقریبی</h2>
@@ -171,6 +265,7 @@ function showNatalEntry(){
       <label>شهر تولد</label><select id="nt-city">${Object.keys(IRAN_CITIES).map(k=>`<option value="${k}">${IRAN_CITIES[k].display_name}</option>`).join('')}</select>
       <button class="btn" onclick="submitNatal()">محاسبه‌ی زایچه</button></div>`);
 }
+
 function submitNatal(){
   const hour=parseInt(document.getElementById('nt-hour').value,10);
   const minute=parseInt(document.getElementById('nt-min').value,10)||0;
@@ -181,6 +276,7 @@ function submitNatal(){
   const result=calculateNatal(gy,gm,gd,hour,minute,city);
   render(`${backBtn('showNatalEntry()')}<div class="card"><div class="verse" style="white-space:pre-line; line-height:2.1">${esc(formatNatal(result))}</div></div>`);
 }
+
 function showBabyNameForm(){
   render(`${backBtn('showHome()')}<div class="card"><h2>👶 پیشنهاد اسم فرزند</h2>
       <label>جنسیت فرزند</label>
@@ -191,7 +287,9 @@ function showBabyNameForm(){
       <p class="small-note">پایگاه اجتماعی «صعودی» و درآمد «متوسط رو به بالا» به‌عنوان بهترین ترکیب پیش‌فرض در نظر گرفته می‌شه.</p></div>`);
   window.selectedGender='boy'; document.getElementById('bn-boy').classList.add('active');
 }
+
 function pickGender(g){window.selectedGender=g; document.getElementById('bn-boy').classList.toggle('active',g==='boy'); document.getElementById('bn-girl').classList.toggle('active',g==='girl');}
+
 let babyQuery=null;
 function submitBabyName(){
   const family=document.getElementById('bn-family').value.trim();
@@ -200,12 +298,14 @@ function submitBabyName(){
   babyQuery={gender:window.selectedGender, family, mother, status:"2", income:"2"};
   renderBabyPage(0);
 }
+
 function renderBabyPage(page){
   const result=getAllMatches(babyQuery.gender,babyQuery.family,babyQuery.mother,babyQuery.status,babyQuery.income);
   const pageData=formatBabyNamePage(babyQuery.gender,result,page);
   render(`${backBtn('showBabyNameForm()')}<div class="card"><div style="white-space:pre-line; line-height:2">${esc(pageData.text)}</div>
       ${pageData.hasMore?`<button class="btn secondary" onclick="renderBabyPage(${page+1})">➡️ ۱۰ اسم بعدی</button>`:''}</div>`);
 }
+
 function showCompareEntry(){
   render(`${backBtn('showHome()')}<div class="card"><h2>🔗 مقایسه‌ی دو نفر</h2>
       <p class="desc">اطلاعات هر دو نفر رو وارد کن:</p>
@@ -215,7 +315,9 @@ function showCompareEntry(){
       <label>تاریخ تولد نفر دوم (شمسی)</label><input id="cp-d2" type="text" placeholder="سال/ماه/روز">
       <button class="btn" onclick="submitCompare()">مقایسه کن</button></div>`);
 }
+
 function parseDate(s){const parts=s.split('/').map(x=>parseInt(x.trim(),10)); if(parts.length!==3||parts.some(isNaN))return null; return {jy:parts[0],jm:parts[1],jd:parts[2]};}
+
 function submitCompare(){
   const n1=document.getElementById('cp-n1').value.trim(), n2=document.getElementById('cp-n2').value.trim();
   const d1=parseDate(document.getElementById('cp-d1').value), d2=parseDate(document.getElementById('cp-d2').value);
@@ -231,11 +333,14 @@ function submitCompare(){
       <div style="white-space:pre-line; line-height:2">${lines.join('\n')}\n\nتعداد اعداد مشترک: ${shared} از ${fields.length}</div></div>
     <div class="card"><div style="white-space:pre-line; line-height:2">${esc(zc)}</div></div>`);
 }
+
 function showSavedProfiles(){
   render(`${backBtn('showMoreMenu()')}<div class="card"><h2>📇 پروفایل‌های من</h2>
       ${state.savedProfiles.length===0?'<p class="desc">هنوز پروفایلی ذخیره نشده.</p>':
         state.savedProfiles.map((p,i)=>`<div class="name-item" style="cursor:pointer" onclick="showSavedProfile(${i})"><b>${esc(p.firstName)} ${esc(p.familyName)}</b> — کد: ${esc(p.report.cosmicCode.slice(0,20))}...</div>`).join('')}
     </div>`);
 }
+
 function showSavedProfile(i){const p=state.savedProfiles[i]; showCosmicResult(p.firstName,p.familyName,p.report);}
+
 showHome();
