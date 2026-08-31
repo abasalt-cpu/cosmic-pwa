@@ -100,7 +100,9 @@ nav.bottom{position:fixed; bottom:0; inset-inline:0; z-index:5; background:#150f
 border-top:1px solid var(--line); display:flex; justify-content:space-around; padding:8px 2px calc(8px + env(safe-area-inset-bottom));}
 nav.bottom .nav-btn{background:none; border:none; color:var(--text-dim); font-family:inherit; display:flex; flex-direction:column;
 align-items:center; gap:2px; font-size:9.5px; padding:4px 4px; cursor:pointer; flex:1; min-width:0; white-space:nowrap;}
-nav.bottom .nav-btn .ic{font-size:18px;}
+nav.bottom .nav-btn .ic{font-size:18px; display:inline-flex; width:22px; height:22px;}
+nav.bottom .nav-btn .ic svg{width:100%; height:100%;}
+nav.bottom .nav-btn.active .ic svg{filter:drop-shadow(0 0 4px #e8b84b99);}
 nav.bottom .nav-btn.active{color:var(--gold-soft);}
 .small-note{font-size:11.5px; color:var(--text-dim); margin-top:10px; line-height:1.8;}
 ::selection{background:var(--gold); color:#241a08;}
@@ -118,10 +120,10 @@ nav.bottom .nav-btn.active{color:var(--gold-soft);}
 </header>
 <main id="app"></main>
 <nav class="bottom">
-  <button class="nav-btn active" data-nav="home"><span class="ic">🏠</span>خانه</button>
-  <button class="nav-btn" data-nav="cosmic"><span class="ic">🔢</span>کد کیهانی</button>
-  <button class="nav-btn" data-nav="profiles"><span class="ic">📇</span>پروفایل‌های من</button>
-  <button class="nav-btn" data-nav="more"><span class="ic">✨</span>بیشتر</button>
+  <button class="nav-btn active" data-nav="home"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10.2V19a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-8.8"/><path d="M10 20v-5h4v5"/><circle cx="12" cy="2" r=".9" fill="currentColor" stroke="none"/></svg></span>خانه</button>
+  <button class="nav-btn" data-nav="cosmic"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M8.7 12c0-1.5 1.15-2.5 2.35-1.75 1.05.65 1.05 2.85 0 3.5-1.2.75-2.35-.25-2.35-1.75Z"/><path d="M15.3 12c0-1.5-1.15-2.5-2.35-1.75-1.05.65-1.05 2.85 0 3.5 1.2.75 2.35-.25 2.35-1.75Z"/></svg></span>کد کیهانی</button>
+  <button class="nav-btn" data-nav="profiles"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.3" y="5" width="17.4" height="14" rx="2.6"/><circle cx="9" cy="11" r="2"/><path d="M6 16.2c.6-1.9 2-2.7 3-2.7s2.4.8 3 2.7"/><path d="M14.5 10h4M14.5 13h3"/></svg></span>پروفایل‌های من</button>
+  <button class="nav-btn" data-nav="more"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2v3.4M12 17.4v3.4M3.2 12h3.4M17.4 12h3.4M5.8 5.8l2.4 2.4M15.8 15.8l2.4 2.4M18.2 5.8l-2.4 2.4M8.2 15.8l-2.4 2.4"/><circle cx="12" cy="12" r="2.6"/></svg></span>بیشتر</button>
 </nav>
 <script src="data/data.js"></script>
 <script src="data/tables.js"></script>
