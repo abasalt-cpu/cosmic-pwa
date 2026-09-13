@@ -39,7 +39,7 @@ function hubHTML(){
       <div class="w-text"><h2>خوش اومدی 👋</h2>
       <p class="desc">${last?`آخرین محاسبه: <b>${esc(last.firstName)} ${esc(last.familyName)}</b>`:'هنوز محاسبه‌ای انجام ندادی. از دکمه‌ی زیر شروع کن.'}</p>
       <button class="btn" onclick="showCosmicInputForm()">🔢 محاسبه‌ی کد کیهانی</button></div>
-      <div class="welcome-icon"><img src="icons/hand-glow.png" alt=""></div>
+      <div class="welcome-icon" onclick="rerollSlogan()" role="button" aria-label="یه شعار دیگه" style="cursor:pointer"><img src="icons/hand-glow.png" alt=""></div>
     </div>
     <div class="grid-menu">
       <div class="menu-tile" onclick="showHafez()"><img src="icons/menu/icon_hafez.png" class="icon-img"><span class="label">فال حافظ</span><span class="desc">پیام امروز حافظ برات</span></div>
@@ -54,7 +54,7 @@ function hubHTML(){
     </div>
     <div class="card banner-card">
       <span class="b-icon">🌟</span>
-      <div class="b-text">هر عددی، <span class="hi">داستانی از تو</span> را روایت می‌کند...<br>کشف کن، بشناس و آگاهانه انتخاب کن.</div>
+      <div class="b-text" id="bannerSlogan">${esc(getSessionSlogan())}</div>
       <span class="b-icon">♾️</span>
     </div>`;
 }
@@ -174,6 +174,17 @@ function showHafez(){
       <div id="hafez-result"></div></div>`);
 }
 function getDeviceId(){let id=localStorage.getItem('deviceId'); if(!id){id='dev-'+Math.random().toString(36).slice(2); localStorage.setItem('deviceId',id);} return id;}
+function getSessionSlogan(){
+  let s=sessionStorage.getItem('sessionSlogan');
+  if(!s){ s=getRandomSlogan(); sessionStorage.setItem('sessionSlogan', s); }
+  return s;
+}
+function rerollSlogan(){
+  const s=getRandomSlogan();
+  sessionStorage.setItem('sessionSlogan', s);
+  const el=document.getElementById('bannerSlogan');
+  if(el) el.textContent=s;
+}
 function revealHafez(){
   const g=getDailyFal(getDeviceId());
   document.getElementById('hafez-result').innerHTML=`<div class="result-block"><div class="verse">${g.verses.join('<br>')}</div>
