@@ -167,11 +167,18 @@ function showCosmicResult(firstName,familyName,r){
       </div></div>`);
 }
 function shareText(text){ if(navigator.share){navigator.share({text});} else {navigator.clipboard.writeText(text); alert('متن کپی شد.');} }
+function getHafezDrawState(){
+  const key='hafezDrawState'; const today=todayStr();
+  let st=JSON.parse(localStorage.getItem(key)||'null');
+  if(!st||st.date!==today){ st={date:today,count:0}; localStorage.setItem(key,JSON.stringify(st)); }
+  return st;
+}
 function showHafez(){
+  const st=getHafezDrawState(); const remaining=Math.max(0,3-st.count);
   render(`${backBtn('showHome()')}<div class="card"><h2>🔮 فال حافظ</h2>
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
-      <button class="btn" onclick="revealHafez()">🔮 فالم رو بگیر</button>
-      <div id="hafez-result"></div></div>`);
+      <button class="btn" id="hafez-btn" onclick="revealHafez()"${remaining<=0?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${remaining>0?` (${remaining} بار دیگه امروز)`:''}</button>
+      <div id="hafez-result">${remaining<=0?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':''}</div></div>`);
 }
 function getDeviceId(){let id=localStorage.getItem('deviceId'); if(!id){id='dev-'+Math.random().toString(36).slice(2); localStorage.setItem('deviceId',id);} return id;}
 function getSessionSlogan(){
@@ -186,10 +193,20 @@ function rerollSlogan(){
   if(el) el.textContent=s;
 }
 function revealHafez(){
-  const g=getDailyFal(getDeviceId());
+  const st=getHafezDrawState();
+  if(st.count>=3) return;
+  st.count++; localStorage.setItem('hafezDrawState', JSON.stringify(st));
+  const g=getDailyFal(getDeviceId()+'-draw'+st.count);
+  const remaining=3-st.count;
   document.getElementById('hafez-result').innerHTML=`<div class="result-block"><div class="verse">${g.verses.join('<br>')}</div>
     <p style="margin-top:10px">📖 <b>تفسیر:</b><br>${esc(g.interpretation)}</p>
-    <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button></div>`;
+    <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button></div>
+    <p class="small-note">${remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙'}</p>`;
+  const btn=document.getElementById('hafez-btn');
+  if(btn){
+    if(remaining<=0){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='🔮 فالم رو بگیر'; }
+    else{ btn.textContent=`🔮 فالم رو بگیر (${remaining} بار دیگه امروز)`; }
+  }
 }
 function showFullGhazal(id){
   const g=getGhazalById(id);
@@ -221,20 +238,24 @@ function showZamanbandi(){
       <button class="btn secondary" onclick="showZamanbandi()">🔄 یکی دیگه</button></div>`);
 }
 function showZodiacEntry(){
-  if(state.savedProfiles.length>1){
+  if(state.savedProfiles.length>=1){
     render(`${backBtn('showHome()')}<div class="card"><h2>♈️ طالع‌بینی — کدوم پروفایل؟</h2>
-        ${state.savedProfiles.map(p=>`<div class="name-item" style="cursor:pointer" onclick="showZodiac(${p.jm})"><b>${esc(p.firstName)} ${esc(p.familyName)}</b> — ${new Date(p.date).toLocaleDateString('fa-IR')}</div>`).join('')}
+        ${state.savedProfiles.map((p,i)=>`<div class="name-item" style="cursor:pointer" onclick="showZodiacForProfile(${i})"><b>${esc(p.firstName)} ${esc(p.familyName)}</b> — ${new Date(p.date).toLocaleDateString('fa-IR')}</div>`).join('')}
+        <div class="name-item" style="cursor:pointer" onclick="showMonthPickerForZodiac()">👤 شخص دیگه (فقط انتخاب ماه تولد)</div>
       </div>`);
-  } else if(state.lastProfile){ showZodiac(state.lastProfile.jm); }
-  else { showMonthPickerForZodiac(); }
+  } else { showMonthPickerForZodiac(); }
+}
+function showZodiacForProfile(i){
+  const p=state.savedProfiles[i];
+  showZodiac(p.jm, `${p.firstName} ${p.familyName}`);
 }
 function showMonthPickerForZodiac(){
   render(`${backBtn('showHome()')}<div class="card"><h2>ماه تولدت رو انتخاب کن:</h2>
       <div class="chip-row">${PERSIAN_MONTHS.map((m,i)=>`<div class="chip" onclick="showZodiac(${i+1})">${m}</div>`).join('')}</div></div>`);
 }
-function showZodiac(jm){
+function showZodiac(jm, name){
   const text=formatHoroscope(jm);
-  render(`${backBtn('showHome()')}<div class="card"><div class="verse" style="white-space:pre-line; line-height:2.1">${esc(text)}</div></div>`);
+  render(`${backBtn('showHome()')}<div class="card">${name?`<h2>♈️ طالع‌بینی ${esc(name)}</h2>`:''}<div class="verse" style="white-space:pre-line; line-height:2.1">${esc(text)}</div></div>`);
 }
 function showNatalEntry(){
   if(!state.lastProfile){

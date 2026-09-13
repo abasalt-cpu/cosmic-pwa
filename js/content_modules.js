@@ -1,5 +1,5 @@
 function getDailyFal(userId){const seed=`${userId}-${todayStr()}`; return HAFEZ_DATA[simpleHash(seed)%HAFEZ_DATA.length];}
-function getGhazalById(id){return HAFEZ_DATA.find(g=>g.id===id)||null;}
+function getGhazalById(id){return HAFEZ_DATA.find(g=>String(g.id)===String(id))||null;}
 function getRandomMunajat(){return MUNAJAT_DATA[Math.floor(Math.random()*MUNAJAT_DATA.length)];}
 function shuffleArray(arr){const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a;}
 function getTodayElham(){
