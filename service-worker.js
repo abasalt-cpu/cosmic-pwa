@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cosmic-number-v2';
+const CACHE_NAME = 'cosmic-number-v3';
 const ASSETS = ['./','./index.html','./manifest.json','./data/data.js','./data/tables.js',
 './js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/baby_name.js','./js/app.js',
 './icons/icon-192.png','./icons/icon-512.png'];
@@ -11,7 +11,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if(event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request).then((fresh) => {
+    fetch(event.request, {cache: 'no-store'}).then((fresh) => {
       const copy = fresh.clone();
       caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
       return fresh;
