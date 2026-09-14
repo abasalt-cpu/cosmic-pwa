@@ -351,17 +351,40 @@ function getComparePerson(n){
   const report=calculateCosmicReport(first,fam.join(' ')||first,'',d.jy,d.jm,d.jd);
   return {name, jm:d.jm, report};
 }
+function traitText(table, num){ return table[String(num)] || ''; }
+function compareMetricBlock(label, emoji, table, n1, n2, name1, name2){
+  const t1=traitText(table,n1), t2=traitText(table,n2);
+  if(n1===n2){
+    return `<div class="card"><h3>${emoji} ${label} مشترک: ${n1}</h3>
+      <p style="line-height:1.9">${esc(t1)}</p>
+      <p style="line-height:1.9">این اشتراک باعث می‌شه توی این بُعد از شخصیت، ${esc(name1)} و ${esc(name2)} همدیگه رو راحت‌تر درک کنن و کمتر سر این موضوع اصطکاک داشته باشن.</p></div>`;
+  }
+  return `<div class="card"><h3>${emoji} ${label}: ${esc(name1)} (${n1}) — ${esc(name2)} (${n2})</h3>
+    <p style="line-height:1.9"><b>${esc(name1)}:</b> ${esc(t1)}</p>
+    <p style="line-height:1.9"><b>${esc(name2)}:</b> ${esc(t2)}</p>
+    <p style="line-height:1.9">این تفاوت می‌تونه هم فرصت یادگیری از هم باشه و هم گاهی منشأ اصطکاک؛ نکته‌ی مهم اینه که این تفاوت رو تهدید نبینید، بلکه مکمل هم بدونیدش.</p></div>`;
+}
+function buildCompareNarrative(person1, person2, r1, r2){
+  return [
+    compareMetricBlock('عدد سرنوشت','🌟',SARNEVESHT_TABLE,r1.destinyNum,r2.destinyNum,person1.name,person2.name),
+    compareMetricBlock('عدد تقدیر','🔮',TAGHDIR_TABLE,r1.fateNum,r2.fateNum,person1.name,person2.name),
+    compareMetricBlock('عدد ارتعاش','⚡',ERTEASH_TABLE,r1.vibrationNum,r2.vibrationNum,person1.name,person2.name),
+    compareMetricBlock('عدد باطن','🔎',BATEN_TABLE,r1.batenNum,r2.batenNum,person1.name,person2.name),
+  ].join('');
+}
 function submitCompare(){
   const person1=getComparePerson(1), person2=getComparePerson(2);
   if(!person1||!person2){alert('اطلاعات هر دو نفر رو کامل و درست وارد کن.'); return;}
   const r1=person1.report, r2=person2.report;
   const fields=[["عدد سرنوشت","destinyNum"],["عدد تقدیر","fateNum"],["ارتعاش","vibrationNum"],["عدد باطن","batenNum"]];
   let shared=0;
-  const lines=fields.map(([label,key])=>{const same=r1[key]===r2[key]; if(same)shared++; return `${label}: ${r1[key]} / ${r2[key]} ${same?'✅ مشترک':''}`;});
+  fields.forEach(([label,key])=>{ if(r1[key]===r2[key]) shared++; });
   const zc=zodiacCompatibility(person1.jm,person2.jm);
-  render(`${backBtn('showCompareEntry()')}<div class="card"><h2>🔢 مقایسه‌ی عددی ${esc(person1.name)} و ${esc(person2.name)}</h2>
-      <div style="white-space:pre-line; line-height:2">${lines.join('\n')}\n\nتعداد اعداد مشترک: ${shared} از ${fields.length}</div></div>
-    <div class="card"><div style="white-space:pre-line; line-height:2">${esc(zc)}</div></div>`);
+  const narrative=buildCompareNarrative(person1,person2,r1,r2);
+  render(`${backBtn('showCompareEntry()')}<div class="card"><h2>🔗 مقایسه‌ی ${esc(person1.name)} و ${esc(person2.name)}</h2>
+      <p class="desc">از ${fields.length} معیار عددی، ${shared} مورد مشترکه.</p></div>
+    ${narrative}
+    <div class="card"><h3>♈️ سازگاری طالعی</h3><div style="white-space:pre-line; line-height:1.9">${esc(zc)}</div></div>`);
 }
 function showSavedProfiles(){
   setNav('profiles');
