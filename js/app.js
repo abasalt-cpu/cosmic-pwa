@@ -352,24 +352,71 @@ function getComparePerson(n){
   return {name, jm:d.jm, report};
 }
 function traitText(table, num){ return table[String(num)] || ''; }
-function compareMetricBlock(label, emoji, table, n1, n2, name1, name2){
+const SAME_INSIGHTS={
+  destinyNum:'این اشتراک یعنی مسیر بزرگ زندگی و اهداف بلندمدتتون هم‌راستاست؛ یه پایه‌ی محکم برای ساختن برنامه‌های مشترک بلندمدت، از انتخاب شغل مشترک گرفته تا تصمیم‌های سرنوشت‌ساز خانوادگی.',
+  fateNum:'این اشتراک یعنی در موقعیت‌های تصمیم‌گیری آنیِ روزمره، غریزه‌تون شبیه همه؛ بدون نیاز به توضیح زیاد، واکنش همدیگه رو پیش‌بینی می‌کنید.',
+  vibrationNum:'این اشتراک یعنی ریتم و سرعت انرژی روزمره‌تون هماهنگه؛ برنامه‌ریزی، استراحت و فعالیت مشترک براتون طبیعی و بی‌دردسر پیش می‌ره.',
+  batenNum:'این اشتراک یعنی انگیزه‌های عمیق و نیازهای درونی‌تون از یه جنسه؛ حتی وقتی حرفش رو نمی‌زنید هم ناخودآگاه همدیگه رو می‌فهمید.'
+};
+const DIFF_INSIGHTS={
+  destinyNum:{
+    close:'چون فاصله‌ی عدد سرنوشت‌تون کمه، مسیر بزرگ زندگی‌تون در عمیق‌ترین لایه هم‌جهته؛ حتی اگه ظاهراً سبک‌های متفاوتی داشته باشید، مقصد نهایی‌تون به هم نزدیکه.',
+    moderate:'فاصله‌ی متوسط بین اعداد سرنوشتتون یعنی مسیرهای زندگی‌تون گاهی موازی و گاهی واگرا می‌شه. برای هماهنگی، باید هدف‌های بلندمدت‌تون رو صریح با هم در میون بذارید، وگرنه ممکنه هرکدوم بی‌خبر از دیگری مسیر خودش رو بره.',
+    far:'فاصله‌ی زیاد بین اعداد سرنوشتتون نشون می‌ده مسیرهای زندگی‌تون از جنس خیلی متفاوتی هستن. این می‌تونه رابطه رو غنی کنه چون هرکدوم چیزی می‌بینه که دیگری نمی‌بینه، اما بدون گفت‌وگوی آگاهانه‌ی مداوم درباره‌ی اولویت‌های بلندمدت، ممکنه احساس کنید دارید در دو مسیر جدا از هم حرکت می‌کنید.'
+  },
+  fateNum:{
+    close:'عدد تقدیرتون نزدیک به همه، یعنی واکنش غریزی‌تون در موقعیت‌های روزمره شبیه همه؛ این باعث می‌شه بدون نیاز به توضیح زیاد، همدیگه رو پیش‌بینی کنید.',
+    moderate:'تفاوت متوسط در عدد تقدیر یعنی سبک تصمیم‌گیری آنی‌تون گاهی هم‌راستا و گاهی متضاده. یاد گرفتن اینکه کِی باید جلو رفت و کِی باید صبر کرد، نیاز به تمرین و صبر مشترک داره.',
+    far:'فاصله‌ی زیاد در عدد تقدیر یعنی در لحظات تصمیم‌گیری سریع، واکنش‌هاتون کاملاً متفاوته. این تفاوت اگه مدیریت نشه، منبع اصلی سوءتفاهم‌های آنیه؛ بهتره قبل از تصمیم‌های مهم، صریح درباره‌ی غریزه‌ی اولیه‌تون حرف بزنید تا یکی‌تون احساس عجله‌ی بی‌مورد یا کندیِ آزاردهنده نکنه.'
+  },
+  vibrationNum:{
+    close:'ریتم انرژی روزمره‌تون به هم نزدیکه؛ سرعت زندگی، میزان فعالیت و نیاز به استراحت‌تون هماهنگه و همین باعث می‌شه برنامه‌ریزی روزمره راحت‌تر پیش بره.',
+    moderate:'یه اختلاف محسوس در ریتم انرژی‌تون هست؛ یکی‌تون ممکنه سریع‌تر حرکت کنه و دیگری کندتر. اگه این تفاوت رو زودتر بشناسید، می‌تونید سرعت مشترکی پیدا کنید که هیچ‌کدوم رو خسته نکنه.',
+    far:'فاصله‌ی زیاد در ریتم انرژی یعنی سبک زندگی روزمره‌تون از نظر سرعت و شدت فعالیت خیلی فرق داره. این می‌تونه باعث بشه یکی احساس کنه دیگری خیلی کند یا خیلی تنده؛ هماهنگ‌کردن این ریتم نیاز به توافق آگاهانه روی زمان‌بندی‌های روزمره داره، نه انتظار اینکه یکی‌تون خودش رو کامل با اون یکی وفق بده.'
+  },
+  batenNum:{
+    close:'نیازهای درونی و انگیزه‌های پنهان‌تون به هم نزدیکه؛ حتی چیزهایی که به زبون نمیارید رو ناخودآگاه در هم می‌فهمید.',
+    moderate:'انگیزه‌های درونی‌تون تا حدی متفاوته؛ چیزی که یکی‌تون در عمق دنبالشه ممکنه برای دیگری اولویت نباشه. گفت‌وگو درباره‌ی نیازهای واقعی (نه فقط خواسته‌های ظاهری) کمک می‌کنه این فاصله پر بشه.',
+    far:'باطن‌تون از دو جنس کاملاً متفاوته؛ انگیزه‌های عمیقی که هرکدوم رو به حرکت درمیاره، فرق زیادی با هم داره. این می‌تونه رابطه رو جذاب و پرکشش کنه، اما فقط اگه هرکدوم برای فهمیدن نیاز واقعیِ اون یکی، آگاهانه وقت بذاره.'
+  }
+};
+function numDiffTier(key, n1, n2){
+  const d=Math.abs(n1-n2);
+  if(key==='vibrationNum'){ return d<=1?'close':(d===2?'moderate':'far'); }
+  if(key==='batenNum'){ return d<=2?'close':(d<=5?'moderate':'far'); }
+  return d<=3?'close':(d<=10?'moderate':'far');
+}
+function compareMetricBlock(label, emoji, table, n1, n2, name1, name2, key){
   const t1=traitText(table,n1), t2=traitText(table,n2);
   if(n1===n2){
     return `<div class="card"><h3>${emoji} ${label} مشترک: ${n1}</h3>
       <p style="line-height:1.9">${esc(t1)}</p>
-      <p style="line-height:1.9">این اشتراک باعث می‌شه توی این بُعد از شخصیت، ${esc(name1)} و ${esc(name2)} همدیگه رو راحت‌تر درک کنن و کمتر سر این موضوع اصطکاک داشته باشن.</p></div>`;
+      <p style="line-height:1.9">${esc(SAME_INSIGHTS[key])}</p></div>`;
   }
+  const tier=numDiffTier(key,n1,n2);
+  const insight=DIFF_INSIGHTS[key][tier];
   return `<div class="card"><h3>${emoji} ${label}: ${esc(name1)} (${n1}) — ${esc(name2)} (${n2})</h3>
     <p style="line-height:1.9"><b>${esc(name1)}:</b> ${esc(t1)}</p>
     <p style="line-height:1.9"><b>${esc(name2)}:</b> ${esc(t2)}</p>
-    <p style="line-height:1.9">این تفاوت می‌تونه هم فرصت یادگیری از هم باشه و هم گاهی منشأ اصطکاک؛ نکته‌ی مهم اینه که این تفاوت رو تهدید نبینید، بلکه مکمل هم بدونیدش.</p></div>`;
+    <p style="line-height:1.9">${esc(insight)}</p></div>`;
+}
+function metricScore(key,n1,n2){
+  if(n1===n2) return 2;
+  const t=numDiffTier(key,n1,n2);
+  return t==='close'?1:(t==='moderate'?0:-1);
+}
+function overallVerdict(totalScore, shared){
+  if(totalScore>=5) return {title:'سازگاری قوی', text:`با مجموع امتیاز بالا در معیارهای عددی، این دو نفر در بیشتر ابعاد شخصیتی هم‌راستا هستن. این یعنی زندگی مشترک یا همکاری نزدیک بین‌تون به‌طور طبیعی و با اصطکاک کم پیش می‌ره — نقطه‌ی قوت‌تون هماهنگی درونیه، نه شباهت سطحی.`};
+  if(totalScore>=2) return {title:'سازگاری خوب با نقاط قابل‌کار', text:`ترکیبی از شباهت و تفاوت بین عددهاتون هست. این یعنی رابطه‌تون هم پایه‌ی مشترک محکمی داره و هم فضای رشد؛ نقاطی که فاصله دارن، دقیقاً همون جاهاییه که با گفت‌وگوی آگاهانه بیشترین رشد رو تجربه می‌کنید.`};
+  if(totalScore>=-1) return {title:'سازگاری متعادل، نیازمند آگاهی', text:`تفاوت‌های عددی‌تون قابل‌توجه‌ست. این به‌معنای ناسازگاری نیست، بلکه یعنی باید فعالانه روی شناخت سبک‌های متفاوت هم کار کنید؛ رابطه‌هایی با این الگو معمولاً وقتی موفق‌ترن که هر دو طرف تفاوت رو به‌جای تهدید، فرصت یادگیری ببینن.`};
+  return {title:'چالش‌برانگیز اما قابل‌مدیریت', text:`اکثر معیارهای عددی‌تون فاصله‌ی زیادی دارن؛ یعنی از نظر مسیر زندگی، غریزه‌ی تصمیم‌گیری، ریتم انرژی و انگیزه‌های درونی، دو الگوی متفاوت دارید. این ترکیب می‌تونه بسیار جذاب و پویا باشه، اما فقط با ارتباط صریح و مداوم پایدار می‌مونه — بدون گفت‌وگو، همین تفاوت‌ها می‌تونن به سوءتفاهم مزمن تبدیل بشن.`};
 }
 function buildCompareNarrative(person1, person2, r1, r2){
   return [
-    compareMetricBlock('عدد سرنوشت','🌟',SARNEVESHT_TABLE,r1.destinyNum,r2.destinyNum,person1.name,person2.name),
-    compareMetricBlock('عدد تقدیر','🔮',TAGHDIR_TABLE,r1.fateNum,r2.fateNum,person1.name,person2.name),
-    compareMetricBlock('عدد ارتعاش','⚡',ERTEASH_TABLE,r1.vibrationNum,r2.vibrationNum,person1.name,person2.name),
-    compareMetricBlock('عدد باطن','🔎',BATEN_TABLE,r1.batenNum,r2.batenNum,person1.name,person2.name),
+    compareMetricBlock('عدد سرنوشت','🌟',SARNEVESHT_TABLE,r1.destinyNum,r2.destinyNum,person1.name,person2.name,'destinyNum'),
+    compareMetricBlock('عدد تقدیر','🔮',TAGHDIR_TABLE,r1.fateNum,r2.fateNum,person1.name,person2.name,'fateNum'),
+    compareMetricBlock('عدد ارتعاش','⚡',ERTEASH_TABLE,r1.vibrationNum,r2.vibrationNum,person1.name,person2.name,'vibrationNum'),
+    compareMetricBlock('عدد باطن','🔎',BATEN_TABLE,r1.batenNum,r2.batenNum,person1.name,person2.name,'batenNum'),
   ].join('');
 }
 function submitCompare(){
@@ -377,14 +424,16 @@ function submitCompare(){
   if(!person1||!person2){alert('اطلاعات هر دو نفر رو کامل و درست وارد کن.'); return;}
   const r1=person1.report, r2=person2.report;
   const fields=[["عدد سرنوشت","destinyNum"],["عدد تقدیر","fateNum"],["ارتعاش","vibrationNum"],["عدد باطن","batenNum"]];
-  let shared=0;
-  fields.forEach(([label,key])=>{ if(r1[key]===r2[key]) shared++; });
+  let shared=0, totalScore=0;
+  fields.forEach(([label,key])=>{ if(r1[key]===r2[key])shared++; totalScore+=metricScore(key,r1[key],r2[key]); });
   const zc=zodiacCompatibility(person1.jm,person2.jm);
   const narrative=buildCompareNarrative(person1,person2,r1,r2);
+  const verdict=overallVerdict(totalScore, shared);
   render(`${backBtn('showCompareEntry()')}<div class="card"><h2>🔗 مقایسه‌ی ${esc(person1.name)} و ${esc(person2.name)}</h2>
       <p class="desc">از ${fields.length} معیار عددی، ${shared} مورد مشترکه.</p></div>
     ${narrative}
-    <div class="card"><h3>♈️ سازگاری طالعی</h3><div style="white-space:pre-line; line-height:1.9">${esc(zc)}</div></div>`);
+    <div class="card"><h3>♈️ سازگاری طالعی</h3><div style="white-space:pre-line; line-height:1.9">${esc(zc)}</div></div>
+    <div class="card" style="border-color:var(--gold, #e8b84b)"><h3>🧭 جمع‌بندی: ${esc(verdict.title)}</h3><p style="line-height:1.9">${esc(verdict.text)}</p></div>`);
 }
 function showSavedProfiles(){
   setNav('profiles');
