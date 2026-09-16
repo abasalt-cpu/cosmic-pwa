@@ -1,6 +1,6 @@
-const CACHE_NAME = 'cosmic-number-v5';
+const CACHE_NAME = 'cosmic-number-v8';
 const ASSETS = ['./','./index.html','./manifest.json','./data/data.js','./data/tables.js',
-'./js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/baby_name.js','./js/app.js',
+'./js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/baby_name.js','./js/app.js','./js/auth.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
 './icons/apple-touch-icon.png','./icons/favicon-32.png','./icons/favicon-16.png','./icons/hand-glow.png',
 './icons/menu/icon_app_192.png','./icons/menu/icon_app_512.png','./icons/menu/icon_baby.png','./icons/menu/icon_compare.png',
