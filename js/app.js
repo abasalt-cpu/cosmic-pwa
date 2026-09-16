@@ -67,11 +67,11 @@ function showMoreMenu(){
   setNav('more');
   render(`<div class="card">
       <div class="list-item" onclick="showAboutPage()"><span class="li-label">ℹ️ درباره‌ی نرم‌افزار</span><span class="li-arrow">‹</span></div>
-      <div class="list-item" onclick="showMembershipPage()"><span class="li-label">💎 عضویت</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showMembershipPage()"><span class="li-label">👤 حساب کاربری</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showPrivacyPage()"><span class="li-label">🔒 حریم خصوصی</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showTermsPage()"><span class="li-label">📜 قوانین</span><span class="li-arrow">‹</span></div>
     </div>
-    <div class="small-note">این یه اپ کاملاً محلیه — هیچ اطلاعاتی به سروری فرستاده نمی‌شه، همه چیز روی خود گوشیت ذخیره می‌مونه.</div>`);
+    <div class="small-note">اطلاعات پروفایل‌هات (اسم، تاریخ تولد و نتایج) فقط روی خود گوشیت ذخیره می‌شه. عضویت اختیاریه و فقط برای ورود به حساب استفاده می‌شه.</div>`);
 }
 function showAboutPage(){
   render(`${backBtn('showMoreMenu()')}
@@ -92,23 +92,80 @@ function showAboutPage(){
     <div class="card"><p class="desc" style="margin:0">نسخه‌ی فعلی: 1.0.0 — این نرم‌افزار به‌صورت مداوم در حال به‌روزرسانی و اضافه شدن امکانات جدیده.</p></div>`);
 }
 function showMembershipPage(){
+  if(currentUser){
+    const label = currentUser.displayName || currentUser.email || 'کاربر';
+    render(`${backBtn('showMoreMenu()')}
+      <div class="card"><h2>👤 حساب کاربری</h2>
+        <p class="desc">با حساب <b>${esc(label)}</b> وارد شدی.${currentUser.email && currentUser.displayName?' ('+esc(currentUser.email)+')':''}</p></div>
+      <div class="card"><button class="btn secondary" onclick="handleSignOut()">🚪 خروج از حساب</button></div>`);
+    return;
+  }
   render(`${backBtn('showMoreMenu()')}
-    <div class="card"><h2>💎 عضویت</h2>
-      <p class="desc">در حال حاضر تمام امکانات «کد کیهانی» کاملاً رایگان و بدون نیاز به ثبت‌نام در دسترسته.</p></div>
-    <div class="card"><h2>عضویت ویژه (به‌زودی)</h2>
-      <p class="desc">به‌زودی یه بسته‌ی ویژه اضافه می‌شه که امکاناتی مثل گزارش‌های تفصیلی‌تر، ذخیره‌سازی نامحدود پروفایل‌ها و محتوای اختصاصی رو شامل می‌شه. جزئیات این بخش به‌مرور تکمیل می‌شه.</p></div>`);
+    <div class="card"><h2>👤 عضویت / ورود</h2>
+      <p class="desc">با ساختن حساب، هویتت روی این اپ ثبت می‌شه. اطلاعات پروفایل‌هات همچنان روی خود گوشیت ذخیره می‌مونه.</p>
+      <button class="btn" onclick="handleGoogleSignIn()">🔵 ورود با گوگل</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">ورود یا ثبت‌نام با ایمیل</h3>
+      <label>ایمیل</label><input id="auth-email" type="email" placeholder="you@example.com">
+      <label>رمز عبور</label><input id="auth-password" type="password" placeholder="حداقل ۶ کاراکتر">
+      <p id="auth-error" class="small-note" style="color:#ff8a8a; min-height:18px"></p>
+      <button class="btn" onclick="handleEmailSignIn()">ورود</button>
+      <button class="btn secondary" onclick="handleEmailSignUp()">ساخت حساب جدید</button>
+      <p class="small-note" style="cursor:pointer; text-decoration:underline" onclick="handleForgotPassword()">رمز عبورم رو فراموش کردم</p>
+    </div>`);
+}
+function authGuard(){
+  if(typeof signInWithEmail!=='function'){
+    const el=document.getElementById('auth-error');
+    if(el) el.textContent='تنظیمات ورود هنوز کامل نشده. بعداً دوباره امتحان کن.';
+    return false;
+  }
+  return true;
+}
+function handleGoogleSignIn(){
+  if(!authGuard()) return;
+  signInWithGoogle().catch((err)=>{ alert(translateAuthError(err)); });
+}
+function handleEmailSignIn(){
+  if(!authGuard()) return;
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-password').value;
+  const errEl=document.getElementById('auth-error');
+  errEl.textContent='';
+  signInWithEmail(email,password).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
+}
+function handleEmailSignUp(){
+  if(!authGuard()) return;
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-password').value;
+  const errEl=document.getElementById('auth-error');
+  errEl.textContent='';
+  signUpWithEmail(email,password).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
+}
+function handleForgotPassword(){
+  if(!authGuard()) return;
+  const email=document.getElementById('auth-email').value.trim();
+  if(!email){ alert('اول ایمیلت رو توی کادر بالا وارد کن.'); return; }
+  resetPassword(email).then(()=>{ alert('ایمیل بازیابی رمز عبور برات ارسال شد.'); }).catch((err)=>{ alert(translateAuthError(err)); });
+}
+function handleSignOut(){
+  signOutUser().then(()=>{ showMembershipPage(); });
+}
+function onAuthChanged(user){
+  // در آینده می‌تونیم اینجا وضعیت ورود رو توی بخش‌های دیگه‌ی اپ هم نشون بدیم.
 }
 function showPrivacyPage(){
   render(`${backBtn('showMoreMenu()')}
     <div class="card"><h2>🔒 حریم خصوصی</h2>
-      <p class="desc">حریم خصوصی تو برای ما مهمه. این نرم‌افزار از پایه طوری طراحی شده که کمترین وابستگی رو به سرور خارجی داشته باشه.</p></div>
+      <p class="desc">حریم خصوصی تو برای ما مهمه. تمام امکانات اصلی اپ (محاسبه‌ی کد کیهانی، فال، طالع‌بینی و...) بدون نیاز به ثبت‌نام و کاملاً محلی روی گوشیت کار می‌کنن؛ عضویت فقط یه قابلیت اختیاریه.</p></div>
     <div class="card"><h2>چه اطلاعاتی ذخیره می‌شه؟</h2>
       <div style="line-height:2.1">
-        📱 نام، تاریخ تولد و نتایج محاسبات فقط روی خود گوشی تو (حافظه‌ی محلی مرورگر) ذخیره می‌شن.<br>
-        🚫 هیچ اطلاعاتی به هیچ سروری ارسال نمی‌شه.<br>
-        🚫 نیازی به ثبت‌نام، شماره موبایل یا ایمیل نیست.<br>
+        📱 نام، تاریخ تولد و نتایج محاسبات فقط روی خود گوشی تو (حافظه‌ی محلی مرورگر) ذخیره می‌شن و به هیچ سروری ارسال نمی‌شن.<br>
+        👤 اگه با ایمیل یا حساب گوگل عضو بشی، فقط ایمیل/نام حسابت (از طریق سرویس Firebase) برای شناسایی ورودت ذخیره می‌شه — نه اطلاعات پروفایل‌ها یا نتایج محاسباتت.<br>
+        🚫 بدون عضویت هم می‌تونی از همه‌ی امکانات اصلی اپ استفاده کنی.<br>
         🍪 از کوکی یا ابزار ردیابی برای تبلیغات استفاده نمی‌کنیم.<br>
-        🗑️ هر وقت بخوای می‌تونی از تنظیمات مرورگر، تمام اطلاعات ذخیره‌شده رو پاک کنی.
+        🗑️ هر وقت بخوای می‌تونی از تنظیمات مرورگر، تمام اطلاعات ذخیره‌شده رو پاک کنی، یا از حسابت خارج بشی.
       </div></div>
     <div class="card"><p class="desc" style="margin:0">اگه سؤال یا نگرانی‌ای درباره‌ی حریم خصوصی داری، از بخش «درباره‌ی نرم‌افزار» می‌تونی با ما در ارتباط باشی.</p></div>`);
 }
