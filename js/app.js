@@ -93,42 +93,71 @@ function showAboutPage(){
 }
 function showMembershipPage(){
   if(currentUser){
-    const label = currentUser.displayName || currentUser.email || 'کاربر';
+    const label = currentUser.displayName || currentUser.email || currentUser.phone || 'کاربر';
+    const sub = currentUser.email || currentUser.phone || '';
     render(`${backBtn('showMoreMenu()')}
       <div class="card"><h2>👤 حساب کاربری</h2>
-        <p class="desc">با حساب <b>${esc(label)}</b> وارد شدی.${currentUser.email && currentUser.displayName?' ('+esc(currentUser.email)+')':''}</p></div>
+        <p class="desc">با حساب <b>${esc(label)}</b> وارد شدی.${sub && sub!==label?' ('+esc(sub)+')':''}</p></div>
       <div class="card"><button class="btn secondary" onclick="handleSignOut()">🚪 خروج از حساب</button></div>`);
     return;
   }
   render(`${backBtn('showMoreMenu()')}
     <div class="card"><h2>👤 عضویت / ورود</h2>
       <p class="desc">با ساختن حساب، هویتت روی این اپ ثبت می‌شه. اطلاعات پروفایل‌هات همچنان روی خود گوشیت ذخیره می‌مونه.</p>
-      <button class="btn" onclick="handleGoogleSignIn()">🔵 ورود با گوگل</button>
+      <div id="google-btn-container" style="margin-top:12px; display:flex; justify-content:center"></div>
+      <p class="small-note" style="text-align:center">ورود با گوگل ممکنه بدون VPN کار نکنه.</p>
     </div>
     <div class="card">
-      <h3 style="margin-bottom:10px">ورود یا ثبت‌نام با ایمیل</h3>
+      <h3 style="margin-bottom:10px">✉️ ورود یا ثبت‌نام با ایمیل</h3>
       <label>ایمیل</label><input id="auth-email" type="email" placeholder="you@example.com">
       <label>رمز عبور</label><input id="auth-password" type="password" placeholder="حداقل ۶ کاراکتر">
       <p id="auth-error" class="small-note" style="color:#ff8a8a; min-height:18px"></p>
       <button class="btn" onclick="handleEmailSignIn()">ورود</button>
       <button class="btn secondary" onclick="handleEmailSignUp()">ساخت حساب جدید</button>
-      <p class="small-note" style="cursor:pointer; text-decoration:underline" onclick="handleForgotPassword()">رمز عبورم رو فراموش کردم</p>
     </div>`);
+  initGoogleButton();
 }
-function authGuard(){
-  if(typeof signInWithEmail!=='function'){
-    const el=document.getElementById('auth-error');
-    if(el) el.textContent='تنظیمات ورود هنوز کامل نشده. بعداً دوباره امتحان کن.';
+function initGoogleButton(){
+  const el=document.getElementById('google-btn-container');
+  if(!el) return;
+  if(typeof google==='undefined' || !google.accounts || !google.accounts.id || GOOGLE_CLIENT_ID==='YOUR_GOOGLE_CLIENT_ID'){
+    el.innerHTML='<p class="small-note">ورود با گوگل هنوز تنظیم نشده.</p>';
+    return;
+  }
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredentialResponse });
+  google.accounts.id.renderButton(el, { theme:'filled_black', size:'large', text:'continue_with', shape:'pill', width:280 });
+}
+function handleGoogleCredentialResponse(response){
+  signInWithGoogleCredential(response.credential).then(()=>{ showMembershipPage(); }).catch((err)=>{ alert(translateAuthError(err)); });
+}
+function authGuard(elId){
+  if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')){
+    const el=document.getElementById(elId);
+    if(el){ el.style.color='#ff8a8a'; el.textContent='تنظیمات سرور عضویت هنوز کامل نشده.'; }
     return false;
   }
   return true;
 }
-function handleGoogleSignIn(){
-  if(!authGuard()) return;
-  signInWithGoogle().catch((err)=>{ alert(translateAuthError(err)); });
+function handleOtpRequest(){
+  if(!authGuard('otp-error')) return;
+  const phone=document.getElementById('auth-phone').value.trim();
+  const errEl=document.getElementById('otp-error');
+  errEl.style.color='#ff8a8a'; errEl.textContent='';
+  requestOtp(phone).then(()=>{
+    document.getElementById('otp-verify-section').style.display='block';
+    errEl.style.color='var(--gold-soft)';
+    errEl.textContent='کد تایید برات پیامک شد.';
+  }).catch((err)=>{ errEl.style.color='#ff8a8a'; errEl.textContent=translateAuthError(err); });
+}
+function handleOtpVerify(){
+  const phone=document.getElementById('auth-phone').value.trim();
+  const code=document.getElementById('auth-otp-code').value.trim();
+  const errEl=document.getElementById('otp-error');
+  errEl.style.color='#ff8a8a'; errEl.textContent='';
+  verifyOtp(phone,code).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.style.color='#ff8a8a'; errEl.textContent=translateAuthError(err); });
 }
 function handleEmailSignIn(){
-  if(!authGuard()) return;
+  if(!authGuard('auth-error')) return;
   const email=document.getElementById('auth-email').value.trim();
   const password=document.getElementById('auth-password').value;
   const errEl=document.getElementById('auth-error');
@@ -136,18 +165,12 @@ function handleEmailSignIn(){
   signInWithEmail(email,password).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
 }
 function handleEmailSignUp(){
-  if(!authGuard()) return;
+  if(!authGuard('auth-error')) return;
   const email=document.getElementById('auth-email').value.trim();
   const password=document.getElementById('auth-password').value;
   const errEl=document.getElementById('auth-error');
   errEl.textContent='';
   signUpWithEmail(email,password).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
-}
-function handleForgotPassword(){
-  if(!authGuard()) return;
-  const email=document.getElementById('auth-email').value.trim();
-  if(!email){ alert('اول ایمیلت رو توی کادر بالا وارد کن.'); return; }
-  resetPassword(email).then(()=>{ alert('ایمیل بازیابی رمز عبور برات ارسال شد.'); }).catch((err)=>{ alert(translateAuthError(err)); });
 }
 function handleSignOut(){
   signOutUser().then(()=>{ showMembershipPage(); });
@@ -162,7 +185,8 @@ function showPrivacyPage(){
     <div class="card"><h2>چه اطلاعاتی ذخیره می‌شه؟</h2>
       <div style="line-height:2.1">
         📱 نام، تاریخ تولد و نتایج محاسبات فقط روی خود گوشی تو (حافظه‌ی محلی مرورگر) ذخیره می‌شن و به هیچ سروری ارسال نمی‌شن.<br>
-        👤 اگه با ایمیل یا حساب گوگل عضو بشی، فقط ایمیل/نام حسابت (از طریق سرویس Firebase) برای شناسایی ورودت ذخیره می‌شه — نه اطلاعات پروفایل‌ها یا نتایج محاسباتت.<br>
+        👤 اگه با ایمیل یا شماره موبایل عضو بشی، فقط همون اطلاعات هویتی (ایمیل/رمز به‌صورت رمزنگاری‌شده، یا شماره موبایل) روی سرور اختصاصی خودمون ذخیره می‌شه — نه اطلاعات پروفایل‌ها یا نتایج محاسباتت.<br>
+        📲 برای ورود با موبایل، شماره‌ت فقط برای ارسال یک‌بار کد تایید به سرویس پیامکی داده می‌شه و جای دیگه‌ای استفاده نمی‌شه.<br>
         🚫 بدون عضویت هم می‌تونی از همه‌ی امکانات اصلی اپ استفاده کنی.<br>
         🍪 از کوکی یا ابزار ردیابی برای تبلیغات استفاده نمی‌کنیم.<br>
         🗑️ هر وقت بخوای می‌تونی از تنظیمات مرورگر، تمام اطلاعات ذخیره‌شده رو پاک کنی، یا از حسابت خارج بشی.
