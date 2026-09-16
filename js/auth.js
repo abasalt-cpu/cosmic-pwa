@@ -1,72 +1,91 @@
-// ===== تنظیمات Firebase =====
-// این مقادیر از پروژه‌ی Firebase «cosmic-code» گرفته شده.
-const firebaseConfig = {
-  apiKey: "AIzaSyDfRsKh0h7JUZj894fR5nIeD0NBJkwnOb4",
-  authDomain: "cosmic-code-e7b94.firebaseapp.com",
-  projectId: "cosmic-code-e7b94",
-  storageBucket: "cosmic-code-e7b94.firebasestorage.app",
-  messagingSenderId: "948644041400",
-  appId: "1:948644041400:web:190819bce51dcc2a2f1a4d"
-};
+// ===== تنظیمات بک‌اند عضویت =====
+// بعد از دیپلوی Worker روی Cloudflare (طبق راهنمای backend/README.md)، این آدرس رو با آدرس واقعی خودت عوض کن:
+const AUTH_API_BASE = "https://cosmic-code-auth.cosmiccode396.workers.dev";
+// Client ID که از Google Cloud Console گرفتی (مرحله‌ی ۹ راهنما) رو اینجا جایگزین کن:
+const GOOGLE_CLIENT_ID = "948644041400-q6k9d730s9ml847t6us27ufumkijfetc.apps.googleusercontent.com";
 
 let currentUser = null;
-let authReady = false;
-const authReadyCallbacks = [];
+let authToken = localStorage.getItem('authToken') || null;
 
-try {
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-
-  auth.onAuthStateChanged((user) => {
-    currentUser = user;
-    authReady = true;
-    if (typeof onAuthChanged === 'function') onAuthChanged(user);
-    authReadyCallbacks.forEach((cb) => cb(user));
-    authReadyCallbacks.length = 0;
-  });
-
-  // نتیجه‌ی ورود با گوگل (که با ریدایرکت انجام می‌شه) رو بعد از برگشت به صفحه چک می‌کنیم.
-  auth.getRedirectResult().catch((err) => {
-    console.error('Google sign-in redirect error:', err);
-  });
-
-  function signUpWithEmail(email, password) {
-    return auth.createUserWithEmailAndPassword(email, password);
-  }
-  function signInWithEmail(email, password) {
-    return auth.signInWithEmailAndPassword(email, password);
-  }
-  function signInWithGoogle() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    return auth.signInWithRedirect(provider);
-  }
-  function signOutUser() {
-    return auth.signOut();
-  }
-  function resetPassword(email) {
-    return auth.sendPasswordResetEmail(email);
-  }
-  window.signUpWithEmail = signUpWithEmail;
-  window.signInWithEmail = signInWithEmail;
-  window.signInWithGoogle = signInWithGoogle;
-  window.signOutUser = signOutUser;
-  window.resetPassword = resetPassword;
-} catch (e) {
-  console.error('Firebase init failed — عضویت تا وقتی تنظیمات Firebase کامل نشه کار نمی‌کنه.', e);
+function saveSession(token, user) {
+  authToken = token;
+  currentUser = user;
+  localStorage.setItem('authToken', token);
+}
+function clearSession() {
+  authToken = null;
+  currentUser = null;
+  localStorage.removeItem('authToken');
 }
 
+async function authFetch(path, options = {}) {
+  const res = await fetch(AUTH_API_BASE + path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error('پاسخ نامعتبر از سرور.');
+  }
+  if (!res.ok) {
+    throw new Error(data.error || 'خطای ناشناخته.');
+  }
+  return data;
+}
+
+async function signUpWithEmail(email, password) {
+  const data = await authFetch('/signup', { method: 'POST', body: JSON.stringify({ email, password }) });
+  saveSession(data.token, data.user);
+  if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
+  return data.user;
+}
+async function signInWithEmail(email, password) {
+  const data = await authFetch('/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+  saveSession(data.token, data.user);
+  if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
+  return data.user;
+}
+async function requestOtp(phone) {
+  return authFetch('/otp/request', { method: 'POST', body: JSON.stringify({ phone }) });
+}
+async function verifyOtp(phone, code) {
+  const data = await authFetch('/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) });
+  saveSession(data.token, data.user);
+  if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
+  return data.user;
+}
+async function signInWithGoogleCredential(idTokenCredential) {
+  const data = await authFetch('/google', { method: 'POST', body: JSON.stringify({ credential: idTokenCredential }) });
+  saveSession(data.token, data.user);
+  if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
+  return data.user;
+}
+async function signOutUser() {
+  clearSession();
+  if (typeof onAuthChanged === 'function') onAuthChanged(null);
+}
+async function refreshCurrentUser() {
+  if (!authToken) return null;
+  try {
+    const data = await authFetch('/me', { headers: { Authorization: 'Bearer ' + authToken } });
+    currentUser = data.user;
+    if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
+    return currentUser;
+  } catch (e) {
+    // توکن منقضی یا نامعتبره — خارج کن.
+    clearSession();
+    if (typeof onAuthChanged === 'function') onAuthChanged(null);
+    return null;
+  }
+}
+// اگه از قبل توکنی ذخیره شده، همون اول برنامه وضعیت ورود رو چک کن.
+if (authToken) refreshCurrentUser();
+
 function translateAuthError(err) {
-  const map = {
-    'auth/email-already-in-use': 'این ایمیل قبلاً ثبت‌نام شده. وارد شو یا رمزت رو فراموش کردی؟',
-    'auth/invalid-email': 'ایمیل واردشده معتبر نیست.',
-    'auth/weak-password': 'رمز عبور باید حداقل ۶ کاراکتر باشه.',
-    'auth/user-not-found': 'حسابی با این ایمیل پیدا نشد.',
-    'auth/wrong-password': 'رمز عبور اشتباهه.',
-    'auth/invalid-credential': 'ایمیل یا رمز عبور اشتباهه.',
-    'auth/too-many-requests': 'تعداد تلاش‌ها زیاد بوده، کمی صبر کن و دوباره امتحان کن.',
-    'auth/network-request-failed': 'مشکل در اتصال به اینترنت.',
-    'auth/popup-closed-by-user': 'پنجره‌ی ورود بسته شد.',
-    'auth/configuration-not-found': 'تنظیمات Firebase هنوز کامل نشده.'
-  };
-  return map[err.code] || ('خطا: ' + err.message);
+  return err && err.message ? err.message : 'خطای ناشناخته رخ داد.';
 }
