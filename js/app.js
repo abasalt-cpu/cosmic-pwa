@@ -42,12 +42,13 @@ function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); }
 let __wcCondensed=false;
 function updateWelcomeCardScrollState(){
   const card=document.getElementById('welcome-card');
-  if(!card) return;
-  const y=window.scrollY||document.documentElement.scrollTop||0;
-  if(!__wcCondensed && y>64){
+  const sentinel=document.getElementById('wc-sentinel');
+  if(!card || !sentinel) return;
+  const top=sentinel.getBoundingClientRect().top;
+  if(!__wcCondensed && top<-64){
     __wcCondensed=true;
     card.classList.add('is-condensed');
-  } else if(__wcCondensed && y<28){
+  } else if(__wcCondensed && top>-24){
     __wcCondensed=false;
     card.classList.remove('is-condensed');
   }
@@ -57,6 +58,7 @@ function hubHTML(){
   const last=state.lastProfile;
   const lastLine = last ? `آخرین محاسبه: <b>${esc(last.firstName)} ${esc(last.familyName)}</b>${last.report&&last.report.destinyNum?` — عدد سرنوشت ${last.report.destinyNum}`:''}` : 'هنوز محاسبه‌ای نداری';
   return `
+    <div id="wc-sentinel" style="height:1px"></div>
     <div class="card welcome-card" id="welcome-card">
       <div class="wc-full">
         <div class="w-text"><h2>خوش اومدی 👋</h2>
@@ -84,7 +86,7 @@ function hubHTML(){
     <div class="card banner-card">
       <span class="b-icon">🌟</span>
       <div class="b-text" id="bannerSlogan">${esc(getSessionSlogan())}</div>
-      <span class="b-icon">♾️</span>
+      <span class="b-icon"><svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 12c2.5-4.5 6-7 10-7s7.5 2.5 10 7c-2.5 4.5-6 7-10 7s-7.5-2.5-10-7z" fill="none" stroke="var(--gold-soft)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.3" fill="var(--gold-soft)"/></svg></span>
     </div>`;
 }
 function showNotifications(){
@@ -558,7 +560,7 @@ function showSavedProfiles(){
   setNav('profiles');
   render(`<div class="card"><h2>📇 پروفایل‌های من</h2>
       ${state.savedProfiles.length===0?'<p class="desc">هنوز پروفایلی ذخیره نشده.</p>':
-        state.savedProfiles.map((p,i)=>`<div class="name-item" style="cursor:pointer" onclick="showSavedProfile(${i})"><b>${esc(p.firstName)} ${esc(p.familyName)}</b> — کد: ${esc(p.report.cosmicCode.slice(0,20))}...</div>`).join('')}
+        state.savedProfiles.map((p,i)=>`<div class="name-item" style="cursor:pointer" onclick="showSavedProfile(${i})"><b>${esc(p.firstName)} ${esc(p.familyName)}</b> — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode.slice(0,20))}...</span></div>`).join('')}
     </div>`);
 }
 function showSavedProfile(i){const p=state.savedProfiles[i]; showCosmicResult(p.firstName,p.familyName,p.report);}
