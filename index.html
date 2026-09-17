@@ -47,7 +47,7 @@ padding:18px 16px; margin-bottom:14px; backdrop-filter: blur(6px);}
 main .card:last-child{margin-bottom:0;}
 .card h2{margin:0 0 10px; font-size:16px; color:var(--gold-soft); font-weight:700;}
 .card p.desc{color:var(--text-dim); font-size:13px; margin:0 0 12px; line-height:1.9;}
-.welcome-card{position:sticky; top:var(--header-h, 100px); z-index:9; transition:padding .25s ease;}
+.welcome-card{position:relative;}
 .wc-full{display:flex; align-items:center; gap:14px;}
 .wc-full .w-text{flex:1; text-align:right;}
 .wc-full .w-text h2{margin:0 0 6px;}
@@ -55,10 +55,11 @@ main .card:last-child{margin-bottom:0;}
 background:radial-gradient(circle at 42% 32%, #3d2c6b, #1a1436 70%); border:1px solid var(--line);
 box-shadow:0 0 0 1px #ffffff08 inset, 0 0 24px #7c4fe044;}
 .welcome-icon img{width:100%; height:100%; object-fit:cover; display:block;}
-.wc-condensed{display:none; align-items:center; gap:10px;}
-.welcome-card.is-condensed{padding-top:10px; padding-bottom:10px;}
-.welcome-card.is-condensed .wc-full{display:none;}
-.welcome-card.is-condensed .wc-condensed{display:flex;}
+.wc-mini-bar{position:fixed; top:var(--header-h, 100px); left:0; right:0; z-index:9; max-width:520px; margin:0 auto;
+display:flex; align-items:center; gap:10px; padding:10px 16px; background:var(--panel);
+backdrop-filter:blur(10px); border-bottom:1px solid var(--line); border-radius:0 0 16px 16px;
+opacity:0; transform:translateY(-10px); pointer-events:none; transition:opacity .2s ease, transform .2s ease;}
+.wc-mini-bar.is-visible{opacity:1; transform:translateY(0); pointer-events:auto;}
 .wc-last{flex:1; font-size:12.5px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .wc-last b{color:var(--gold-soft);}
 .wc-mini-btn{width:auto !important; padding:8px 14px !important; font-size:12.5px !important; border-radius:999px !important; flex-shrink:0;}

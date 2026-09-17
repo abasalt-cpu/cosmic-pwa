@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cosmic-number-v11';
+const CACHE_NAME = 'cosmic-number-v12';
 const ASSETS = ['./','./index.html','./manifest.json','./data/data.js','./data/tables.js',
 './js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/baby_name.js','./js/app.js','./js/auth.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
