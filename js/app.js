@@ -44,10 +44,12 @@ function updateWelcomeCardScrollState(){
   const card=document.getElementById('welcome-card');
   if(!card) return;
   const y=window.scrollY||document.documentElement.scrollTop||0;
-  const shouldCondense=y>36;
-  if(shouldCondense!==__wcCondensed){
-    __wcCondensed=shouldCondense;
-    card.classList.toggle('is-condensed', shouldCondense);
+  if(!__wcCondensed && y>64){
+    __wcCondensed=true;
+    card.classList.add('is-condensed');
+  } else if(__wcCondensed && y<28){
+    __wcCondensed=false;
+    card.classList.remove('is-condensed');
   }
 }
 window.addEventListener('scroll', ()=>{ requestAnimationFrame(updateWelcomeCardScrollState); }, {passive:true});
@@ -64,7 +66,7 @@ function hubHTML(){
       </div>
       <div class="wc-condensed">
         <span class="wc-last">${lastLine}</span>
-        <button class="btn wc-mini-btn" onclick="showCosmicInputForm()">${ICON_CALC}محاسبه</button>
+        <button class="btn wc-mini-btn" onclick="showCosmicInputForm()">${ICON_CALC}کد کیهانی</button>
         <img src="icons/hand-glow.png" class="wc-mini-hand" onclick="rerollSlogan()" alt="" role="button" aria-label="یه شعار دیگه">
       </div>
     </div>
