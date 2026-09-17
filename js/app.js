@@ -42,13 +42,14 @@ function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); }
 let __wcCondensed=false;
 function updateWelcomeCardScrollState(){
   const bar=document.getElementById('wc-mini-bar');
-  const sentinel=document.getElementById('wc-sentinel');
-  if(!bar || !sentinel) return;
-  const top=sentinel.getBoundingClientRect().top;
-  if(!__wcCondensed && top<-64){
+  const card=document.getElementById('welcome-card');
+  if(!bar || !card) return;
+  const headerH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h'))||100;
+  const cardBottom=card.getBoundingClientRect().bottom;
+  if(!__wcCondensed && cardBottom<headerH+8){
     __wcCondensed=true;
     bar.classList.add('is-visible');
-  } else if(__wcCondensed && top>-24){
+  } else if(__wcCondensed && cardBottom>headerH+40){
     __wcCondensed=false;
     bar.classList.remove('is-visible');
   }
@@ -58,7 +59,6 @@ function hubHTML(){
   const last=state.lastProfile;
   const lastLine = last ? `آخرین محاسبه: <b>${esc(last.firstName)} ${esc(last.familyName)}</b>${last.report&&last.report.destinyNum?` — عدد سرنوشت ${last.report.destinyNum}`:''}` : 'هنوز محاسبه‌ای نداری';
   return `
-    <div id="wc-sentinel" style="height:1px"></div>
     <div class="wc-mini-bar" id="wc-mini-bar">
       <span class="wc-last">${lastLine}</span>
       <button class="btn wc-mini-btn" onclick="showCosmicInputForm()">${ICON_CALC}کد کیهانی</button>
