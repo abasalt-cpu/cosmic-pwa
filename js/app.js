@@ -41,16 +41,16 @@ function setNav(key){document.querySelectorAll('nav.bottom .nav-btn').forEach(b=
 function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); }
 let __wcCondensed=false;
 function updateWelcomeCardScrollState(){
-  const card=document.getElementById('welcome-card');
+  const bar=document.getElementById('wc-mini-bar');
   const sentinel=document.getElementById('wc-sentinel');
-  if(!card || !sentinel) return;
+  if(!bar || !sentinel) return;
   const top=sentinel.getBoundingClientRect().top;
   if(!__wcCondensed && top<-64){
     __wcCondensed=true;
-    card.classList.add('is-condensed');
+    bar.classList.add('is-visible');
   } else if(__wcCondensed && top>-24){
     __wcCondensed=false;
-    card.classList.remove('is-condensed');
+    bar.classList.remove('is-visible');
   }
 }
 window.addEventListener('scroll', ()=>{ requestAnimationFrame(updateWelcomeCardScrollState); }, {passive:true});
@@ -59,17 +59,17 @@ function hubHTML(){
   const lastLine = last ? `آخرین محاسبه: <b>${esc(last.firstName)} ${esc(last.familyName)}</b>${last.report&&last.report.destinyNum?` — عدد سرنوشت ${last.report.destinyNum}`:''}` : 'هنوز محاسبه‌ای نداری';
   return `
     <div id="wc-sentinel" style="height:1px"></div>
+    <div class="wc-mini-bar" id="wc-mini-bar">
+      <span class="wc-last">${lastLine}</span>
+      <button class="btn wc-mini-btn" onclick="showCosmicInputForm()">${ICON_CALC}کد کیهانی</button>
+      <img src="icons/hand-glow.png" class="wc-mini-hand" onclick="rerollSlogan()" alt="" role="button" aria-label="یه شعار دیگه">
+    </div>
     <div class="card welcome-card" id="welcome-card">
       <div class="wc-full">
         <div class="w-text"><h2>خوش اومدی 👋</h2>
         <p class="desc">${last?lastLine:'هنوز محاسبه‌ای انجام ندادی. از دکمه‌ی زیر شروع کن.'}</p>
         <button class="btn" onclick="showCosmicInputForm()">${ICON_CALC}محاسبه‌ی کد کیهانی</button></div>
         <div class="welcome-icon" onclick="rerollSlogan()" role="button" aria-label="یه شعار دیگه" style="cursor:pointer"><img src="icons/hand-glow.png" alt=""></div>
-      </div>
-      <div class="wc-condensed">
-        <span class="wc-last">${lastLine}</span>
-        <button class="btn wc-mini-btn" onclick="showCosmicInputForm()">${ICON_CALC}کد کیهانی</button>
-        <img src="icons/hand-glow.png" class="wc-mini-hand" onclick="rerollSlogan()" alt="" role="button" aria-label="یه شعار دیگه">
       </div>
     </div>
     <div class="grid-menu">
@@ -560,7 +560,7 @@ function showSavedProfiles(){
   setNav('profiles');
   render(`<div class="card"><h2>📇 پروفایل‌های من</h2>
       ${state.savedProfiles.length===0?'<p class="desc">هنوز پروفایلی ذخیره نشده.</p>':
-        state.savedProfiles.map((p,i)=>`<div class="name-item" style="cursor:pointer" onclick="showSavedProfile(${i})"><b>${esc(p.firstName)} ${esc(p.familyName)}</b> — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode.slice(0,20))}...</span></div>`).join('')}
+        state.savedProfiles.map((p,i)=>`<div class="name-item" style="cursor:pointer" onclick="showSavedProfile(${i})"><b>${esc(p.firstName)} ${esc(p.familyName)}</b> — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode)}</span></div>`).join('')}
     </div>`);
 }
 function showSavedProfile(i){const p=state.savedProfiles[i]; showCosmicResult(p.firstName,p.familyName,p.report);}
