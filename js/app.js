@@ -1,4 +1,10 @@
 const PERSIAN_MONTHS=["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+const ICON_CALC=`<svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-4px; margin-inline-end:6px"><circle cx="12" cy="12" r="11" fill="url(#gCalc)"/><path d="M12 6.3l1.3 3.4 3.4 1.3-3.4 1.3L12 15.7l-1.3-3.4-3.4-1.3 3.4-1.3L12 6.3z" fill="#241742"/><defs><linearGradient id="gCalc" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
+const ICON_INFO=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="url(#gInfo)"/><circle cx="12" cy="7.6" r="1.3" fill="#241742"/><rect x="10.8" y="10.6" width="2.4" height="7" rx="1.2" fill="#241742"/><defs><linearGradient id="gInfo" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
+const ICON_ACCOUNT=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="url(#gAcct)"/><circle cx="12" cy="9.3" r="3.1" fill="#241742"/><path d="M5.5 18.2c1.1-3 3.7-4.3 6.5-4.3s5.4 1.3 6.5 4.3c-1.9 1.6-4.1 2.5-6.5 2.5s-4.6-.9-6.5-2.5z" fill="#241742"/><defs><linearGradient id="gAcct" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
+const ICON_PRIVACY=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="url(#gLock)"/><rect x="7.8" y="11" width="8.4" height="6.6" rx="1.6" fill="#241742"/><path d="M9.2 11V9a2.8 2.8 0 0 1 5.6 0v2" stroke="#241742" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="12" cy="13.9" r="1" fill="#f0c96a"/><defs><linearGradient id="gLock" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
+const ICON_TERMS=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="url(#gDoc)"/><rect x="7.5" y="6.5" width="9" height="11" rx="1.3" fill="#241742"/><rect x="9.3" y="9.2" width="5.4" height="1.1" rx=".55" fill="#f0c96a"/><rect x="9.3" y="11.6" width="5.4" height="1.1" rx=".55" fill="#f0c96a"/><rect x="9.3" y="14" width="3.6" height="1.1" rx=".55" fill="#f0c96a"/><defs><linearGradient id="gDoc" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
+const GOOGLE_G_LOGO=`<svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.9-2.26 5.36-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.94 23.94 0 0 0 0 24c0 3.87.92 7.53 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.92-2.14 15.89-5.82l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.97 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
 const state={lastProfile:JSON.parse(localStorage.getItem('lastProfile')||'null'), savedProfiles:JSON.parse(localStorage.getItem('savedProfiles')||'[]')};
 function saveProfile(p){
   state.lastProfile=p; localStorage.setItem('lastProfile',JSON.stringify(p));
@@ -32,14 +38,35 @@ document.querySelectorAll('nav.bottom .nav-btn').forEach(btn=>{
   });
 });
 function setNav(key){document.querySelectorAll('nav.bottom .nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.nav===key));}
+function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); }
+let __wcCondensed=false;
+function updateWelcomeCardScrollState(){
+  const card=document.getElementById('welcome-card');
+  if(!card) return;
+  const y=window.scrollY||document.documentElement.scrollTop||0;
+  const shouldCondense=y>36;
+  if(shouldCondense!==__wcCondensed){
+    __wcCondensed=shouldCondense;
+    card.classList.toggle('is-condensed', shouldCondense);
+  }
+}
+window.addEventListener('scroll', ()=>{ requestAnimationFrame(updateWelcomeCardScrollState); }, {passive:true});
 function hubHTML(){
   const last=state.lastProfile;
+  const lastLine = last ? `آخرین محاسبه: <b>${esc(last.firstName)} ${esc(last.familyName)}</b>${last.report&&last.report.destinyNum?` — عدد سرنوشت ${last.report.destinyNum}`:''}` : 'هنوز محاسبه‌ای نداری';
   return `
-    <div class="card welcome-card">
-      <div class="w-text"><h2>خوش اومدی 👋</h2>
-      <p class="desc">${last?`آخرین محاسبه: <b>${esc(last.firstName)} ${esc(last.familyName)}</b>`:'هنوز محاسبه‌ای انجام ندادی. از دکمه‌ی زیر شروع کن.'}</p>
-      <button class="btn" onclick="showCosmicInputForm()">🔢 محاسبه‌ی کد کیهانی</button></div>
-      <div class="welcome-icon" onclick="rerollSlogan()" role="button" aria-label="یه شعار دیگه" style="cursor:pointer"><img src="icons/hand-glow.png" alt=""></div>
+    <div class="card welcome-card" id="welcome-card">
+      <div class="wc-full">
+        <div class="w-text"><h2>خوش اومدی 👋</h2>
+        <p class="desc">${last?lastLine:'هنوز محاسبه‌ای انجام ندادی. از دکمه‌ی زیر شروع کن.'}</p>
+        <button class="btn" onclick="showCosmicInputForm()">${ICON_CALC}محاسبه‌ی کد کیهانی</button></div>
+        <div class="welcome-icon" onclick="rerollSlogan()" role="button" aria-label="یه شعار دیگه" style="cursor:pointer"><img src="icons/hand-glow.png" alt=""></div>
+      </div>
+      <div class="wc-condensed">
+        <span class="wc-last">${lastLine}</span>
+        <button class="btn wc-mini-btn" onclick="showCosmicInputForm()">${ICON_CALC}محاسبه</button>
+        <img src="icons/hand-glow.png" class="wc-mini-hand" onclick="rerollSlogan()" alt="" role="button" aria-label="یه شعار دیگه">
+      </div>
     </div>
     <div class="grid-menu">
       <div class="menu-tile" onclick="showHafez()"><img src="icons/menu/icon_hafez.png" class="icon-img"><span class="label">فال حافظ</span><span class="desc">پیام امروز حافظ برات</span></div>
@@ -58,7 +85,6 @@ function hubHTML(){
       <span class="b-icon">♾️</span>
     </div>`;
 }
-function showHome(){ setNav('home'); render(hubHTML()); }
 function showNotifications(){
   render(`${backBtn('showHome()')}<div class="card"><h2>🔔 اعلان‌ها</h2>
       <p class="desc">فعلاً اعلان جدیدی نداری.</p></div>`);
@@ -66,30 +92,30 @@ function showNotifications(){
 function showMoreMenu(){
   setNav('more');
   render(`<div class="card">
-      <div class="list-item" onclick="showAboutPage()"><span class="li-label">ℹ️ درباره‌ی نرم‌افزار</span><span class="li-arrow">‹</span></div>
-      <div class="list-item" onclick="showMembershipPage()"><span class="li-label">👤 حساب کاربری</span><span class="li-arrow">‹</span></div>
-      <div class="list-item" onclick="showPrivacyPage()"><span class="li-label">🔒 حریم خصوصی</span><span class="li-arrow">‹</span></div>
-      <div class="list-item" onclick="showTermsPage()"><span class="li-label">📜 قوانین</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showAboutPage()"><span class="li-label">${ICON_INFO}درباره‌ی نرم‌افزار</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showMembershipPage()"><span class="li-label">${ICON_ACCOUNT}حساب کاربری</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showPrivacyPage()"><span class="li-label">${ICON_PRIVACY}حریم خصوصی</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showTermsPage()"><span class="li-label">${ICON_TERMS}قوانین و شرایط استفاده</span><span class="li-arrow">‹</span></div>
     </div>
     <div class="small-note">اطلاعات پروفایل‌هات (اسم، تاریخ تولد و نتایج) فقط روی خود گوشیت ذخیره می‌شه. عضویت اختیاریه و فقط برای ورود به حساب استفاده می‌شه.</div>`);
 }
 function showAboutPage(){
   render(`${backBtn('showMoreMenu()')}
-    <div class="card"><h2>ℹ️ درباره‌ی نرم‌افزار</h2>
-      <p class="desc">«کد کیهانی» یه ابزار سرگرمی و خودشناسیه که با ترکیب علم عددشناسی، طالع‌بینی و متون الهام‌بخش، یه نگاه متفاوت به شخصیت، مسیر زندگی و روزهای تو می‌ندازه.</p></div>
-    <div class="card"><h2>چیا توی این اپ هست؟</h2>
+    <div class="card"><h2 style="display:flex; align-items:center; gap:8px">${ICON_INFO}درباره‌ی نرم‌افزار</h2>
+      <p class="desc">«کد کیهانی» با ترکیب عددشناسی، طالع‌بینی و متون الهام‌بخش فارسی، یه نگاه تازه و شخصی‌سازی‌شده به شخصیت، مسیر زندگی و روزهای تو ارائه می‌ده — طراحی‌شده برای کاوش، نه برای پیش‌گویی قطعی.</p></div>
+    <div class="card"><h3 style="margin-bottom:10px">امکانات نرم‌افزار</h3>
       <div style="line-height:2.1">
         🔢 محاسبه‌ی کد کیهانی از روی نام و تاریخ تولد<br>
-        🔮 فال حافظ روزانه<br>
+        🔮 فال حافظ روزانه (با امکان سه‌بار فال در روز)<br>
         ♈ طالع‌بینی شخصی و روزانه<br>
         🕊️ مناجات و متون معنوی<br>
         🌅 الهام روز<br>
         🌌 زایچه‌ی تقریبی<br>
         ⚖️ مقایسه‌ی عددی و ستاره‌ای دو نفر<br>
         👶 پیشنهاد اسم برای فرزند<br>
-        📇 ذخیره‌ی پروفایل‌های چند نفر
+        📇 ذخیره‌ی پروفایل‌های چند نفر روی گوشی
       </div></div>
-    <div class="card"><p class="desc" style="margin:0">نسخه‌ی فعلی: 1.0.0 — این نرم‌افزار به‌صورت مداوم در حال به‌روزرسانی و اضافه شدن امکانات جدیده.</p></div>`);
+    <div class="card"><p class="desc" style="margin:0">نسخه‌ی فعلی: 1.0.0 — این نرم‌افزار به‌صورت مداوم در حال به‌روزرسانی و اضافه‌شدن امکانات جدیده.</p></div>`);
 }
 function showMembershipPage(){
   if(currentUser){
@@ -117,18 +143,27 @@ function showMembershipPage(){
     </div>`);
   initGoogleButton();
 }
+let googleTokenClient=null;
 function initGoogleButton(){
   const el=document.getElementById('google-btn-container');
   if(!el) return;
-  if(typeof google==='undefined' || !google.accounts || !google.accounts.id || GOOGLE_CLIENT_ID==='YOUR_GOOGLE_CLIENT_ID'){
+  if(typeof google==='undefined' || !google.accounts || !google.accounts.oauth2 || GOOGLE_CLIENT_ID==='YOUR_GOOGLE_CLIENT_ID'){
     el.innerHTML='<p class="small-note">ورود با گوگل هنوز تنظیم نشده.</p>';
     return;
   }
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredentialResponse });
-  google.accounts.id.renderButton(el, { theme:'filled_black', size:'large', text:'continue_with', shape:'pill', width:280 });
+  el.innerHTML=`<button type="button" class="google-btn" onclick="handleGoogleButtonClick()">${GOOGLE_G_LOGO}<span>ورود با اکانت گوگل</span></button>`;
+  googleTokenClient=google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'openid email profile',
+    callback: handleGoogleTokenResponse
+  });
 }
-function handleGoogleCredentialResponse(response){
-  signInWithGoogleCredential(response.credential).then(()=>{ showMembershipPage(); }).catch((err)=>{ alert(translateAuthError(err)); });
+function handleGoogleButtonClick(){
+  if(googleTokenClient) googleTokenClient.requestAccessToken();
+}
+function handleGoogleTokenResponse(response){
+  if(!response || response.error){ return; }
+  signInWithGoogleCredential(response.access_token).then(()=>{ showMembershipPage(); }).catch((err)=>{ alert(translateAuthError(err)); });
 }
 function authGuard(elId){
   if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')){
@@ -180,13 +215,14 @@ function onAuthChanged(user){
 }
 function showPrivacyPage(){
   render(`${backBtn('showMoreMenu()')}
-    <div class="card"><h2>🔒 حریم خصوصی</h2>
+    <div class="card"><h2 style="display:flex; align-items:center; gap:8px">${ICON_PRIVACY}حریم خصوصی</h2>
       <p class="desc">حریم خصوصی تو برای ما مهمه. تمام امکانات اصلی اپ (محاسبه‌ی کد کیهانی، فال، طالع‌بینی و...) بدون نیاز به ثبت‌نام و کاملاً محلی روی گوشیت کار می‌کنن؛ عضویت فقط یه قابلیت اختیاریه.</p></div>
-    <div class="card"><h2>چه اطلاعاتی ذخیره می‌شه؟</h2>
+    <div class="card"><h3 style="margin-bottom:10px">چه اطلاعاتی ذخیره می‌شه؟</h3>
       <div style="line-height:2.1">
         📱 نام، تاریخ تولد و نتایج محاسبات فقط روی خود گوشی تو (حافظه‌ی محلی مرورگر) ذخیره می‌شن و به هیچ سروری ارسال نمی‌شن.<br>
         👤 اگه با ایمیل یا شماره موبایل عضو بشی، فقط همون اطلاعات هویتی (ایمیل/رمز به‌صورت رمزنگاری‌شده، یا شماره موبایل) روی سرور اختصاصی خودمون ذخیره می‌شه — نه اطلاعات پروفایل‌ها یا نتایج محاسباتت.<br>
-        📲 برای ورود با موبایل، شماره‌ت فقط برای ارسال یک‌بار کد تایید به سرویس پیامکی داده می‌شه و جای دیگه‌ای استفاده نمی‌شه.<br>
+        🔵 اگه با گوگل وارد بشی، فقط ایمیل و نامی که گوگل در اختیارمون می‌ذاره برای شناسایی حسابت ذخیره می‌شه.<br>
+        📲 برای ورود با موبایل (در آینده)، شماره‌ت فقط برای ارسال یک‌بار کد تایید استفاده می‌شه و جای دیگه‌ای ذخیره نمی‌مونه.<br>
         🚫 بدون عضویت هم می‌تونی از همه‌ی امکانات اصلی اپ استفاده کنی.<br>
         🍪 از کوکی یا ابزار ردیابی برای تبلیغات استفاده نمی‌کنیم.<br>
         🗑️ هر وقت بخوای می‌تونی از تنظیمات مرورگر، تمام اطلاعات ذخیره‌شده رو پاک کنی، یا از حسابت خارج بشی.
@@ -195,7 +231,7 @@ function showPrivacyPage(){
 }
 function showTermsPage(){
   render(`${backBtn('showMoreMenu()')}
-    <div class="card"><h2>📜 قوانین و شرایط استفاده</h2>
+    <div class="card"><h2 style="display:flex; align-items:center; gap:8px">${ICON_TERMS}قوانین و شرایط استفاده</h2>
       <p class="desc">با استفاده از «کد کیهانی» فرض می‌شه شرایط زیر رو مطالعه کرده و پذیرفتی:</p></div>
     <div class="card">
       <div style="line-height:2.1">
@@ -342,7 +378,7 @@ function showNatalEntry(){
   if(!state.lastProfile){
     render(`${backBtn('showHome()')}<div class="card"><h2>🌌 زایچه‌ی تقریبی</h2>
       <p class="desc">برای زایچه، اول یه‌بار «کد کیهانی» رو محاسبه کن (چون از همون تاریخ تولد استفاده می‌کنیم).</p>
-      <button class="btn" onclick="showCosmicInputForm()">محاسبه‌ی کد کیهانی</button></div>`); return;
+      <button class="btn" onclick="showCosmicInputForm()">${ICON_CALC}محاسبه‌ی کد کیهانی</button></div>`); return;
   }
   const p=state.lastProfile;
   render(`${backBtn('showHome()')}<div class="card"><h2>🌌 زایچه‌ی تقریبی</h2>

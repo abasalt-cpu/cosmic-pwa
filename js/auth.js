@@ -59,8 +59,8 @@ async function verifyOtp(phone, code) {
   if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
   return data.user;
 }
-async function signInWithGoogleCredential(idTokenCredential) {
-  const data = await authFetch('/google', { method: 'POST', body: JSON.stringify({ credential: idTokenCredential }) });
+async function signInWithGoogleCredential(accessToken) {
+  const data = await authFetch('/google', { method: 'POST', body: JSON.stringify({ access_token: accessToken }) });
   saveSession(data.token, data.user);
   if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
   return data.user;
