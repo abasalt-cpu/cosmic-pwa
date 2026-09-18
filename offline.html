@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#161233">
+<title>کد کیهانی — بدون اینترنت</title>
+<style>
+:root{--bg-top:#161233; --bg-bottom:#2b1a4a; --gold:#e8b84b; --gold-soft:#f0c96a; --text:#f1eef9; --text-dim:#b9b0d6; --line:#3d3268;}
+*{box-sizing:border-box;}
+html,body{margin:0; padding:0;}
+body{background:radial-gradient(1200px 800px at 15% -10%, #3a2a63 0%, transparent 60%),
+radial-gradient(900px 700px at 100% 0%, #402458 0%, transparent 55%),
+linear-gradient(180deg, var(--bg-top), var(--bg-bottom) 70%);
+color:var(--text); min-height:100vh; font-family:Tahoma, sans-serif;
+display:flex; align-items:center; justify-content:center; text-align:center; padding:24px;}
+.box{max-width:380px;}
+.icon{font-size:56px; margin-bottom:18px; filter:drop-shadow(0 0 18px #7c4fe066);}
+h1{font-size:19px; margin:0 0 10px; color:var(--gold-soft);}
+p{font-size:14px; line-height:1.9; color:var(--text-dim); margin:0 0 22px;}
+button{background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241742; border:none;
+border-radius:999px; padding:13px 28px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit;}
+button:active{opacity:.85;}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="icon">🌌</div>
+  <h1>به نظر می‌رسه اتصال اینترنت نداری</h1>
+  <p>برای این بخش نیاز به اینترنته. وصل شو و دوباره امتحان کن — بخش‌هایی که قبلاً باز کرده بودی معمولاً بدون اینترنت هم کار می‌کنن.</p>
+  <button onclick="location.reload()">🔄 تلاش دوباره</button>
+</div>
+</body>
+</html>
