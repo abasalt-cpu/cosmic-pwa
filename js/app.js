@@ -157,7 +157,7 @@ function initGoogleButton(){
     el.innerHTML='<p class="small-note">ورود با گوگل هنوز تنظیم نشده.</p>';
     return;
   }
-  el.innerHTML=`<button type="button" class="google-btn" onclick="handleGoogleButtonClick()">${GOOGLE_G_LOGO}<span>ورود با اکانت گوگل</span></button>`;
+  el.innerHTML=`<button type="button" class="google-btn" onclick="handleGoogleButtonClick()">${GOOGLE_G_LOGO}<span>ثبت نام با حساب گوگل</span></button>`;
   googleTokenClient=google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
     scope: 'openid email profile',
