@@ -1,5 +1,5 @@
-const CACHE_NAME = 'cosmic-number-v13';
-const ASSETS = ['./','./index.html','./manifest.json','./data/data.js','./data/tables.js',
+const CACHE_NAME = 'cosmic-number-v15';
+const ASSETS = ['./','./index.html','./offline.html','./manifest.json','./data/data.js','./data/tables.js',
 './js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/baby_name.js','./js/app.js','./js/auth.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
 './icons/apple-touch-icon.png','./icons/favicon-32.png','./icons/favicon-16.png','./icons/hand-glow.png',
@@ -34,6 +34,10 @@ self.addEventListener('fetch', (event) => {
       const copy = fresh.clone();
       caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
       return fresh;
-    }).catch(() => caches.match(event.request))
+    }).catch(() => caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      if (event.request.mode === 'navigate') return caches.match('./offline.html');
+      return Response.error();
+    }))
   );
 });
