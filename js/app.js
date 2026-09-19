@@ -166,7 +166,7 @@ function showMembershipPage(){
     const sub = currentUser.email || currentUser.phone || '';
     render(`${backBtn('showMoreMenu()')}
       <div class="card"><h2>👤 حساب کاربری</h2>
-        <p class="desc">با حساب <b>${esc(label)}</b> وارد شدی.${sub && sub!==label?' ('+esc(sub)+')':''}</p></div>
+        <p class="desc">با حساب <b style="color:#4fd17a">${esc(label)}</b> وارد شدی.${sub && sub!==label?' (<span style="color:#4fd17a">'+esc(sub)+'</span>)':''}</p></div>
       <div class="card"><button class="btn secondary" onclick="handleSignOut()">🚪 خروج از حساب</button></div>`);
     return;
   }
