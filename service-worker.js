@@ -1,6 +1,6 @@
-const CACHE_NAME = 'cosmic-number-v18';
+const CACHE_NAME = 'cosmic-number-v19';
 const ASSETS = ['./','./index.html','./offline.html','./manifest.json','./data/data.js','./data/tables.js',
-'./js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/baby_name.js','./js/app.js','./js/auth.js',
+'./js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/baby_name.js','./js/app.js','./js/auth.js','./js/push.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
 './icons/apple-touch-icon.png','./icons/favicon-32.png','./icons/favicon-16.png','./icons/hand-glow.png',
 './icons/menu/icon_app_192.png','./icons/menu/icon_app_512.png','./icons/menu/icon_baby.png','./icons/menu/icon_compare.png',
@@ -39,5 +39,25 @@ self.addEventListener('fetch', (event) => {
       if (event.request.mode === 'navigate') return caches.match('./offline.html');
       return Response.error();
     }))
+  );
+});
+self.addEventListener('push', (event) => {
+  let data = { title: '🎂 یادآوری تولد', body: 'امروز یه تولد ویژه داری!' };
+  try { if (event.data) data = event.data.json(); } catch (e) {}
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    dir: 'rtl',
+    lang: 'fa',
+  }));
+});
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsArr) => {
+      for (const client of clientsArr) { if ('focus' in client) return client.focus(); }
+      if (self.clients.openWindow) return self.clients.openWindow('./');
+    })
   );
 });
