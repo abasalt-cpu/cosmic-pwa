@@ -52,9 +52,8 @@ function getTodaysBirthdayProfiles(){
 function maybeShowBirthdayCelebration(){
   const todays=getTodaysBirthdayProfiles();
   if(todays.length===0) return;
-  const todayKey=new Date().toDateString();
-  if(localStorage.getItem('birthdayCelebrationShown')===todayKey) return;
-  localStorage.setItem('birthdayCelebrationShown', todayKey);
+  if(sessionStorage.getItem('birthdayCelebrationShown')) return; // یه‌بار در هر بار باز کردن اپ، نه هر بار رفتن به خانه
+  sessionStorage.setItem('birthdayCelebrationShown', '1');
   launchBalloons(todays.map(p=>`${p.firstName} ${p.familyName}`.trim()));
 }
 function launchBalloons(names){
@@ -605,7 +604,11 @@ function showSavedProfiles(){
       ${state.savedProfiles.length===0?'<p class="desc">هنوز پروفایلی ذخیره نشده.</p>':
         state.savedProfiles.map((p,i)=>{
           const isBday=p.report && p.report.gm===todayM && p.report.gd===todayD;
-          return `<div class="name-item" style="cursor:pointer${isBday?'; background:linear-gradient(90deg, #e8b84b22, transparent); border-radius:8px; padding-inline-start:8px':''}" onclick="showSavedProfile(${i})">${isBday?'💐 ':''}<b>${esc(p.firstName)} ${esc(p.familyName)}</b>${isBday?' <span style="color:var(--gold-soft); font-size:12px">(امروز تولدشه 🎉)</span>':''} — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode)}</span></div>`;
+          const fullName=`${p.firstName} ${p.familyName}`.trim();
+          const nameHtml=isBday
+            ? `<span onclick="event.stopPropagation(); launchBalloons(['${esc(fullName).replace(/'/g,"\\'")}'])" style="cursor:pointer"><b>${esc(p.firstName)} ${esc(p.familyName)}</b></span>`
+            : `<b>${esc(p.firstName)} ${esc(p.familyName)}</b>`;
+          return `<div class="name-item" style="cursor:pointer${isBday?'; background:linear-gradient(90deg, #e8b84b22, transparent); border-radius:8px; padding-inline-start:8px':''}" onclick="showSavedProfile(${i})">${isBday?'💐 ':''}${nameHtml}${isBday?' <span style="color:var(--gold-soft); font-size:12px">(امروز تولدشه 🎉)</span>':''} — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode)}</span></div>`;
         }).join('')}
     </div>
     <div class="card">
