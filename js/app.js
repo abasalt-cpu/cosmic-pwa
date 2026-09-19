@@ -11,6 +11,9 @@ function saveProfile(p){
   state.savedProfiles=state.savedProfiles.filter(x=>!(x.firstName===p.firstName&&x.familyName===p.familyName));
   state.savedProfiles.unshift(p); state.savedProfiles=state.savedProfiles.slice(0,15);
   localStorage.setItem('savedProfiles',JSON.stringify(state.savedProfiles));
+  if(typeof isBirthdayRemindersEnabled==='function' && isBirthdayRemindersEnabled()){
+    syncBirthdayReminders().catch(()=>{});
+  }
 }
 const app=document.getElementById('app');
 let __suppressPush=true;
@@ -38,7 +41,39 @@ document.querySelectorAll('nav.bottom .nav-btn').forEach(btn=>{
   });
 });
 function setNav(key){document.querySelectorAll('nav.bottom .nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.nav===key));}
-function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); }
+function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); maybeShowBirthdayCelebration(); }
+function getTodaysBirthdayProfiles(){
+  const now=new Date();
+  const m=now.getMonth()+1, d=now.getDate();
+  return state.savedProfiles.filter(p=>p.report && p.report.gm===m && p.report.gd===d);
+}
+function maybeShowBirthdayCelebration(){
+  const todays=getTodaysBirthdayProfiles();
+  if(todays.length===0) return;
+  const todayKey=new Date().toDateString();
+  if(localStorage.getItem('birthdayCelebrationShown')===todayKey) return;
+  localStorage.setItem('birthdayCelebrationShown', todayKey);
+  launchBalloons(todays.map(p=>`${p.firstName} ${p.familyName}`.trim()));
+}
+function launchBalloons(names){
+  const overlay=document.createElement('div');
+  overlay.className='balloon-overlay';
+  const colors=['#e8546b','#4fb8e8','#f0c96a','#8a6fe0','#5fd18f','#ef8f4e'];
+  let html='';
+  for(let i=0;i<18;i++){
+    const left=(Math.random()*94).toFixed(1);
+    const delay=(Math.random()*1.8).toFixed(2);
+    const duration=(6+Math.random()*3).toFixed(2);
+    const color=colors[i%colors.length];
+    html+=`<div class="balloon" style="left:${left}%; animation-delay:${delay}s; animation-duration:${duration}s;">
+      <svg width="40" height="56" viewBox="0 0 40 56"><ellipse cx="20" cy="20" rx="18" ry="20" fill="${color}"/><path d="M20 40 L18 54 M20 40 L20 55 M20 40 L22 54" stroke="#ffffff55" stroke-width="1.3" fill="none"/><path d="M14 15c1-3 4-5 6-4" stroke="#ffffff77" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>
+    </div>`;
+  }
+  const nameLine=names.length===1?`تولد ${esc(names[0])} مبارک 🎉`:`تولد ${names.map(esc).join(' و ')} مبارک 🎉`;
+  overlay.innerHTML=html+`<div class="balloon-msg">🎂 ${nameLine}</div>`;
+  document.body.appendChild(overlay);
+  setTimeout(()=>{ overlay.remove(); }, 7000);
+}
 let __wcCondensed=false;
 function updateWelcomeCardScrollState(){
   const bar=document.getElementById('wc-mini-bar');
@@ -157,7 +192,7 @@ function initGoogleButton(){
     el.innerHTML='<p class="small-note">ورود با گوگل هنوز تنظیم نشده.</p>';
     return;
   }
-  el.innerHTML=`<button type="button" class="google-btn" onclick="handleGoogleButtonClick()">${GOOGLE_G_LOGO}<span>ثبت نام با حساب گوگل</span></button>`;
+  el.innerHTML=`<button type="button" class="google-btn" onclick="handleGoogleButtonClick()">${GOOGLE_G_LOGO}<span>ورود با اکانت گوگل</span></button>`;
   googleTokenClient=google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
     scope: 'openid email profile',
@@ -562,10 +597,36 @@ function submitCompare(){
 }
 function showSavedProfiles(){
   setNav('profiles');
+  const pushOn=typeof isBirthdayRemindersEnabled==='function' && isBirthdayRemindersEnabled();
+  const now=new Date(); const todayM=now.getMonth()+1, todayD=now.getDate();
   render(`<div class="card"><h2>📇 پروفایل‌های من</h2>
       ${state.savedProfiles.length===0?'<p class="desc">هنوز پروفایلی ذخیره نشده.</p>':
-        state.savedProfiles.map((p,i)=>`<div class="name-item" style="cursor:pointer" onclick="showSavedProfile(${i})"><b>${esc(p.firstName)} ${esc(p.familyName)}</b> — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode)}</span></div>`).join('')}
+        state.savedProfiles.map((p,i)=>{
+          const isBday=p.report && p.report.gm===todayM && p.report.gd===todayD;
+          return `<div class="name-item" style="cursor:pointer${isBday?'; background:linear-gradient(90deg, #e8b84b22, transparent); border-radius:8px; padding-inline-start:8px':''}" onclick="showSavedProfile(${i})">${isBday?'💐 ':''}<b>${esc(p.firstName)} ${esc(p.familyName)}</b>${isBday?' <span style="color:var(--gold-soft); font-size:12px">(امروز تولدشه 🎉)</span>':''} — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode)}</span></div>`;
+        }).join('')}
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:8px">🎂 یادآوری تولد</h3>
+      <p class="desc">روز تولد هرکدوم از این پروفایل‌ها، یه اعلان بهت می‌رسه — حتی وقتی اپ بسته‌ست.</p>
+      <p id="push-status-msg" class="small-note" style="min-height:18px"></p>
+      <button class="btn${pushOn?' secondary':''}" id="push-toggle-btn" onclick="handlePushToggle()">${pushOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری تولد'}</button>
     </div>`);
+}
+function handlePushToggle(){
+  const btn=document.getElementById('push-toggle-btn');
+  const msg=document.getElementById('push-status-msg');
+  const isOn=isBirthdayRemindersEnabled();
+  msg.textContent='';
+  if(isOn){
+    disableBirthdayReminders().then(()=>{ showSavedProfiles(); });
+    return;
+  }
+  btn.disabled=true; btn.textContent='در حال فعال‌سازی...';
+  enableBirthdayReminders().then(()=>{ showSavedProfiles(); }).catch((err)=>{
+    btn.disabled=false; btn.textContent='🔔 فعال‌کردن یادآوری تولد';
+    msg.style.color='#ff8a8a'; msg.textContent=err.message||'خطایی پیش اومد.';
+  });
 }
 function showSavedProfile(i){const p=state.savedProfiles[i]; showCosmicResult(p.firstName,p.familyName,p.report);}
 showHome();
