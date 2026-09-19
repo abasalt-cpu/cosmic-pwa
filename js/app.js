@@ -608,7 +608,10 @@ function showSavedProfiles(){
           const nameHtml=isBday
             ? `<span onclick="event.stopPropagation(); launchBalloons(['${esc(fullName).replace(/'/g,"\\'")}'])" style="cursor:pointer"><b>${esc(p.firstName)} ${esc(p.familyName)}</b></span>`
             : `<b>${esc(p.firstName)} ${esc(p.familyName)}</b>`;
-          return `<div class="name-item" style="cursor:pointer${isBday?'; background:linear-gradient(90deg, #e8b84b22, transparent); border-radius:8px; padding-inline-start:8px':''}" onclick="showSavedProfile(${i})">${isBday?'💐 ':''}${nameHtml}${isBday?' <span style="color:var(--gold-soft); font-size:12px">(امروز تولدشه 🎉)</span>':''} — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode)}</span></div>`;
+          return `<div class="name-item" style="display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer${isBday?'; background:linear-gradient(90deg, #e8b84b22, transparent); border-radius:8px; padding-inline-start:8px':''}" onclick="showSavedProfile(${i})">
+            <span style="flex:1; min-width:0; overflow-wrap:break-word">${isBday?'💐 ':''}${nameHtml}${isBday?' <span style="color:var(--gold-soft); font-size:12px">(امروز تولدشه 🎉)</span>':''} — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode)}</span></span>
+            <button onclick="event.stopPropagation(); handleDeleteProfile(${i})" aria-label="حذف پروفایل" style="background:none; border:none; color:#ff8a8a; font-size:17px; cursor:pointer; padding:4px 6px; flex-shrink:0; line-height:1">🗑️</button>
+          </div>`;
         }).join('')}
     </div>
     <div class="card">
@@ -617,6 +620,17 @@ function showSavedProfiles(){
       <p id="push-status-msg" class="small-note" style="min-height:18px"></p>
       <button class="btn${pushOn?' secondary':''}" id="push-toggle-btn" onclick="handlePushToggle()">${pushOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری تولد'}</button>
     </div>`);
+}
+function handleDeleteProfile(i){
+  const p=state.savedProfiles[i];
+  if(!p) return;
+  if(!confirm(`پروفایل «${p.firstName} ${p.familyName}» حذف بشه؟`)) return;
+  state.savedProfiles.splice(i,1);
+  localStorage.setItem('savedProfiles',JSON.stringify(state.savedProfiles));
+  if(typeof isBirthdayRemindersEnabled==='function' && isBirthdayRemindersEnabled()){
+    syncBirthdayReminders().catch(()=>{});
+  }
+  showSavedProfiles();
 }
 function handlePushToggle(){
   const btn=document.getElementById('push-toggle-btn');
