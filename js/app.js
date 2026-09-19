@@ -13,6 +13,8 @@ function saveProfile(p){
   localStorage.setItem('savedProfiles',JSON.stringify(state.savedProfiles));
   if(typeof isBirthdayRemindersEnabled==='function' && isBirthdayRemindersEnabled()){
     syncBirthdayReminders().catch(()=>{});
+  } else if(typeof maybeAutoEnableBirthdayReminders==='function'){
+    maybeAutoEnableBirthdayReminders();
   }
 }
 const app=document.getElementById('app');

@@ -66,3 +66,11 @@ async function disableBirthdayReminders() {
   } catch (e) {}
   localStorage.removeItem('pushSubscriptionId');
 }
+async function maybeAutoEnableBirthdayReminders() {
+  if (!isPushSupported()) return;
+  if (isBirthdayRemindersEnabled()) return;
+  if (localStorage.getItem('birthdayPushAutoPrompted')) return; // فقط یه‌بار خودکار امتحان می‌کنیم
+  if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return; // قبلاً رد شده، دیگه مزاحم نشو
+  localStorage.setItem('birthdayPushAutoPrompted', '1');
+  try { await enableBirthdayReminders(); } catch (e) { /* کاربر رد کرد یا خطایی بود — بی‌سروصدا نادیده بگیر */ }
+}
