@@ -16,6 +16,22 @@ function saveProfile(p){
   } else if(typeof maybeAutoEnableBirthdayReminders==='function'){
     maybeAutoEnableBirthdayReminders();
   }
+  syncProfilesToServer();
+}
+function syncProfilesToServer(){
+  if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')) return;
+  const deviceId=getDeviceId();
+  const userId=(typeof currentUser!=='undefined' && currentUser) ? currentUser.id : null;
+  const profiles=state.savedProfiles.map(p=>({
+    firstName:p.firstName, familyName:p.familyName, motherName:p.motherName,
+    jy:p.jy, jm:p.jm, jd:p.jd,
+    gm:p.report&&p.report.gm, gd:p.report&&p.report.gd,
+    cosmicCode:p.report&&p.report.cosmicCode,
+  }));
+  fetch(AUTH_API_BASE+'/profiles/sync', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({deviceId, userId, profiles}),
+  }).catch(()=>{});
 }
 const app=document.getElementById('app');
 let __suppressPush=true;
@@ -131,13 +147,54 @@ function showNotifications(){
 }
 function showMoreMenu(){
   setNav('more');
+  const adminBlock=(currentUser && currentUser.isAdmin)?`<div class="card">
+      <div class="list-item" onclick="showAdminUsersPage()"><span class="li-label">👥 کاربران ثبت‌شده</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showAdminProfilesPage()"><span class="li-label">📇 همه‌ی پروفایل‌ها</span><span class="li-arrow">‹</span></div>
+    </div>`:'';
   render(`<div class="card">
       <div class="list-item" onclick="showAboutPage()"><span class="li-label">${ICON_INFO}درباره‌ی نرم‌افزار</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showMembershipPage()"><span class="li-label">${ICON_ACCOUNT}حساب کاربری</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showPrivacyPage()"><span class="li-label">${ICON_PRIVACY}حریم خصوصی</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showTermsPage()"><span class="li-label">${ICON_TERMS}قوانین و شرایط استفاده</span><span class="li-arrow">‹</span></div>
     </div>
-    <div class="small-note">اطلاعات پروفایل‌هات (اسم، تاریخ تولد و نتایج) فقط روی خود گوشیت ذخیره می‌شه. عضویت اختیاریه و فقط برای ورود به حساب استفاده می‌شه.</div>`);
+    ${adminBlock}
+    <div class="small-note">اطلاعات پروفایل‌هات (اسم، تاریخ تولد و نتایج) روی گوشیت و همچنین سرور اختصاصی ما ذخیره می‌شه. جزئیات کامل توی «حریم خصوصی».</div>`);
+}
+async function showAdminUsersPage(){
+  render(`${backBtn('showMoreMenu()')}<div class="card"><h2>👥 کاربران ثبت‌شده</h2><p class="desc" id="admin-status">در حال بارگذاری...</p></div><div id="admin-list"></div>`);
+  try{
+    const data=await authFetch('/admin/users', { headers:{ Authorization:'Bearer '+authToken } });
+    document.getElementById('admin-status').textContent=`تعداد: ${data.users.length}`;
+    document.getElementById('admin-list').innerHTML=data.users.map(u=>`
+      <div class="card">
+        <p style="margin:0; line-height:1.9">
+          ${u.email?`✉️ ${esc(u.email)}<br>`:''}${u.phone?`📱 ${esc(u.phone)}<br>`:''}${u.display_name?`👤 ${esc(u.display_name)}<br>`:''}
+          <span class="small-note">عضویت: ${new Date(u.created_at).toLocaleString('fa-IR')}</span>
+        </p>
+      </div>`).join('') || '<div class="card"><p class="desc" style="margin:0">هنوز کاربری ثبت‌نام نکرده.</p></div>';
+  }catch(e){
+    document.getElementById('admin-status').textContent='';
+    document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
+  }
+}
+async function showAdminProfilesPage(){
+  render(`${backBtn('showMoreMenu()')}<div class="card"><h2>📇 همه‌ی پروفایل‌ها</h2><p class="desc" id="admin-status">در حال بارگذاری...</p></div><div id="admin-list"></div>`);
+  try{
+    const data=await authFetch('/admin/profiles', { headers:{ Authorization:'Bearer '+authToken } });
+    document.getElementById('admin-status').textContent=`تعداد: ${data.profiles.length}`;
+    document.getElementById('admin-list').innerHTML=data.profiles.map(p=>`
+      <div class="card">
+        <p style="margin:0; line-height:1.9">
+          <b>${esc(p.first_name||'')} ${esc(p.family_name||'')}</b><br>
+          ${p.jy&&p.jm&&p.jd?`🗓️ تولد: ${p.jy}/${p.jm}/${p.jd}<br>`:''}
+          کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft)">${esc(p.cosmic_code||'-')}</span><br>
+          <span class="small-note">${p.user_id?'وابسته به حساب کاربری':'بدون حساب (محلی)'} — به‌روزرسانی: ${new Date(p.updated_at).toLocaleString('fa-IR')}</span>
+        </p>
+      </div>`).join('') || '<div class="card"><p class="desc" style="margin:0">هنوز پروفایلی ثبت نشده.</p></div>';
+  }catch(e){
+    document.getElementById('admin-status').textContent='';
+    document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
+  }
 }
 function showAboutPage(){
   render(`${backBtn('showMoreMenu()')}
@@ -171,7 +228,7 @@ function showMembershipPage(){
   }
   render(`${backBtn('showMoreMenu()')}
     <div class="card"><h2>👤 عضویت / ورود</h2>
-      <p class="desc">با ساختن حساب، هویتت روی این اپ ثبت می‌شه. اطلاعات پروفایل‌هات همچنان روی خود گوشیت ذخیره می‌مونه.</p>
+      <p class="desc">با ساختن حساب، هویتت روی این اپ ثبت می‌شه. اطلاعات پروفایل‌هات روی گوشیت و سرور ما ذخیره می‌مونه تا در صورت نیاز بتونی بازیابیشون کنی.</p>
       <div id="google-btn-container" style="margin-top:12px; display:flex; justify-content:center"></div>
       <p class="small-note" style="text-align:center">ورود با گوگل ممکنه بدون VPN کار نکنه.</p>
     </div>
@@ -250,7 +307,12 @@ function handleEmailSignUp(){
   signUpWithEmail(email,password).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
 }
 function handleSignOut(){
-  signOutUser().then(()=>{ showMembershipPage(); });
+  signOutUser().then(()=>{
+    // پروفایل‌های محلی رو هم پاک می‌کنیم تا حساب بعدی که وارد می‌شه، پروفایل‌های این حساب رو نبینه.
+    state.savedProfiles=[];
+    localStorage.removeItem('savedProfiles');
+    showMembershipPage();
+  });
 }
 function onAuthChanged(user){
   // در آینده می‌تونیم اینجا وضعیت ورود رو توی بخش‌های دیگه‌ی اپ هم نشون بدیم.
@@ -261,8 +323,8 @@ function showPrivacyPage(){
       <p class="desc">حریم خصوصی تو برای ما مهمه. تمام امکانات اصلی اپ (محاسبه‌ی کد کیهانی، فال، طالع‌بینی و...) بدون نیاز به ثبت‌نام و کاملاً محلی روی گوشیت کار می‌کنن؛ عضویت فقط یه قابلیت اختیاریه.</p></div>
     <div class="card"><h3 style="margin-bottom:10px">چه اطلاعاتی ذخیره می‌شه؟</h3>
       <div style="line-height:2.1">
-        📱 نام، تاریخ تولد و نتایج محاسبات فقط روی خود گوشی تو (حافظه‌ی محلی مرورگر) ذخیره می‌شن و به هیچ سروری ارسال نمی‌شن.<br>
-        👤 اگه با ایمیل یا شماره موبایل عضو بشی، فقط همون اطلاعات هویتی (ایمیل/رمز به‌صورت رمزنگاری‌شده، یا شماره موبایل) روی سرور اختصاصی خودمون ذخیره می‌شه — نه اطلاعات پروفایل‌ها یا نتایج محاسباتت.<br>
+        📱 نام، تاریخ تولد و نتیجه‌ی محاسبات هر پروفایلی که می‌سازی، هم روی خود گوشیت ذخیره می‌شه و هم برای پشتیبانی و بهبود اپ روی سرور اختصاصی ما (Cloudflare) نگه‌داری می‌شه. این اطلاعات فروخته یا با شخص ثالثی به اشتراک گذاشته نمی‌شه.<br>
+        👤 اگه با ایمیل یا شماره موبایل عضو بشی، اطلاعات هویتی‌ت (ایمیل/رمز به‌صورت رمزنگاری‌شده، یا شماره موبایل) هم روی همون سرور ذخیره می‌شه.<br>
         🔵 اگه با گوگل وارد بشی، فقط ایمیل و نامی که گوگل در اختیارمون می‌ذاره برای شناسایی حسابت ذخیره می‌شه.<br>
         📲 برای ورود با موبایل (در آینده)، شماره‌ت فقط برای ارسال یک‌بار کد تایید استفاده می‌شه و جای دیگه‌ای ذخیره نمی‌مونه.<br>
         📊 برای بهتر شدن اپ، از آمار بازدید ناشناس و بدون کوکی (Cloudflare Analytics) استفاده می‌کنیم که هیچ اطلاعات شخصی یا قابل‌شناسایی جمع نمی‌کنه.<br>
@@ -630,6 +692,7 @@ function handleDeleteProfile(i){
   if(typeof isBirthdayRemindersEnabled==='function' && isBirthdayRemindersEnabled()){
     syncBirthdayReminders().catch(()=>{});
   }
+  syncProfilesToServer();
   showSavedProfiles();
 }
 function handlePushToggle(){
