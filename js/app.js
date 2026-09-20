@@ -423,10 +423,31 @@ function getHafezDrawState(){
 }
 function showHafez(){
   const st=getHafezDrawState(); const remaining=Math.max(0,3-st.count);
+  const falOn=typeof isDailyFalEnabled==='function' && isDailyFalEnabled();
   render(`${backBtn('showHome()')}<div class="card"><h2>🔮 فال حافظ</h2>
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
       <button class="btn" id="hafez-btn" onclick="revealHafez()"${remaining<=0?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${remaining>0?` (${remaining} بار دیگه امروز)`:''}</button>
-      <div id="hafez-result">${remaining<=0?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':''}</div></div>`);
+      <div id="hafez-result">${remaining<=0?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':''}</div></div>
+    <div class="card">
+      <h3 style="margin-bottom:8px">🔔 یادآوری فال روزانه</h3>
+      <p class="desc">هر روز صبح یه اعلان بهت می‌رسه که یادت بندازه فالت رو بگیری.</p>
+      <p id="fal-push-msg" class="small-note" style="min-height:18px"></p>
+      <button class="btn${falOn?' secondary':''}" id="fal-push-btn" onclick="handleDailyFalToggle()">${falOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری روزانه'}</button>
+    </div>`);
+}
+function handleDailyFalToggle(){
+  const btn=document.getElementById('fal-push-btn');
+  const msg=document.getElementById('fal-push-msg');
+  msg.textContent='';
+  if(isDailyFalEnabled()){
+    disableDailyFalReminder().then(()=>{ showHafez(); });
+    return;
+  }
+  btn.disabled=true; btn.textContent='در حال فعال‌سازی...';
+  enableDailyFalReminder().then(()=>{ showHafez(); }).catch((err)=>{
+    btn.disabled=false; btn.textContent='🔔 فعال‌کردن یادآوری روزانه';
+    msg.style.color='#ff8a8a'; msg.textContent=err.message||'خطایی پیش اومد.';
+  });
 }
 function getDeviceId(){let id=localStorage.getItem('deviceId'); if(!id){id='dev-'+Math.random().toString(36).slice(2); localStorage.setItem('deviceId',id);} return id;}
 function getSessionSlogan(){
