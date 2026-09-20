@@ -58,7 +58,16 @@ document.querySelectorAll('nav.bottom .nav-btn').forEach(btn=>{
   });
 });
 function setNav(key){document.querySelectorAll('nav.bottom .nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.nav===key));}
-function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); maybeShowBirthdayCelebration(); }
+function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); maybeShowBirthdayCelebration(); syncMiniHandSize(); }
+function syncMiniHandSize(){
+  requestAnimationFrame(()=>{
+    const btn=document.getElementById('wc-mini-btn');
+    const hand=document.getElementById('wc-mini-hand');
+    if(!btn || !hand) return;
+    const w=btn.offsetWidth;
+    if(w>0){ hand.style.width=w+'px'; hand.style.height=w+'px'; }
+  });
+}
 function getTodaysBirthdayProfiles(){
   const now=new Date();
   const m=now.getMonth()+1, d=now.getDate();
@@ -112,8 +121,8 @@ function hubHTML(){
   return `
     <div class="wc-mini-bar" id="wc-mini-bar">
       <span class="wc-last">${lastLine}</span>
-      <button class="btn wc-mini-btn" onclick="showCosmicInputForm()">${ICON_CALC}کد کیهانی</button>
-      <img src="icons/hand-glow.png" class="wc-mini-hand" onclick="rerollSlogan()" alt="" role="button" aria-label="یه شعار دیگه">
+      <button class="btn wc-mini-btn" id="wc-mini-btn" onclick="showCosmicInputForm()">${ICON_CALC}کد کیهانی</button>
+      <img src="icons/hand-glow.png" class="wc-mini-hand" id="wc-mini-hand" style="width:42px; height:42px" onclick="rerollSlogan()" alt="" role="button" aria-label="یه شعار دیگه">
     </div>
     <div class="card welcome-card" id="welcome-card">
       <div class="wc-full">
