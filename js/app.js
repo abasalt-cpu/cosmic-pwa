@@ -132,7 +132,7 @@ function hubHTML(){
       <div class="menu-tile" onclick="showNatalEntry()"><img src="icons/menu/icon_natal.png" class="icon-img"><span class="label">زایچه‌ی تقریبی</span><span class="desc">تقویم شخصی شما</span></div>
       <div class="menu-tile" onclick="showCompareEntry()"><img src="icons/menu/icon_compare.png" class="icon-img"><span class="label">مقایسه‌ی دو نفر</span><span class="desc">سازگاری عددی دو نفر</span></div>
       <div class="menu-tile" onclick="showBabyNameForm()"><img src="icons/menu/icon_baby.png" class="icon-img"><span class="label">اسم فرزند</span><span class="desc">انتخاب اسم با معنا</span></div>
-      <div class="menu-tile" onclick="showSavedProfiles()"><img src="icons/menu/icon_profiles.png" class="icon-img"><span class="label">پروفایل‌های من</span><span class="desc">لیست محاسبات ذخیره‌شده</span></div>
+      <div class="menu-tile" onclick="showGratitude()"><img src="icons/menu/icon_gratitude.png" class="icon-img"><span class="label">شکرگزاری</span><span class="desc">یک جمله‌ی شکرگزاری روزانه</span></div>
     </div>
     <div class="card banner-card">
       <span class="b-icon">🌟</span>
@@ -703,6 +703,41 @@ function submitCompare(){
     ${narrative}
     <div class="card"><h3>♈️ سازگاری طالعی</h3><div style="white-space:pre-line; line-height:1.9">${esc(zc)}</div></div>
     <div class="card" style="border-color:var(--gold, #e8b84b)"><h3>🧭 جمع‌بندی: ${esc(verdict.title)}</h3><p style="line-height:1.9">${esc(verdict.text)}</p></div>`);
+}
+function getGratitudeToday(){
+  const todayKey=new Date().toDateString();
+  function shuffleNew(){
+    const arr=GRATITUDE_DATA.map(x=>x.day);
+    for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+    return arr;
+  }
+  let order=JSON.parse(localStorage.getItem('gratitudeOrder')||'null');
+  let position=parseInt(localStorage.getItem('gratitudePosition')||'-1',10);
+  let lastDate=localStorage.getItem('gratitudeLastDate');
+
+  if(!Array.isArray(order) || order.length!==GRATITUDE_DATA.length){
+    order=shuffleNew(); position=-1; lastDate=null;
+  }
+  if(lastDate!==todayKey){
+    position++;
+    if(position>=order.length){ order=shuffleNew(); position=0; }
+    localStorage.setItem('gratitudeOrder', JSON.stringify(order));
+    localStorage.setItem('gratitudePosition', String(position));
+    localStorage.setItem('gratitudeLastDate', todayKey);
+  }
+  const dayId=order[position];
+  const entry=GRATITUDE_DATA.find(x=>x.day===dayId)||GRATITUDE_DATA[0];
+  return { entry, position: position+1, total: order.length };
+}
+function showGratitude(){
+  const { entry, position, total } = getGratitudeToday();
+  render(`${backBtn('showHome()')}
+    <div class="card" style="text-align:center">
+      <h2 style="margin-bottom:4px">🙏 شکرگزاری</h2>
+      <p class="small-note" style="margin-bottom:18px">${position} از ${total} روز</p>
+      <p style="direction:ltr; text-align:left; font-style:italic; color:var(--gold-soft); line-height:1.9; margin:0 0 18px">${esc(entry.english)}</p>
+      <p style="direction:rtl; text-align:right; line-height:2; font-size:15px; margin:0">${esc(entry.persian)}</p>
+    </div>`);
 }
 function showSavedProfiles(){
   setNav('profiles');
