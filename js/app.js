@@ -25,8 +25,7 @@ function syncProfilesToServer(){
   const profiles=state.savedProfiles.map(p=>({
     firstName:p.firstName, familyName:p.familyName, motherName:p.motherName,
     jy:p.jy, jm:p.jm, jd:p.jd,
-    gm:p.report&&p.report.gm, gd:p.report&&p.report.gd,
-    cosmicCode:p.report&&p.report.cosmicCode,
+    report:p.report,
   }));
   fetch(AUTH_API_BASE+'/profiles/sync', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -315,7 +314,33 @@ function handleSignOut(){
   });
 }
 function onAuthChanged(user){
-  // در آینده می‌تونیم اینجا وضعیت ورود رو توی بخش‌های دیگه‌ی اپ هم نشون بدیم.
+  if(user) mergeAndRestoreProfilesOnLogin();
+}
+async function mergeAndRestoreProfilesOnLogin(){
+  const localProfiles=state.savedProfiles.slice(); // اسنپ‌شات از پروفایل‌های محلی قبل از بازنویسی
+  await fetchMyProfilesFromServer(); // حالا state.savedProfiles = لیست همین حساب روی سرور
+  let merged=false;
+  for(const lp of localProfiles){
+    const exists=state.savedProfiles.some(sp=>sp.firstName===lp.firstName && sp.familyName===lp.familyName);
+    if(!exists){ state.savedProfiles.unshift(lp); merged=true; }
+  }
+  if(merged){
+    localStorage.setItem('savedProfiles', JSON.stringify(state.savedProfiles));
+    syncProfilesToServer(); // فقط بعد از merge، لیست کامل رو دوباره به سرور می‌فرستیم
+  }
+}
+async function fetchMyProfilesFromServer(){
+  if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER') || !authToken) return;
+  try{
+    const data=await authFetch('/profiles/mine', { headers:{ Authorization:'Bearer '+authToken } });
+    state.savedProfiles=data.profiles.map(row=>({
+      firstName:row.first_name, familyName:row.family_name, motherName:row.mother_name,
+      jy:row.jy, jm:row.jm, jd:row.jd,
+      report: row.report_json ? JSON.parse(row.report_json) : { gm:row.gm, gd:row.gd, cosmicCode:row.cosmic_code },
+      date: new Date(row.updated_at).toISOString(),
+    }));
+    localStorage.setItem('savedProfiles', JSON.stringify(state.savedProfiles));
+  }catch(e){ console.error('fetch my profiles failed', e); }
 }
 function showPrivacyPage(){
   render(`${backBtn('showMoreMenu()')}
