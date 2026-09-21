@@ -112,14 +112,14 @@ function hubHTML(){
   return `
     <div class="wc-mini-bar" id="wc-mini-bar">
       <span class="wc-last">${lastLine}</span>
-      <button class="btn wc-mini-btn" id="wc-mini-btn" onclick="showCosmicInputForm()">کد کیهانی<span class="btn-badge">${ICON_CALC}</span></button>
+      <button class="btn wc-mini-btn" id="wc-mini-btn" onclick="showCosmicInputForm()"><span class="btn-inner">کد کیهانی<span class="btn-badge">${ICON_CALC}</span></span></button>
       <img src="icons/hand-glow.png" class="wc-mini-hand" id="wc-mini-hand" style="width:42px; height:42px" onclick="rerollSlogan()" alt="" role="button" aria-label="یه شعار دیگه">
     </div>
     <div class="card welcome-card" id="welcome-card">
       <div class="wc-full">
         <div class="w-text"><h2>خوش اومدی 👋</h2>
         <p class="desc">${last?lastLine:'هنوز محاسبه‌ای انجام ندادی. از دکمه‌ی زیر شروع کن.'}</p>
-        <button class="btn" onclick="showCosmicInputForm()">محاسبه‌ی کد کیهانی<span class="btn-badge">${ICON_CALC}</span><span class="btn-chevron">›</span></button></div>
+        <button class="btn" onclick="showCosmicInputForm()"><span class="btn-inner">محاسبه‌ی کد کیهانی<span class="btn-badge">${ICON_CALC}</span><span class="btn-chevron">›</span></span></button></div>
         <div class="welcome-icon-wrap">
           <div class="welcome-icon" onclick="rerollSlogan()" role="button" aria-label="یه شعار دیگه" style="cursor:pointer"><img src="icons/hand-glow.png" alt=""></div>
           <span class="orbit-dot d1"></span><span class="orbit-dot d2"></span><span class="orbit-dot d3"></span>
@@ -533,7 +533,7 @@ function showNatalEntry(){
   if(!state.lastProfile){
     render(`${backBtn('showHome()')}<div class="card"><h2>🌌 زایچه‌ی تقریبی</h2>
       <p class="desc">برای زایچه، اول یه‌بار «کد کیهانی» رو محاسبه کن (چون از همون تاریخ تولد استفاده می‌کنیم).</p>
-      <button class="btn" onclick="showCosmicInputForm()">محاسبه‌ی کد کیهانی<span class="btn-badge">${ICON_CALC}</span><span class="btn-chevron">›</span></button></div>`); return;
+      <button class="btn" onclick="showCosmicInputForm()"><span class="btn-inner">محاسبه‌ی کد کیهانی<span class="btn-badge">${ICON_CALC}</span><span class="btn-chevron">›</span></span></button></div>`); return;
   }
   const p=state.lastProfile;
   render(`${backBtn('showHome()')}<div class="card"><h2>🌌 زایچه‌ی تقریبی</h2>
