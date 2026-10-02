@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#161233">
 <title>کد کیهانی</title>
+
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -149,9 +150,19 @@ nav.bottom .nav-btn.active{color:var(--gold-soft);}
 color:var(--gold-soft); padding:12px 22px; border-radius:16px; font-size:14px; font-weight:700; box-shadow:0 8px 30px #0008;
 animation:balloonMsgFade 7s ease forwards; text-align:center; max-width:88%; backdrop-filter:blur(6px);}
 @keyframes balloonMsgFade{0%{opacity:0; transform:translateX(-50%) translateY(-10px);}10%{opacity:1; transform:translateX(-50%) translateY(0);}85%{opacity:1;}100%{opacity:0;}}
+#splash-screen{position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center;
+flex-direction:column; background:linear-gradient(180deg, var(--bg-top), var(--bg-bottom) 70%); transition:opacity .4s ease;}
+#splash-screen.hide{opacity:0; pointer-events:none;}
+.splash-logo{font-size:52px; margin-bottom:10px; animation:splashPulse 1.6s ease-in-out infinite;}
+.splash-title{font-size:20px; font-weight:800; color:var(--gold-soft); letter-spacing:1px; font-family:inherit;}
+@keyframes splashPulse{0%,100%{transform:scale(1); opacity:1;}50%{transform:scale(1.12); opacity:.75;}}
 </style>
 </head>
 <body>
+<div id="splash-screen">
+  <div class="splash-logo">✨</div>
+  <div class="splash-title">کد کیهانی</div>
+</div>
 <div class="stars"></div>
 <header class="top">
   <div class="top-bar">
@@ -178,16 +189,16 @@ window.addEventListener('load', setHeaderHeightVar);
 window.addEventListener('resize', setHeaderHeightVar);
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="js/auth.js"></script>
-<script src="js/push.js"></script>
-<script src="data/data.js"></script>
-<script src="data/tables.js"></script>
-<script src="js/cosmic_logic.js"></script>
-<script src="js/natal_chart.js"></script>
-<script src="js/zodiac.js"></script>
-<script src="js/content_modules.js"></script>
-<script src="js/baby_name.js"></script>
-<script src="js/app.js"></script>
+<script src="js/auth.js" defer></script>
+<script src="js/push.js" defer></script>
+<script src="data/data.js" defer></script>
+<script src="data/tables.js" defer></script>
+<script src="js/cosmic_logic.js" defer></script>
+<script src="js/natal_chart.js" defer></script>
+<script src="js/zodiac.js" defer></script>
+<script src="js/content_modules.js" defer></script>
+<script src="js/baby_name.js" defer></script>
+<script src="js/app.js" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').catch(()=>{}); });
