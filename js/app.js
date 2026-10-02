@@ -152,6 +152,7 @@ function showMoreMenu(){
   const adminBlock=(currentUser && currentUser.isAdmin)?`<div class="card">
       <div class="list-item" onclick="showAdminUsersPage()"><span class="li-label">👥 کاربران ثبت‌شده</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showAdminProfilesPage()"><span class="li-label">📇 همه‌ی پروفایل‌ها</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showAdminErrorsPage()"><span class="li-label">🐞 خطاهای اخیر</span><span class="li-arrow">‹</span></div>
     </div>`:'';
   render(`<div class="card">
       <div class="list-item" onclick="showAboutPage()"><span class="li-label">${ICON_INFO}درباره‌ی نرم‌افزار</span><span class="li-arrow">‹</span></div>
@@ -174,6 +175,25 @@ async function showAdminUsersPage(){
           <span class="small-note">عضویت: ${new Date(u.created_at).toLocaleString('fa-IR')}</span>
         </p>
       </div>`).join('') || '<div class="card"><p class="desc" style="margin:0">هنوز کاربری ثبت‌نام نکرده.</p></div>';
+  }catch(e){
+    document.getElementById('admin-status').textContent='';
+    document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
+  }
+}
+async function showAdminErrorsPage(){
+  render(`${backBtn('showMoreMenu()')}<div class="card"><h2>🐞 خطاهای اخیر</h2><p class="desc" id="admin-status">در حال بارگذاری...</p></div><div id="admin-list"></div>`);
+  try{
+    const data=await authFetch('/admin/errors', { headers:{ Authorization:'Bearer '+authToken } });
+    document.getElementById('admin-status').textContent=`تعداد: ${data.errors.length} (آخرین ۲۰۰ مورد)`;
+    document.getElementById('admin-list').innerHTML=data.errors.map(er=>`
+      <div class="card">
+        <p style="margin:0; line-height:1.9">
+          <b style="color:#ff8a8a">${esc(er.message||'')}</b><br>
+          ${er.url?`🔗 <span style="direction:ltr; unicode-bidi:isolate; font-size:12px">${esc(er.url)}</span><br>`:''}
+          ${er.stack?`<span class="small-note" style="direction:ltr; unicode-bidi:isolate; display:block; white-space:pre-wrap; word-break:break-all">${esc(er.stack)}</span><br>`:''}
+          <span class="small-note">${new Date(er.created_at).toLocaleString('fa-IR')}</span>
+        </p>
+      </div>`).join('') || '<div class="card"><p class="desc" style="margin:0">هنوز خطایی ثبت نشده 🎉</p></div>';
   }catch(e){
     document.getElementById('admin-status').textContent='';
     document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
@@ -453,6 +473,18 @@ function handleDailyFalToggle(){
   });
 }
 function getDeviceId(){let id=localStorage.getItem('deviceId'); if(!id){id='dev-'+Math.random().toString(36).slice(2); localStorage.setItem('deviceId',id);} return id;}
+// ---------- ردیابی خطا (به‌جای Sentry، چون از ایران فیلتره) ----------
+function reportError(message, stack){
+  if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')) return;
+  try{
+    fetch(AUTH_API_BASE+'/errors/log', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ message:String(message).slice(0,500), stack:stack?String(stack).slice(0,2000):null, url:location.href, deviceId:getDeviceId() }),
+    }).catch(()=>{});
+  }catch(e){}
+}
+window.addEventListener('error', (e)=>{ reportError(e.message, e.error&&e.error.stack); });
+window.addEventListener('unhandledrejection', (e)=>{ reportError('Unhandled promise: '+(e.reason&&e.reason.message||e.reason), e.reason&&e.reason.stack); });
 function getSessionSlogan(){
   let s=sessionStorage.getItem('sessionSlogan');
   if(!s){ s=getRandomSlogan(); sessionStorage.setItem('sessionSlogan', s); }
@@ -796,3 +828,9 @@ function handlePushToggle(){
 }
 function showSavedProfile(i){const p=state.savedProfiles[i]; showCosmicResult(p.firstName,p.familyName,p.report);}
 showHome();
+(function hideSplash(){
+  const splash=document.getElementById('splash-screen');
+  if(!splash) return;
+  splash.classList.add('hide');
+  setTimeout(()=>splash.remove(), 500);
+})();
