@@ -434,9 +434,10 @@ function showCosmicResult(firstName,familyName,r){
       <div class="result-block">💰 <b>وضعیت درآمد:</b> ${nl2br(r.incomeText)}<br>🏛 <b>پایگاه اجتماعی:</b> ${r.statusText?r.statusText:'محاسبه نشد (نام مادر وارد نشده)'}<br>🔮 <b>عدد باطن فرد:</b> ${r.batenNum}</div>
       <div class="btn-row">
         <button class="btn secondary" onclick="showCosmicInputForm()">محاسبه‌ی جدید</button>
-        <button class="btn secondary" onclick='shareText(${JSON.stringify(`گزارش کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}`)})'>اشتراک‌گذاری</button>
+        <button class="btn secondary" onclick='shareText(${JSON.stringify(`🌌 کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}\n\nکد کیهانیِ خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
       </div></div>`);
 }
+const APP_SHARE_URL="https://abasalt-cpu.github.io/cosmic-pwa/";
 function shareText(text){ if(navigator.share){navigator.share({text});} else {navigator.clipboard.writeText(text); alert('متن کپی شد.');} }
 function getHafezDrawState(){
   const key='hafezDrawState'; const today=todayStr();
@@ -504,7 +505,8 @@ function revealHafez(){
   const remaining=3-st.count;
   document.getElementById('hafez-result').innerHTML=`<div class="result-block"><div class="verse">${g.verses.join('<br>')}</div>
     <p style="margin-top:10px">📖 <b>تفسیر:</b><br>${esc(g.interpretation)}</p>
-    <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button></div>
+    <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
+    <button class="btn small secondary" onclick='shareText(${JSON.stringify(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button></div>
     <p class="small-note">${remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙'}</p>`;
   const btn=document.getElementById('hafez-btn');
   if(btn){
@@ -771,7 +773,8 @@ function showGratitude(){
       <h2 style="margin-bottom:4px">🙏 شکرگزاری</h2>
       <p class="small-note" style="margin-bottom:18px">${position} از ${total} روز</p>
       <p style="direction:ltr; text-align:left; font-style:italic; color:var(--gold-soft); line-height:1.9; margin:0 0 18px">${esc(entry.english)}</p>
-      <p style="direction:rtl; text-align:right; line-height:2; font-size:15px; margin:0">${esc(entry.persian)}</p>
+      <p style="direction:rtl; text-align:right; line-height:2; font-size:15px; margin:0 0 18px">${esc(entry.persian)}</p>
+      <button class="btn small secondary" onclick='shareText(${JSON.stringify(`🙏 شکرگزاری امروزم:\n\n${entry.persian}\n\n${entry.english}\n\nتو هم اینجا یه جمله‌ی شکرگزاری روزانه بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div>`);
 }
 function showSavedProfiles(){
