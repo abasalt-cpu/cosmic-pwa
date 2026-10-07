@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "io.github.abasalt_cpu.twa",
-        "sha256_cert_fingerprints": ["43:8C:5E:E0:A2:88:F0:7A:39:F3:26:07:9C:9D:82:CE:A4:E1:1E:CF:5C:51:85:C7:42:60:03:16:7B:76:7C:75"]
+        "sha256_cert_fingerprints": ["5E:8D:50:CD:28:3E:A8:F4:CF:59:6E:8A:3E:6E:29:C5:EA:F0:4A:A1:BC:A6:E1:0A:77:60:E9:D8:F2:09:C5:AF"]
       }
     }]
