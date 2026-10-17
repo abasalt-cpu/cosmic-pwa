@@ -20,15 +20,11 @@ async function ensurePushSubscribed() {
   if (!isPushSupported()) throw new Error('مرورگرت از اعلان‌ها پشتیبانی نمی‌کنه.');
   if (typeof AUTH_API_BASE === 'undefined' || AUTH_API_BASE.includes('YOUR-WORKER')) throw new Error('این قابلیت هنوز تنظیم نشده.');
 
-  const existingId = localStorage.getItem('pushSubscriptionId');
-  if (existingId) return existingId;
-
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') throw new Error('اجازه‌ی اعلان داده نشد.');
-
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
   if (!subscription) {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') throw new Error('اجازه‌ی اعلان داده نشد.');
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),

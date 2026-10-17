@@ -71,16 +71,27 @@ async function signOutUser() {
 }
 async function refreshCurrentUser() {
   if (!authToken) return null;
+  let res;
   try {
-    const data = await authFetch('/me', { headers: { Authorization: 'Bearer ' + authToken } });
+    res = await fetch(AUTH_API_BASE + '/me', { headers: { Authorization: 'Bearer ' + authToken } });
+  } catch (networkErr) {
+    // مشکل شبکه بود (قطعی موقت، آفلاین و...)، نه اینکه توکن نامعتبر باشه — نشست رو دست‌نخورده نگه دار.
+    return currentUser;
+  }
+  if (res.status === 401) {
+    // این‌جا سرور صراحتاً گفته توکن نامعتبر/منقضی‌شده — واقعاً خارج کن.
+    clearSession();
+    if (typeof onAuthChanged === 'function') onAuthChanged(null);
+    return null;
+  }
+  try {
+    const data = await res.json();
+    if (!res.ok) return currentUser; // خطای دیگه‌ای غیر از ۴۰۱ بود — فعلاً نشست رو دست نزن
     currentUser = data.user;
     if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
     return currentUser;
   } catch (e) {
-    // توکن منقضی یا نامعتبره — خارج کن.
-    clearSession();
-    if (typeof onAuthChanged === 'function') onAuthChanged(null);
-    return null;
+    return currentUser; // پاسخ قابل‌خوندن نبود — بازم نشست رو حفظ کن
   }
 }
 // اگه از قبل توکنی ذخیره شده، همون اول برنامه وضعیت ورود رو چک کن.
