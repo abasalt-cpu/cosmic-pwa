@@ -160,6 +160,58 @@ flex-direction:column; background:linear-gradient(180deg, var(--bg-top), var(--b
 .hafez-mode .mode-opt{flex:1; text-align:center; padding:10px 8px; border:1px solid var(--line); border-radius:12px; cursor:pointer; font-size:13.5px; color:var(--text-dim);}
 .hafez-mode .mode-opt.on{border-color:var(--gold); color:var(--gold-soft); background:#e8b84b18; font-weight:700;}
 .hz-sec{margin:14px 0 4px; color:var(--gold-soft); font-size:14.5px;}
+
+/* ===== تم طلایی-سرمه‌ای (مطابق طراحی جدید) ===== */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap');
+:root{--bg-top:#090a24; --bg-bottom:#1a1140; --panel:#0e1030e6; --gold:#e8b84b; --gold-soft:#f0c96a; --line:#e8b84b44; font-family:'Vazirmatn',Tahoma,sans-serif;}
+body{background:radial-gradient(900px 600px at 0% 8%, #3a1d6a66 0%, transparent 60%),radial-gradient(800px 600px at 100% 40%, #4a1d6a55 0%, transparent 60%),linear-gradient(180deg,var(--bg-top),var(--bg-bottom) 80%);}
+.card{border:1px solid #e8b84b55; background:linear-gradient(180deg,#0e1030e6,#0a0b22f2);}
+.orn{position:relative; border:1.5px solid #e8b84b !important; box-shadow:0 0 0 1px #e8b84b22,0 0 26px #e8b84b22,inset 0 0 40px #0007 !important; padding:28px 18px !important;}
+.orn::before{content:''; position:absolute; inset:7px; border:1px solid #e8b84b44; border-radius:calc(var(--radius) - 5px); pointer-events:none;}
+.orn::after{content:''; position:absolute; inset:3px; pointer-events:none; background-repeat:no-repeat; background-size:46px 46px;
+background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2060%22%3E%3Cg%20transform%3D%22%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23e8b84b%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M3%2057V20C3%2010.6%2010.6%203%2020%203h37%22%2F%3E%3Cpath%20d%3D%22M9%2051V23c0-7.7%206.3-14%2014-14h28%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M15%2015c7%200%2011%204.5%2011%2010%200%205-6%207-9%204s0-8%204-6%22%2F%3E%3Ccircle%20cx%3D%224%22%20cy%3D%224%22%20r%3D%222.4%22%20fill%3D%22%23f0c96a%22%20stroke%3D%22none%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E"),url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2060%22%3E%3Cg%20transform%3D%22translate%2860%200%29%20scale%28-1%201%29%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23e8b84b%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M3%2057V20C3%2010.6%2010.6%203%2020%203h37%22%2F%3E%3Cpath%20d%3D%22M9%2051V23c0-7.7%206.3-14%2014-14h28%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M15%2015c7%200%2011%204.5%2011%2010%200%205-6%207-9%204s0-8%204-6%22%2F%3E%3Ccircle%20cx%3D%224%22%20cy%3D%224%22%20r%3D%222.4%22%20fill%3D%22%23f0c96a%22%20stroke%3D%22none%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E"),url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2060%22%3E%3Cg%20transform%3D%22translate%280%2060%29%20scale%281%20-1%29%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23e8b84b%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M3%2057V20C3%2010.6%2010.6%203%2020%203h37%22%2F%3E%3Cpath%20d%3D%22M9%2051V23c0-7.7%206.3-14%2014-14h28%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M15%2015c7%200%2011%204.5%2011%2010%200%205-6%207-9%204s0-8%204-6%22%2F%3E%3Ccircle%20cx%3D%224%22%20cy%3D%224%22%20r%3D%222.4%22%20fill%3D%22%23f0c96a%22%20stroke%3D%22none%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E"),url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2060%22%3E%3Cg%20transform%3D%22translate%2860%2060%29%20scale%28-1%20-1%29%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23e8b84b%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M3%2057V20C3%2010.6%2010.6%203%2020%203h37%22%2F%3E%3Cpath%20d%3D%22M9%2051V23c0-7.7%206.3-14%2014-14h28%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M15%2015c7%200%2011%204.5%2011%2010%200%205-6%207-9%204s0-8%204-6%22%2F%3E%3Ccircle%20cx%3D%224%22%20cy%3D%224%22%20r%3D%222.4%22%20fill%3D%22%23f0c96a%22%20stroke%3D%22none%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E"); background-position:left top,right top,left bottom,right bottom;}
+.center{text-align:center;}
+.pg-head{text-align:center; margin:2px 0 16px;}
+.pg-ic{font-size:46px; line-height:1.1; filter:drop-shadow(0 0 12px #8a5cffaa); margin-bottom:2px;}
+.pg-title{margin:0; font-size:clamp(26px,9vw,36px); font-weight:800; line-height:1.6;
+background:linear-gradient(180deg,#fff1c8,#e8b84b 58%,#b98324); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 8px #000a);}
+.pg-title.sm{font-size:clamp(20px,6.5vw,26px);}
+.pg-sub{color:var(--text-dim); font-size:13px; margin:6px 0 0; line-height:1.8;}
+.orn-div{display:flex; align-items:center; gap:8px; justify-content:center; margin:6px auto; max-width:300px; color:var(--gold-soft); font-size:12px;}
+.orn-div span{flex:1; height:1px; background:linear-gradient(90deg,transparent,#e8b84b,transparent);}
+.pg-person{display:flex; align-items:center; justify-content:center; gap:8px; font-weight:800; font-size:17px; color:var(--gold-soft); margin:4px 0 2px;}
+.back-btn{width:40px; height:40px; border-radius:50%; border:1.5px solid var(--gold); padding:0; justify-content:center; margin-bottom:8px; background:#0b0d2a99;}
+.back-btn svg{width:20px; height:20px;}
+.icon-btn{width:40px; height:40px; border-radius:50%; border:1.5px solid var(--gold); background:#0b0d2a99; color:var(--gold-soft);}
+.brand-inline{font-family:'Cinzel',Georgia,serif; font-size:21px; letter-spacing:1.5px; font-weight:700;}
+label{color:var(--gold-soft); font-weight:700; font-size:14px;}
+input[type=text],input[type=number],input[type=email],input[type=password],select{background-color:#0b0d2a; border:1px solid #e8b84b66; border-radius:12px;}
+input.ic-user{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23e8b84b%22%20stroke-width%3D%221.6%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%228%22%20r%3D%224%22%2F%3E%3Cpath%20d%3D%22M4%2021c1-4.5%204.5-6.5%208-6.5s7%202%208%206.5%22%2F%3E%3C%2Fsvg%3E"); background-repeat:no-repeat; background-position:right 14px center; background-size:20px; padding-inline-start:46px !important;}
+.date-row{display:grid; grid-template-columns:1fr 1.4fr 1fr; gap:8px; text-align:center;}
+.date-row small{display:block; color:var(--text-dim); font-size:12px; margin-top:4px;}
+.btn{border-radius:999px; font-size:16px; padding:14px 18px; border:1.5px solid #fbe3a1; background:linear-gradient(180deg,#fbe3a1,#e8b84b 55%,#c2902f);}
+.btn.secondary{background:#0b0d2a99; border:1.5px solid var(--gold);}
+.menu-tile{border:1px solid #e8b84b55; background:linear-gradient(160deg,#16193f,#0d0f2b);}
+.verse{font-style:normal; text-align:center; font-size:16.5px; line-height:2.3; color:#f6efdc;}
+.result-block{border-top:1px solid #e8b84b44;}
+.result-block .btn.small{width:48%; margin:10px 1% 0;}
+.hz-sec{color:var(--gold-soft); font-weight:800;}
+.chip-row.two{display:flex; gap:10px;} .chip-row.two .chip{flex:1; text-align:center; padding:12px; border-radius:999px; border-color:var(--gold); font-weight:700;}
+.big-time{font-size:34px; font-weight:800; color:var(--gold-soft); margin:6px 0; direction:rtl;}
+.attrib{color:var(--gold-soft); font-size:13px; font-weight:700; margin:4px 0 14px;}
+.count-chip{display:inline-block; border:1px solid var(--gold); border-radius:999px; padding:8px 26px; color:var(--gold-soft); font-weight:800; margin:0 auto 16px; background:#0b0d2acc;}
+.en-line{direction:ltr; text-align:center; font-family:Georgia,serif; color:var(--gold-soft); line-height:1.9; font-size:17px; margin:0 0 14px;}
+.code{direction:ltr; font-size:clamp(18px,6vw,26px); font-weight:800; letter-spacing:1px; background:transparent; border:none; color:var(--gold-soft); text-shadow:0 0 14px #e8b84b66; padding:14px 0; margin:0;}
+.cr-name{text-align:center; font-size:20px; font-weight:800; margin:16px 0 0; color:#fff6de;}
+.chips{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:10px 0 6px;}
+.chip2{border:1px solid #e8b84b88; border-radius:999px; padding:6px 14px; font-size:12px; color:var(--text-dim); background:#0b0d2acc;}
+.num-grid{display:grid; grid-template-columns:1fr 1fr; gap:26px 12px; margin:30px 0 8px;}
+.num-card{position:relative; border:1px solid #e8b84b88; border-radius:14px; background:#0b0d2acc; padding:26px 10px 14px; text-align:center;}
+.num-card .nc-ic{position:absolute; top:-18px; left:50%; transform:translateX(-50%); width:36px; height:36px; border-radius:50%; background:#0b0d2a; border:1px solid var(--gold); display:flex; align-items:center; justify-content:center; font-size:17px;}
+.num-card.full{grid-column:1/-1;}
+.num-card h4{margin:0 0 4px; color:var(--gold-soft); font-size:14px;}
+.num-card .big{font-size:34px; font-weight:800; color:var(--gold-soft); line-height:1.3;}
+.num-card p{font-size:12px; line-height:1.9; margin:6px 0 0; color:var(--text);}
 </style>
 </head>
 <body>
@@ -171,10 +223,10 @@ flex-direction:column; background:linear-gradient(180deg, var(--bg-top), var(--b
 <header class="top">
   <div class="top-bar">
     <button class="icon-btn" onclick="showNotifications()" aria-label="اعلان‌ها">🔔<span class="dot"></span></button>
-    <div class="brand-inline">✨ کد کیهانی ✨</div>
+    <div class="brand-inline">✦ Cosmic Code ✦</div>
     <button class="icon-btn" onclick="showMoreMenu()" aria-label="منو">☰</button>
   </div>
-  <div class="sub">عددشناسی، طالع‌بینی و الهام‌های روزانه</div>
+  <div class="sub">کد کیهانی شما، نقشه‌ی وجود شما</div>
 </header>
 <main id="app"></main>
 <nav class="bottom">
