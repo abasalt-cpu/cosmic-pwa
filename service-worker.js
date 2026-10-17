@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cosmic-number-v39';
+const CACHE_NAME = 'cosmic-number-v40';
 const ASSETS = ['./','./index.html','./offline.html','./manifest.json','./data/data.js','./data/tables.js',
 './js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/baby_name.js','./js/app.js','./js/auth.js','./js/push.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
@@ -15,7 +15,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if(event.request.method !== 'GET') return;
   const isImage = /\.(png|jpg|jpeg|svg|webp|ico)$/i.test(event.request.url);
-  if(isImage){
+  const isHeavyData = /\/data\/(data|tables|hafez_modern)\.js$/i.test(event.request.url);
+  if(isImage || isHeavyData){
     // تصاویر سنگین: اول فوری از کش نشون بده، بعد در پس‌زمینه یه نسخه‌ی تازه بگیر و برای دفعه‌ی بعد کش کن.
     event.respondWith(
       caches.match(event.request).then((cached) => {
