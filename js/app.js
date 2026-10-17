@@ -127,7 +127,7 @@ function hubHTML(){
       </div>
     </div>
     <div class="grid-menu">
-      <div class="menu-tile" onclick="showHafez()"><img src="icons/menu/icon_hafez.png" class="icon-img"><span class="label">فال حافظ</span><span class="desc">پیام امروز حافظ برات</span></div>
+      <div class="menu-tile" onclick="showHafez('modern')"><img src="icons/menu/icon_hafez.png" class="icon-img"><span class="label">فال حافظ</span><span class="desc">پیام امروز حافظ برات</span></div>
       <div class="menu-tile" onclick="showMunajat()"><img src="icons/menu/icon_munajat.png" class="icon-img"><span class="label">مناجات</span><span class="desc">متون معنوی و مناجات</span></div>
       <div class="menu-tile" onclick="showZamanbandi()"><img src="icons/menu/icon_zamanbandi.png" class="icon-img"><span class="label">زمان‌بندی خدا</span><span class="desc">زمان‌بندی الهی زندگیت</span></div>
       <div class="menu-tile" onclick="showElham()"><img src="icons/menu/icon_elham.png" class="icon-img"><span class="label">الهام روز</span><span class="desc">پیام و الهام روزانه</span></div>
@@ -265,11 +265,15 @@ function showMembershipPage(){
   initGoogleButton();
 }
 let googleTokenClient=null;
-function initGoogleButton(){
+function initGoogleButton(attempt){
+  attempt=attempt||0;
   const el=document.getElementById('google-btn-container');
   if(!el) return;
-  if(typeof google==='undefined' || !google.accounts || !google.accounts.oauth2 || GOOGLE_CLIENT_ID==='YOUR_GOOGLE_CLIENT_ID'){
-    el.innerHTML='<p class="small-note">ورود با گوگل هنوز تنظیم نشده.</p>';
+  if(GOOGLE_CLIENT_ID==='YOUR_GOOGLE_CLIENT_ID') return;
+  if(typeof google==='undefined' || !google.accounts || !google.accounts.oauth2){
+    // اسکریپت گوگل ممکنه هنوز کامل لود نشده باشه — به‌جای جاخالی‌دادن، چندبار دیگه امتحان کن.
+    if(attempt<20){ setTimeout(()=>initGoogleButton(attempt+1), 250); return; }
+    el.innerHTML='<p class="small-note">ورود با گوگل در دسترس نیست — اتصال اینترنتت رو چک کن.</p>';
     return;
   }
   el.innerHTML=`<button type="button" class="google-btn" onclick="handleGoogleButtonClick()">${GOOGLE_G_LOGO}<span>ورود با اکانت گوگل</span></button>`;
@@ -445,19 +449,97 @@ function getHafezDrawState(){
   if(!st||st.date!==today){ st={date:today,count:0}; localStorage.setItem(key,JSON.stringify(st)); }
   return st;
 }
-function showHafez(){
+let hafezMode='modern'; // پیش‌فرض: تفسیر مدرن
+function getHafezModernToday(){
+  const st=JSON.parse(localStorage.getItem('hafezModernState')||'null');
+  return (st && st.date===todayStr()) ? st : null;
+}
+function loadHafezModernData(){
+  if(typeof HAFEZ_MODERN_DATA!=='undefined') return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='data/hafez_modern.js';
+    s.onload=()=>resolve();
+    s.onerror=()=>reject(new Error('بارگذاری تفسیر مدرن ناموفق بود. اتصال اینترنتت رو چک کن.'));
+    document.head.appendChild(s);
+  });
+}
+function renderHafezText(text){
+  let html='', list=[], para=[], quote=[];
+  const fq=()=>{ if(quote.length){ html+=`<div class="verse" style="margin:8px 0">${quote.join('<br>')}</div>`; quote=[]; } };
+  const fp=()=>{ if(para.length){ html+=`<p style="line-height:2; margin:6px 0">${para.join('<br>')}</p>`; para=[]; } };
+  const fl=()=>{ if(list.length){ html+=`<ul style="margin:6px 0; padding-inline-start:20px; line-height:2">${list.map(x=>`<li>${x}</li>`).join('')}</ul>`; list=[]; } };
+  for(const raw of String(text||'').split('\n')){
+    const l=raw.trim();
+    if(!l){ fq(); fp(); fl(); continue; }
+    if(l.startsWith('>')){ fp(); fl(); quote.push(esc(l.replace(/^>\s?/,''))); }
+    else if(/^[*-]\s+/.test(l)){ fq(); fp(); list.push(esc(l.replace(/^[*-]\s+/,''))); }
+    else { fq(); fl(); para.push(esc(l)); }
+  }
+  fq(); fp(); fl();
+  return html;
+}
+function showHafez(mode){
+  if(mode) hafezMode=mode;
+  const modern=hafezMode==='modern';
   const st=getHafezDrawState(); const remaining=Math.max(0,3-st.count);
+  const modernToday=getHafezModernToday();
   const falOn=typeof isDailyFalEnabled==='function' && isDailyFalEnabled();
+  const opt=(m,label)=>`<div class="mode-opt${hafezMode===m?' on':''}" onclick="showHafez('${m}')">${hafezMode===m?'◉':'○'} ${label}</div>`;
+  const mainBtn=modern
+    ? (modernToday
+        ? `<button class="btn" id="hafez-btn" disabled style="opacity:.5;cursor:not-allowed">✅ فال مدرن امروزت رو گرفتی</button>`
+        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">🌿 فال مدرنم رو بگیر (۱ بار در روز)</button>`)
+    : `<button class="btn" id="hafez-btn" onclick="revealHafez()"${remaining<=0?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${remaining>0?` (${remaining} بار دیگه امروز)`:''}</button>`;
+  const resultInit=(!modern && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
   render(`${backBtn('showHome()')}<div class="card"><h2>🔮 فال حافظ</h2>
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
-      <button class="btn" id="hafez-btn" onclick="revealHafez()"${remaining<=0?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${remaining>0?` (${remaining} بار دیگه امروز)`:''}</button>
-      <div id="hafez-result">${remaining<=0?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':''}</div></div>
+      <div class="hafez-mode">${opt('modern','تفسیر مدرن')}${opt('traditional','تفسیر سنتی')}</div>
+      <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}</p>
+      ${mainBtn}
+      <div id="hafez-result">${resultInit}</div></div>
     <div class="card">
       <h3 style="margin-bottom:8px">🔔 یادآوری فال روزانه</h3>
       <p class="desc">هر روز صبح یه اعلان بهت می‌رسه که یادت بندازه فالت رو بگیری.</p>
       <p id="fal-push-msg" class="small-note" style="min-height:18px"></p>
       <button class="btn${falOn?' secondary':''}" id="fal-push-btn" onclick="handleDailyFalToggle()">${falOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری روزانه'}</button>
     </div>`);
+  if(modern && modernToday) renderHafezModernResult(modernToday.id);
+}
+async function revealHafezModern(){
+  if(getHafezModernToday()) return;
+  const btn=document.getElementById('hafez-btn');
+  if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; }
+  try{ await loadHafezModernData(); }
+  catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='🌿 فال مدرنم رو بگیر (۱ بار در روز)'; }
+    document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`;
+    return;
+  }
+  const id=(simpleHash(getDeviceId()+'-modern-'+todayStr())%HAFEZ_MODERN_DATA.length)+1;
+  localStorage.setItem('hafezModernState', JSON.stringify({date:todayStr(), id}));
+  showHafez();
+}
+async function renderHafezModernResult(id){
+  const box=document.getElementById('hafez-result');
+  if(!box) return;
+  box.innerHTML='<p class="small-note">در حال بارگذاری...</p>';
+  try{ await loadHafezModernData(); }
+  catch(e){ box.innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`; return; }
+  const g=HAFEZ_MODERN_DATA[id-1];
+  if(!g){ box.innerHTML=''; return; }
+  const shareTxt=`🔮 فال حافظِ من (تفسیر مدرن):\n\n${g.p.join('\n')}\n\n${g.f.replace(/\s+/g,' ')}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`;
+  box.innerHTML=`<div class="result-block">
+    <div class="verse">${g.p.map(esc).join('<br>')}</div>
+    ${g.t!==g.p[0]?`<h3 style="margin:12px 0 4px; color:var(--gold-soft)">${esc(g.t)}</h3>`:''}
+    <p class="small-note" style="margin-top:6px">${esc(g.a)}</p>
+    <h3 class="hz-sec">🪞 آینه‌ی غزل</h3>${renderHafezText(g.m)}
+    <h3 class="hz-sec">⚡ چالش‌ها</h3>${renderHafezText(g.c)}
+    <h3 class="hz-sec">🧭 گام‌های عملی</h3>${renderHafezText(g.x)}
+    <h3 class="hz-sec">💬 پیام پایانی</h3>${renderHafezText(g.f)}
+    <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
+    <button class="btn small secondary" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button>
+  </div><p class="small-note">این فال مدرنِ امروزته — فردا می‌تونی دوباره بگیری 🌙</p>`;
 }
 function handleDailyFalToggle(){
   const btn=document.getElementById('fal-push-btn');
