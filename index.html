@@ -162,7 +162,7 @@ flex-direction:column; background:linear-gradient(180deg, var(--bg-top), var(--b
 .hz-sec{margin:14px 0 4px; color:var(--gold-soft); font-size:14.5px;}
 
 /* ===== تم طلایی-سرمه‌ای (مطابق طراحی جدید) ===== */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&display=swap');
 :root{--bg-top:#090a24; --bg-bottom:#1a1140; --panel:#0e1030e6; --gold:#e8b84b; --gold-soft:#f0c96a; --line:#e8b84b44; font-family:'Vazirmatn',Tahoma,sans-serif;}
 body{background:radial-gradient(900px 600px at 0% 8%, #3a1d6a66 0%, transparent 60%),radial-gradient(800px 600px at 100% 40%, #4a1d6a55 0%, transparent 60%),linear-gradient(180deg,var(--bg-top),var(--bg-bottom) 80%);}
 .card{border:1px solid #e8b84b55; background:linear-gradient(180deg,#0e1030e6,#0a0b22f2);}
@@ -183,7 +183,7 @@ background:linear-gradient(180deg,#fff1c8,#e8b84b 58%,#b98324); -webkit-backgrou
 .back-btn{width:40px; height:40px; border-radius:50%; border:1.5px solid var(--gold); padding:0; justify-content:center; margin-bottom:8px; background:#0b0d2a99;}
 .back-btn svg{width:20px; height:20px;}
 .icon-btn{width:40px; height:40px; border-radius:50%; border:1.5px solid var(--gold); background:#0b0d2a99; color:var(--gold-soft);}
-.brand-inline{font-family:'Cinzel',Georgia,serif; font-size:21px; letter-spacing:1.5px; font-weight:700;}
+.brand-inline{font-family:'Aref Ruqaa','Vazirmatn',Tahoma,serif; font-size:30px; letter-spacing:0; font-weight:700; line-height:1.3; color:var(--gold-soft); text-shadow:0 0 12px #e8b84b55;}
 label{color:var(--gold-soft); font-weight:700; font-size:14px;}
 input[type=text],input[type=number],input[type=email],input[type=password],select{background-color:#0b0d2a; border:1px solid #e8b84b66; border-radius:12px;}
 input.ic-user{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23e8b84b%22%20stroke-width%3D%221.6%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%228%22%20r%3D%224%22%2F%3E%3Cpath%20d%3D%22M4%2021c1-4.5%204.5-6.5%208-6.5s7%202%208%206.5%22%2F%3E%3C%2Fsvg%3E"); background-repeat:no-repeat; background-position:right 14px center; background-size:20px; padding-inline-start:46px !important;}
@@ -212,6 +212,12 @@ input.ic-user{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%
 .num-card h4{margin:0 0 4px; color:var(--gold-soft); font-size:14px;}
 .num-card .big{font-size:34px; font-weight:800; color:var(--gold-soft); line-height:1.3;}
 .num-card p{font-size:12px; line-height:1.9; margin:6px 0 0; color:var(--text);}
+.welcome-card .btn{width:auto; max-width:100%; white-space:nowrap; padding:8px 14px; font-size:13.5px;}
+.welcome-card .btn-inner{white-space:nowrap; gap:6px;}
+.welcome-card .btn-badge{width:26px; height:26px; border-width:2px;}
+.welcome-card .btn-badge svg{width:17px; height:17px;}
+.welcome-card .btn-chevron{display:none;}
+.welcome-card>*{min-width:0;}
 </style>
 </head>
 <body>
@@ -223,7 +229,7 @@ input.ic-user{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%
 <header class="top">
   <div class="top-bar">
     <button class="icon-btn" onclick="showNotifications()" aria-label="اعلان‌ها">🔔<span class="dot"></span></button>
-    <div class="brand-inline">✦ Cosmic Code ✦</div>
+    <div class="brand-inline">✦ کد کیهانی ✦</div>
     <button class="icon-btn" onclick="showMoreMenu()" aria-label="منو">☰</button>
   </div>
   <div class="sub">کد کیهانی شما، نقشه‌ی وجود شما</div>
