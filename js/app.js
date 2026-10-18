@@ -433,7 +433,7 @@ function submitCosmicForm(){
   showCosmicResult(firstName,familyName,report);
 }
 function shortText(t,n){t=String(t||'').replace(/\s+/g,' ').trim(); if(t.length<=n) return t; const c=t.slice(0,n); const i=c.lastIndexOf(' '); return c.slice(0,i>n*0.6?i:n)+'…';}
-function fitCode(){const el=document.querySelector('.code'); if(!el) return; let fs=30; el.style.fontSize=fs+'px'; while(el.scrollWidth>el.clientWidth && fs>9){fs--; el.style.fontSize=fs+'px';}}
+function fitCode(){const el=document.querySelector('.code'), sp=document.getElementById('code-span'); if(!el||!sp) return; el.style.fontSize='30px'; const avail=el.clientWidth-28, w=sp.getBoundingClientRect().width; if(w>0) el.style.fontSize=Math.max(9,Math.min(30,Math.floor(30*avail/w)))+'px';}
 let lastCosmic=null;
 function reopenCosmic(){ if(lastCosmic) showCosmicResult(lastCosmic.f,lastCosmic.l,lastCosmic.r); else showCosmicInputForm(); }
 function numKeyFor(kind,r){
@@ -473,7 +473,7 @@ function showCosmicResult(firstName,familyName,r){
   const bt=(typeof BATEN_TABLE!=='undefined'&&BATEN_TABLE[String(r.batenNum)])||(NUM_INFO[String(r.batenNum)]||{}).s||'';
   const pad=n=>String(n).padStart(2,'0');
   render(`${backBtn('showCosmicInputForm()')}${pageHead('','کد کیهانی')}
-    <div class="card orn center"><div class="code">${esc(r.cosmicCode)}</div></div>
+    <div class="card orn center"><div class="code"><span id="code-span" style="display:inline-block">${esc(r.cosmicCode)}</span></div></div>
     <div class="cr-name">${esc(firstName)} ${esc(familyName)}</div>
     ${ORN_DIV}
     <div class="chips"><span class="chip2">📅 تاریخ تولد: ${toFa(r.jy)}/${toFa(pad(r.jm))}/${toFa(pad(r.jd))}</span><span class="chip2">☀️ عدد خورشیدی: ${toFa(r.solarNum)}</span></div>
@@ -489,7 +489,7 @@ function showCosmicResult(firstName,familyName,r){
       <button class="btn secondary" onclick="showCosmicInputForm()">🔄 محاسبه‌ی جدید</button>
       <button class="btn" onclick='shareText(${JSON.stringify(`🌌 کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}\n\nکد کیهانیِ خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div>`);
-  fitCode(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitCode);
+  fitCode(); if(document.fonts){ document.fonts.ready.then(fitCode); document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',fitCode); } setTimeout(fitCode,300); setTimeout(fitCode,1200);
 }
 const APP_SHARE_URL="https://abasalt-cpu.github.io/cosmic-pwa/";
 function shareText(text){ if(navigator.share){navigator.share({text});} else {navigator.clipboard.writeText(text); alert('متن کپی شد.');} }
