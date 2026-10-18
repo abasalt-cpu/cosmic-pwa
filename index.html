@@ -11,7 +11,8 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=Cinzel:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=Barlow+Semi+Condensed:wght@600;700&display=swap');
+@font-face{font-family:'BahnLocal'; src:url('fonts/bahnschrift.ttf') format('truetype'); font-weight:100 900; font-display:swap;}
 @font-face{font-family:'VazirLocal'; src:url('fonts/Vazirmatn%5Bwght%5D.woff2') format('woff2'); font-weight:100 900; font-display:swap;}
 @font-face{font-family:'Sahel'; src:url('fonts/Sahel-Bold.woff2') format('woff2'); font-weight:400 800; font-display:swap;}
 @font-face{font-family:'Sahel'; src:url('fonts/Sahel-Black.woff2') format('woff2'); font-weight:900; font-display:swap;}
@@ -130,7 +131,7 @@ cursor:pointer; background:none; border:none; padding:6px 0; font-family:inherit
 .result-block{border-top:1px dashed var(--line); padding-top:12px; margin-top:12px; font-size:14px; line-height:2;}
 .result-block .num{color:var(--gold-soft); font-weight:700;}
 .result-block .verse{font-style:italic; color:#e7e0ff;}
-.code{direction:ltr; white-space:nowrap; font-family:'Cinzel',Georgia,serif; font-size:26px; font-weight:700; letter-spacing:1px; background:transparent; border:none; color:var(--gold-soft); text-shadow:0 0 14px #e8b84b66; padding:12px 0; margin:0; overflow:hidden;}
+.code{direction:ltr; white-space:nowrap; text-align:center; font-family:'BahnLocal','Barlow Semi Condensed','Arial Narrow',sans-serif; font-size:26px; font-weight:700; letter-spacing:.5px; background:transparent; border:none; color:var(--gold-soft); text-shadow:0 0 14px #e8b84b66; padding:12px 14px; margin:0; overflow:hidden;}
 .verse{font-style:italic; color:#e7e0ff;}
 .name-item{padding:8px 0; border-bottom:1px solid var(--line); font-size:14px;}
 nav.bottom{position:fixed; bottom:0; inset-inline:0; z-index:5; background:#150f2ce6; backdrop-filter:blur(10px);
@@ -235,6 +236,12 @@ input.ic-user{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%
 .dt-sec h3{margin:0 0 4px; color:var(--gold-soft); font-size:16px;}
 .dt-sec p{margin:0; font-size:13.5px; line-height:2; text-align:justify; text-align-last:right;}
 .dt-ic{flex:0 0 46px;} .dt-ic svg{width:46px; height:46px; fill:none; stroke:var(--gold); stroke-width:1.5; stroke-linejoin:round; stroke-linecap:round;}
+.back-btn{display:flex; align-items:center; margin-bottom:0; position:relative; z-index:2;}
+.back-btn+.pg-head{margin-top:-40px;}
+.back-btn+.medal{margin-top:-40px;}
+.pg-head{margin:0 0 10px;}
+.pg-title{line-height:1.45;}
+.pg-head .orn-div{margin:2px auto;}
 </style>
 </head>
 <body>
