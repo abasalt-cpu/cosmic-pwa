@@ -161,7 +161,7 @@ function showMoreMenu(){
       <div class="list-item" onclick="showTermsPage()"><span class="li-label">${ICON_TERMS}قوانین و شرایط استفاده</span><span class="li-arrow">‹</span></div>
     </div>
     ${adminBlock}
-    <div class="small-note">اطلاعات پروفایل‌هات (اسم، تاریخ تولد و نتایج) روی گوشیت و همچنین سرور اختصاصی ما ذخیره می‌شه. جزئیات کامل توی «حریم خصوصی».</div>`);
+    <div class="small-note">اطلاعات پروفایل‌های شما (نام، تاریخ تولد و نتایج) بر روی دستگاه شما و همچنین سرور اختصاصی ما ذخیره می‌شود. جزئیات کامل در بخش «حریم خصوصی» ارائه شده است.</div>`);
 }
 async function showAdminUsersPage(){
   render(`${backBtn('showMoreMenu()')}<div class="card"><h2>👥 کاربران ثبت‌شده</h2><p class="desc" id="admin-status">در حال بارگذاری...</p></div><div id="admin-list"></div>`);
@@ -218,49 +218,70 @@ async function showAdminProfilesPage(){
     document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
   }
 }
+const PV_ICONS={
+shield:'<path d="M12 3l7.5 3v5.5c0 4.6-3.1 8.1-7.5 9.5C7.6 19.6 4.5 16.1 4.5 11.5V6z"/><rect x="9" y="10.5" width="6" height="5" rx="1"/><path d="M10 10.5V9a2 2 0 014 0v1.5"/>',
+doc:'<path d="M7 3h7l4 4v5"/><path d="M7 3v18h5"/><path d="M9.5 9h4M9.5 12.5h3"/><rect x="14" y="15" width="6.5" height="5.5" rx="1"/><path d="M15.7 15v-1.3a1.5 1.5 0 013 0V15"/>',
+eye:'<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 20L20 4"/>',
+eyeOpen:'<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+lock:'<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle cx="12" cy="15.5" r="1.2"/>',
+info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+calc:'<rect x="5" y="3" width="14" height="18" rx="2"/><rect x="8" y="6" width="8" height="3"/><path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 16.5h.01M12 16.5h.01M15.5 16.5h.01"/>',
+feather:'<path d="M20 4c-8 0-13 5-13 12l-3 4"/><path d="M20 4c0 8-5 13-12 13"/><path d="M9 15l6-6"/>',
+wheel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.6 5.6l4.3 4.3M14.1 14.1l4.3 4.3M18.4 5.6l-4.3 4.3M9.9 14.1l-4.3 4.3"/>',
+people:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19c.6-3.3 2.9-5 5.5-5s4.9 1.7 5.5 5"/><path d="M15 14.2c.7-.2 1.3-.2 1.9-.2 2 0 3.6 1.3 4.1 4"/>',
+user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5"/>',
+bell:'<path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 004 0"/>',
+compass:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+refresh:'<path d="M20 11a8 8 0 10-2.3 5.7"/><path d="M20 5v6h-6"/>',
+trash:'<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>'
+};
+function pvCard(title,text,ic){return `<div class="pv-card"><div class="pv-ic"><svg viewBox="0 0 24 24">${PV_ICONS[ic]}</svg></div><div class="pv-tx"><h3>${title}</h3><p>${text}</p></div></div>`;}
 function showAboutPage(){
-  render(`${backBtn('showMoreMenu()')}
-    <div class="card"><h2 style="display:flex; align-items:center; gap:8px">${ICON_INFO}درباره‌ی نرم‌افزار</h2>
-      <p class="desc">«کد کیهانی» با ترکیب عددشناسی، طالع‌بینی و متون الهام‌بخش فارسی، یه نگاه تازه و شخصی‌سازی‌شده به شخصیت، مسیر زندگی و روزهای تو ارائه می‌ده — طراحی‌شده برای کاوش، نه برای پیش‌گویی قطعی.</p></div>
-    <div class="card"><h3 style="margin-bottom:10px">امکانات نرم‌افزار</h3>
-      <div style="line-height:2.1">
-        🔢 محاسبه‌ی کد کیهانی از روی نام و تاریخ تولد<br>
-        🔮 فال حافظ روزانه (با امکان سه‌بار فال در روز)<br>
-        ⏳ زمان‌بندی خدا — جمله‌ای الهام‌بخش با ریتم روزانه<br>
-        ♈ طالع‌بینی شخصی و روزانه<br>
-        🕊️ مناجات و متون معنوی<br>
-        🌅 الهام روز<br>
-        🌌 زایچه‌ی تقریبی<br>
-        ⚖️ مقایسه‌ی عددی و ستاره‌ای دو نفر<br>
-        👶 پیشنهاد اسم برای فرزند<br>
-        📇 ذخیره‌ی پروفایل‌های چند نفر روی گوشی<br>
-        👤 عضویت اختیاری (ایمیل یا گوگل) برای ورود به حساب
-      </div></div>
-    <div class="card"><p class="desc" style="margin:0">نسخه‌ی فعلی: 1.0.0 — این نرم‌افزار به‌صورت مداوم در حال به‌روزرسانی و اضافه‌شدن امکانات جدیده.</p></div>`);
+  render(`${backBtn('showMoreMenu()')}${pageHead('','درباره‌ی نرم‌افزار')}
+    <div class="card orn pv-text">
+      <p>«کد کیهانی» راهی است به‌سوی شناخت عمیق‌تر خویش و رمزگشایی از نظام هستی.</p>
+      <p>این نرم‌افزار با تلفیق عددشناسی، طالع‌بینی و گنجینه‌ی ادب فارسی، تجربه‌ای شخصی‌سازی‌شده برای کاوش در شخصیت، مسیر زندگی و روزهای شما فراهم می‌آورد.</p>
+      <p>از محاسبه‌ی کد کیهانی و زایچه‌ی تقریبی گرفته تا فال حافظ، مناجات و متون الهام‌بخش، همه‌ی بخش‌ها برای همراهی شما در سفر درون و برون طراحی شده‌اند. این نرم‌افزار به‌منظور کاوش و خودشناسی ارائه می‌شود و جنبه‌ی پیش‌گویی قطعی ندارد.</p>
+    </div>
+    <h2 class="sec-title">✦ امکانات نرم‌افزار</h2>
+    ${pvCard('محاسبه‌ی کد کیهانی','استخراج کد کیهانی، عدد سرنوشت، تقدیر، باطن، پایگاه اجتماعی و وضعیت درآمد بر پایه‌ی نام و تاریخ تولد.','calc')}
+    ${pvCard('فال حافظ و متون معنوی','فال حافظ روزانه (حداکثر سه‌بار در روز)، مناجات، الهام روز و عبارت‌های «زمان‌بندی خدا».','feather')}
+    ${pvCard('طالع‌بینی و زایچه‌ی تقریبی','طالع‌بینی شخصی و روزانه و محاسبه‌ی زایچه‌ی تقریبی بر اساس زمان و محل تولد.','wheel')}
+    ${pvCard('مقایسه و پیشنهاد نام','مقایسه‌ی عددی و ستاره‌ای دو نفر و پیشنهاد نام فرزند با توجه به نام خانوادگی و نام مادر.','people')}
+    ${pvCard('پروفایل‌ها و حساب کاربری','ذخیره‌ی پروفایل چند نفر و عضویت اختیاری از طریق ایمیل یا حساب گوگل.','user')}
+    ${pvCard('یادآوری‌ها','یادآوری روزانه‌ی فال و یادآوری تولد، در صورت فعال‌سازی توسط کاربر.','bell')}
+    <p class="small-note center">نسخه‌ی فعلی: ${toFa('1.0.0')} — این نرم‌افزار به‌طور مستمر به‌روزرسانی می‌شود و امکانات تازه به آن افزوده خواهد شد.</p>`);
 }
+function togglePw(){const i=document.getElementById('auth-password'),b=document.getElementById('pw-eye'); if(!i) return; const show=i.type==='password'; i.type=show?'text':'password'; b.innerHTML=`<svg viewBox="0 0 24 24">${PV_ICONS[show?'eye':'eyeOpen']}</svg>`;}
 function showMembershipPage(){
   if(currentUser){
     const label = currentUser.displayName || currentUser.email || currentUser.phone || 'کاربر';
     const sub = currentUser.email || currentUser.phone || '';
-    render(`${backBtn('showMoreMenu()')}
-      <div class="card"><h2>👤 حساب کاربری</h2>
-        <p class="desc">با حساب <b style="color:#4fd17a">${esc(label)}</b> وارد شدی.${sub && sub!==label?' (<span style="color:#4fd17a">'+esc(sub)+'</span>)':''}</p></div>
-      <div class="card"><button class="btn secondary" onclick="handleSignOut()">🚪 خروج از حساب</button></div>`);
+    render(`${backBtn('showMoreMenu()')}${pageHead('','حساب کاربری')}
+      <div class="card orn center">
+        <div class="pv-ic acc-av"><svg viewBox="0 0 24 24">${PV_ICONS.user}</svg></div>
+        <div class="acc-name">${esc(label)}</div>
+        ${sub && sub!==label?`<div class="acc-sub">${esc(sub)}</div>`:''}
+        ${ORN_DIV}
+        <p class="small-note center">شما با این حساب وارد شده‌اید.</p>
+        <button class="btn secondary" onclick="handleSignOut()">خروج از حساب</button>
+      </div>`);
     return;
   }
-  render(`${backBtn('showMoreMenu()')}
-    <div class="card"><h2>👤 عضویت / ورود</h2>
-      <p class="desc">با ساختن حساب، هویتت روی این اپ ثبت می‌شه. اطلاعات پروفایل‌هات روی گوشیت و سرور ما ذخیره می‌مونه تا در صورت نیاز بتونی بازیابیشون کنی.</p>
-      <div id="google-btn-container" style="margin-top:12px; display:flex; justify-content:center"></div>
-      <p class="small-note" style="text-align:center">ورود با گوگل ممکنه بدون VPN کار نکنه.</p>
-    </div>
-    <div class="card">
-      <h3 style="margin-bottom:10px">✉️ ورود یا ثبت‌نام با ایمیل</h3>
-      <label>ایمیل</label><input id="auth-email" type="email" placeholder="you@example.com">
-      <label>رمز عبور</label><input id="auth-password" type="password" placeholder="حداقل ۶ کاراکتر">
-      <p id="auth-error" class="small-note" style="color:#ff8a8a; min-height:18px"></p>
-      <button class="btn" onclick="handleEmailSignIn()">ورود</button>
-      <button class="btn secondary" onclick="handleEmailSignUp()">ساخت حساب جدید</button>
+  render(`${backBtn('showMoreMenu()')}${pageHead('','عضویت / ورود','برای ورود یا عضویت، یکی از روش‌های زیر را انتخاب کنید.')}
+    <div class="card orn">
+      <div id="google-btn-container" class="google-wrap"></div>
+      <p class="small-note center">ورود با گوگل ممکن است بدون استفاده از VPN امکان‌پذیر نباشد.</p>
+      <div class="auth-box">
+        <div class="auth-title"><span></span><b>ورود با ایمیل</b><span></span></div>
+        <label>ایمیل</label>
+        <input id="auth-email" class="ic-mail" type="email" dir="ltr" placeholder="example@email.com">
+        <label>رمز عبور</label>
+        <div class="pw-wrap"><input id="auth-password" class="ic-lock" type="password" placeholder="رمز عبور (حداقل ۶ نویسه)"><button type="button" id="pw-eye" class="pw-eye" onclick="togglePw()" aria-label="نمایش رمز عبور"><svg viewBox="0 0 24 24">${PV_ICONS.eyeOpen}</svg></button></div>
+        <p id="auth-error" class="small-note" style="color:#ff8a8a; min-height:18px"></p>
+        <button class="btn" onclick="handleEmailSignIn()">ورود</button>
+        <button class="btn secondary" onclick="handleEmailSignUp()">ساخت حساب جدید</button>
+      </div>
     </div>`);
   initGoogleButton();
 }
@@ -273,7 +294,7 @@ function initGoogleButton(attempt){
   if(typeof google==='undefined' || !google.accounts || !google.accounts.oauth2){
     // اسکریپت گوگل ممکنه هنوز کامل لود نشده باشه — به‌جای جاخالی‌دادن، چندبار دیگه امتحان کن.
     if(attempt<20){ setTimeout(()=>initGoogleButton(attempt+1), 250); return; }
-    el.innerHTML='<p class="small-note">ورود با گوگل در دسترس نیست — اتصال اینترنتت رو چک کن.</p>';
+    el.innerHTML='<p class="small-note">ورود با گوگل در حال حاضر در دسترس نیست؛ لطفاً اتصال اینترنت خود را بررسی کنید.</p>';
     return;
   }
   el.innerHTML=`<button type="button" class="google-btn" onclick="handleGoogleButtonClick()">${GOOGLE_G_LOGO}<span>ورود با اکانت گوگل</span></button>`;
@@ -293,7 +314,7 @@ function handleGoogleTokenResponse(response){
 function authGuard(elId){
   if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')){
     const el=document.getElementById(elId);
-    if(el){ el.style.color='#ff8a8a'; el.textContent='تنظیمات سرور عضویت هنوز کامل نشده.'; }
+    if(el){ el.style.color='#ff8a8a'; el.textContent='پیکربندی سرویس عضویت هنوز تکمیل نشده است.'; }
     return false;
   }
   return true;
@@ -370,35 +391,24 @@ async function fetchMyProfilesFromServer(){
   }catch(e){ console.error('fetch my profiles failed', e); }
 }
 function showPrivacyPage(){
-  render(`${backBtn('showMoreMenu()')}
-    <div class="card"><h2 style="display:flex; align-items:center; gap:8px">${ICON_PRIVACY}حریم خصوصی</h2>
-      <p class="desc">حریم خصوصی تو برای ما مهمه. تمام امکانات اصلی اپ (محاسبه‌ی کد کیهانی، فال، طالع‌بینی و...) بدون نیاز به ثبت‌نام و کاملاً محلی روی گوشیت کار می‌کنن؛ عضویت فقط یه قابلیت اختیاریه.</p></div>
-    <div class="card"><h3 style="margin-bottom:10px">چه اطلاعاتی ذخیره می‌شه؟</h3>
-      <div style="line-height:2.1">
-        📱 نام، تاریخ تولد و نتیجه‌ی محاسبات هر پروفایلی که می‌سازی، هم روی خود گوشیت ذخیره می‌شه و هم برای پشتیبانی و بهبود اپ روی سرور اختصاصی ما (Cloudflare) نگه‌داری می‌شه. این اطلاعات فروخته یا با شخص ثالثی به اشتراک گذاشته نمی‌شه.<br>
-        👤 اگه با ایمیل یا شماره موبایل عضو بشی، اطلاعات هویتی‌ت (ایمیل/رمز به‌صورت رمزنگاری‌شده، یا شماره موبایل) هم روی همون سرور ذخیره می‌شه.<br>
-        🔵 اگه با گوگل وارد بشی، فقط ایمیل و نامی که گوگل در اختیارمون می‌ذاره برای شناسایی حسابت ذخیره می‌شه.<br>
-        📲 برای ورود با موبایل (در آینده)، شماره‌ت فقط برای ارسال یک‌بار کد تایید استفاده می‌شه و جای دیگه‌ای ذخیره نمی‌مونه.<br>
-        📊 برای بهتر شدن اپ، از آمار بازدید ناشناس و بدون کوکی (Cloudflare Analytics) استفاده می‌کنیم که هیچ اطلاعات شخصی یا قابل‌شناسایی جمع نمی‌کنه.<br>
-        🚫 بدون عضویت هم می‌تونی از همه‌ی امکانات اصلی اپ استفاده کنی.<br>
-        🍪 از کوکی یا ابزار ردیابی برای تبلیغات استفاده نمی‌کنیم.<br>
-        🗑️ هر وقت بخوای می‌تونی از تنظیمات مرورگر، تمام اطلاعات ذخیره‌شده رو پاک کنی، یا از حسابت خارج بشی.
-      </div></div>
-    <div class="card"><p class="desc" style="margin:0">اگه سؤال یا نگرانی‌ای درباره‌ی حریم خصوصی داری، از بخش «درباره‌ی نرم‌افزار» می‌تونی با ما در ارتباط باشی.</p></div>`);
+  render(`${backBtn('showMoreMenu()')}${pageHead('','حریم خصوصی')}
+    ${pvCard('احترام به حریم خصوصی شما','حفظ حریم خصوصی شما برای ما اهمیت بسیار دارد. تمام امکانات اصلی نرم‌افزار، از جمله محاسبه‌ی کد کیهانی، فال و طالع‌بینی، بدون نیاز به عضویت و به‌صورت محلی بر روی دستگاه شما در دسترس است؛ عضویت صرفاً یک امکان اختیاری است.','shield')}
+    ${pvCard('اطلاعات ذخیره‌شده','نام، تاریخ تولد و نتایج محاسبات هر پروفایل، هم بر روی دستگاه شما و هم، به‌منظور پشتیبانی و بهبود خدمات، بر روی سرور اختصاصی ما (Cloudflare) نگهداری می‌شود. این اطلاعات به فروش نمی‌رسد و با هیچ شخص ثالثی به اشتراک گذاشته نمی‌شود.','doc')}
+    ${pvCard('اطلاعات حساب کاربری','در صورت عضویت با ایمیل، نشانی ایمیل و رمز عبور (به‌صورت رمزنگاری‌شده) ذخیره می‌شود. در صورت ورود با گوگل، تنها نشانی ایمیل و نامی که گوگل در اختیار ما قرار می‌دهد برای شناسایی حساب نگهداری می‌شود. ورود با شماره‌ی تلفن همراه در آینده افزوده خواهد شد و شماره صرفاً برای ارسال یک‌باره‌ی کد تأیید به کار می‌رود.','user')}
+    ${pvCard('اعلان‌ها','در صورت فعال‌سازی یادآوری‌ها، شناسه‌ی فنی اشتراک اعلان دستگاه شما صرفاً برای ارسال یادآوری‌های انتخابی ذخیره می‌شود و با غیرفعال‌سازی یادآوری، این اشتراک لغو می‌گردد.','bell')}
+    ${pvCard('استفاده از اطلاعات','اطلاعات شما صرفاً برای ارائه و بهبود خدمات، شخصی‌سازی نتایج و ارسال یادآوری‌های انتخابی به کار می‌رود و بدون رضایت شما در اختیار دیگران قرار نخواهد گرفت.','eye')}
+    ${pvCard('آمار و ردیابی','برای بهبود نرم‌افزار از آمار بازدید ناشناس و بدون کوکی (Cloudflare Analytics) استفاده می‌شود که هیچ اطلاعات شخصی یا قابل‌شناسایی گردآوری نمی‌کند. از کوکی یا ابزار ردیابی تبلیغاتی استفاده نمی‌شود.','lock')}
+    ${pvCard('حذف اطلاعات','شما می‌توانید در هر زمان با پاک‌کردن داده‌های مرورگر یا برنامه، اطلاعات ذخیره‌شده بر روی دستگاه را حذف کنید و از حساب کاربری خود خارج شوید.','trash')}`);
 }
 function showTermsPage(){
-  render(`${backBtn('showMoreMenu()')}
-    <div class="card"><h2 style="display:flex; align-items:center; gap:8px">${ICON_TERMS}قوانین و شرایط استفاده</h2>
-      <p class="desc">با استفاده از «کد کیهانی» فرض می‌شه شرایط زیر رو مطالعه کرده و پذیرفتی:</p></div>
-    <div class="card">
-      <div style="line-height:2.1">
-        🎭 محتوای این اپ (عددشناسی، طالع‌بینی، فال حافظ و مناجات) صرفاً جنبه‌ی سرگرمی، فرهنگی و خودشناسی داره و جایگزین مشاوره‌ی علمی، پزشکی، روان‌شناسی یا مالی نیست.<br>
-        🧭 تصمیم‌های مهم زندگیت رو صرفاً بر پایه‌ی نتایج این اپ نگیر.<br>
-        ✍️ مسئولیت صحت اطلاعاتی که وارد می‌کنی (نام، تاریخ تولد و...) با خودته.<br>
-        🔐 اگه حساب کاربری می‌سازی، حفظ رمز عبور و امنیت حسابت با خودته؛ هر حساب مخصوص یک نفره.<br>
-        🔄 محتوا و امکانات اپ ممکنه بدون اطلاع قبلی تغییر یا به‌روزرسانی بشه.<br>
-        ⚠️ این نرم‌افزار «همان‌طور که هست» ارائه می‌شه و هیچ تضمینی برای دقت صددرصدی نتایج وجود نداره.
-      </div></div>`);
+  render(`${backBtn('showMoreMenu()')}${pageHead('','قوانین و شرایط استفاده','','sm')}
+    ${pvCard('پذیرش شرایط','استفاده از «کد کیهانی» به منزله‌ی مطالعه و پذیرش شرایط زیر است.','doc')}
+    ${pvCard('ماهیت محتوا','محتوای نرم‌افزار (عددشناسی، طالع‌بینی، فال حافظ و مناجات) جنبه‌ی سرگرمی، فرهنگی و خودشناسی دارد و جایگزین مشاوره‌ی علمی، پزشکی، روان‌شناختی، حقوقی یا مالی نیست.','compass')}
+    ${pvCard('مسئولیت تصمیم‌گیری','از اتخاذ تصمیم‌های مهم زندگی صرفاً بر پایه‌ی نتایج این نرم‌افزار خودداری کنید.','info')}
+    ${pvCard('صحت اطلاعات','مسئولیت صحت اطلاعات واردشده، از جمله نام و تاریخ تولد، بر عهده‌ی کاربر است.','user')}
+    ${pvCard('حساب کاربری','در صورت ایجاد حساب کاربری، حفظ رمز عبور و امنیت حساب بر عهده‌ی کاربر است و هر حساب منحصراً به یک نفر تعلق دارد.','lock')}
+    ${pvCard('تغییرات و به‌روزرسانی','محتوا و امکانات نرم‌افزار ممکن است بدون اطلاع قبلی تغییر کند یا به‌روزرسانی شود.','refresh')}
+    ${pvCard('سلب مسئولیت','این نرم‌افزار به همان صورتی که هست و بدون هیچ‌گونه ضمانتی ارائه می‌شود و تضمینی برای دقت کامل نتایج وجود ندارد.','shield')}`);
 }
 function backBtn(fn,label){return `<button class="back-btn" aria-label="${label||'بازگشت'}" onclick="${fn}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>`;}
 const ORN_DIV='<div class="orn-div"><span></span><i>✦</i><span></span></div>';
