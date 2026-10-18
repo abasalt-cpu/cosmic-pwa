@@ -11,7 +11,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=Aref+Ruqaa:wght@700&family=Cinzel:wght@600;700&display=swap');
 :root{--bg-top:#161233; --bg-bottom:#2b1a4a; --panel:#231a42cc; --gold:#e8b84b; --gold-soft:#f0c96a;
 --text:#f1eef9; --text-dim:#b9b0d6; --line:#3d3268; --radius:18px; font-family: Tahoma, sans-serif;}
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
@@ -129,8 +129,7 @@ cursor:pointer; background:none; border:none; padding:6px 0; font-family:inherit
 .result-block{border-top:1px dashed var(--line); padding-top:12px; margin-top:12px; font-size:14px; line-height:2;}
 .result-block .num{color:var(--gold-soft); font-weight:700;}
 .result-block .verse{font-style:italic; color:#e7e0ff;}
-.code{direction:ltr; text-align:center; font-size:15px; letter-spacing:1px; background:#0f0b21; border:1px solid var(--line);
-border-radius:10px; padding:10px; margin:8px 0; color:var(--gold-soft); word-break:break-all;}
+.code{direction:ltr; white-space:nowrap; font-family:'Cinzel',Georgia,serif; font-size:26px; font-weight:700; letter-spacing:1px; background:transparent; border:none; color:var(--gold-soft); text-shadow:0 0 14px #e8b84b66; padding:12px 0; margin:0; overflow:hidden;}
 .verse{font-style:italic; color:#e7e0ff;}
 .name-item{padding:8px 0; border-bottom:1px solid var(--line); font-size:14px;}
 nav.bottom{position:fixed; bottom:0; inset-inline:0; z-index:5; background:#150f2ce6; backdrop-filter:blur(10px);
@@ -162,7 +161,6 @@ flex-direction:column; background:linear-gradient(180deg, var(--bg-top), var(--b
 .hz-sec{margin:14px 0 4px; color:var(--gold-soft); font-size:14.5px;}
 
 /* ===== تم طلایی-سرمه‌ای (مطابق طراحی جدید) ===== */
-@import url('https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&display=swap');
 :root{--bg-top:#090a24; --bg-bottom:#1a1140; --panel:#0e1030e6; --gold:#e8b84b; --gold-soft:#f0c96a; --line:#e8b84b44; font-family:'Vazirmatn',Tahoma,sans-serif;}
 body{background:radial-gradient(900px 600px at 0% 8%, #3a1d6a66 0%, transparent 60%),radial-gradient(800px 600px at 100% 40%, #4a1d6a55 0%, transparent 60%),linear-gradient(180deg,var(--bg-top),var(--bg-bottom) 80%);}
 .card{border:1px solid #e8b84b55; background:linear-gradient(180deg,#0e1030e6,#0a0b22f2);}
@@ -223,6 +221,19 @@ input.ic-user{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%
 .center .small-note,.pg-head .pg-sub,.num-card.cc p{text-align:center; text-align-last:center;}
 .pg-head .pg-sub{text-align:center; text-align-last:center;}
 .card.orn.center .small-note{text-align:center; text-align-last:center;}
+.num-grid{grid-template-columns:repeat(3,1fr); gap:28px 8px;}
+.num-card{padding:24px 5px 10px; cursor:pointer;}
+.num-card h4{font-size:12.5px;}
+.num-card .big{font-size:30px;}
+.num-card p{font-size:11px; line-height:1.8; text-align:center; text-align-last:center;}
+.nc-more{display:block; margin-top:6px; font-size:10.5px; color:var(--gold-soft);}
+.medal{display:flex; justify-content:center; margin:0 0 4px;}
+.dt-title{text-align:center; color:var(--gold-soft); font-size:19px; font-weight:800; margin:4px 0; line-height:1.7;}
+.dt-sec{display:flex; gap:12px; align-items:center; padding:12px 2px; border-bottom:1px solid #e8b84b33;}
+.dt-sec:last-of-type{border-bottom:none;}
+.dt-sec h3{margin:0 0 4px; color:var(--gold-soft); font-size:16px;}
+.dt-sec p{margin:0; font-size:13.5px; line-height:2; text-align:justify; text-align-last:right;}
+.dt-ic{flex:0 0 46px;} .dt-ic svg{width:46px; height:46px; fill:none; stroke:var(--gold); stroke-width:1.5; stroke-linejoin:round; stroke-linecap:round;}
 </style>
 </head>
 <body>
@@ -265,6 +276,7 @@ window.addEventListener('resize', setHeaderHeightVar);
 <script src="js/zodiac.js" defer></script>
 <script src="js/content_modules.js" defer></script>
 <script src="js/baby_name.js" defer></script>
+<script src="js/number_info.js" defer></script>
 <script src="js/app.js" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
