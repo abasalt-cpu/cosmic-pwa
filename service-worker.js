@@ -1,11 +1,11 @@
-const CACHE_NAME = 'cosmic-number-v48';
+const CACHE_NAME = 'cosmic-number-v49';
 const ASSETS = ['./','./index.html','./offline.html','./manifest.json','./data/data.js','./data/tables.js','./fonts/Sahel-Bold.woff2','./fonts/Sahel-Black.woff2','./data/hafez_modern.js',
 './js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/baby_name.js','./js/number_info.js','./js/app.js','./js/auth.js','./js/push.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
 './icons/apple-touch-icon.png','./icons/favicon-32.png','./icons/favicon-16.png','./icons/hand-glow.png',
-'./icons/menu/icon_app_192.png','./icons/menu/icon_app_512.png','./icons/menu/icon_baby.png','./icons/menu/icon_compare.png',
-'./icons/menu/icon_elham.png','./icons/menu/icon_hafez.png','./icons/menu/icon_munajat.png','./icons/menu/icon_natal.png',
-'./icons/menu/icon_profiles.png','./icons/menu/icon_zamanbandi.png','./icons/menu/icon_zodiac.png'];
+'./icons/menu/icon_app_192.png','./icons/menu/icon_app_512.png','./icons/menu/icon_baby.webp','./icons/menu/icon_compare.webp',
+'./icons/menu/icon_elham.webp','./icons/menu/icon_hafez.webp','./icons/menu/icon_munajat.webp','./icons/menu/icon_natal.webp',
+'./icons/menu/icon_profiles.png','./icons/menu/icon_zamanbandi.webp','./icons/menu/icon_zodiac.webp'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
