@@ -432,25 +432,64 @@ function submitCosmicForm(){
   saveProfile({firstName,familyName,motherName,jy,jm,jd,report,date:new Date().toISOString()});
   showCosmicResult(firstName,familyName,report);
 }
+function shortText(t,n){t=String(t||'').replace(/\s+/g,' ').trim(); if(t.length<=n) return t; const c=t.slice(0,n); const i=c.lastIndexOf(' '); return c.slice(0,i>n*0.6?i:n)+'…';}
+function fitCode(){const el=document.querySelector('.code'); if(!el) return; let fs=30; el.style.fontSize=fs+'px'; while(el.scrollWidth>el.clientWidth && fs>9){fs--; el.style.fontSize=fs+'px';}}
+let lastCosmic=null;
+function reopenCosmic(){ if(lastCosmic) showCosmicResult(lastCosmic.f,lastCosmic.l,lastCosmic.r); else showCosmicInputForm(); }
+function numKeyFor(kind,r){
+  if(kind==='income'){for(const k in INCOME_TEXT) if(INCOME_TEXT[k]===r.incomeText) return k; return '2';}
+  if(kind==='status') return r.statusText||'راکد';
+  return String({destiny:r.destinyNum,fate:r.fateNum,vibration:r.vibrationNum,baten:r.batenNum}[kind]);
+}
+const NUM_KINDS={destiny:{label:'سرنوشت',ic:'🪷',tbl:()=>SARNEVESHT_TABLE},fate:{label:'تقدیر',ic:'🧭',tbl:()=>TAGHDIR_TABLE},vibration:{label:'ارتعاش تاریخ تولد',ic:'〰️',tbl:()=>ERTEASH_TABLE},baten:{label:'باطن',ic:'🌙',tbl:()=>BATEN_TABLE}};
+function numDetail(kind,r){
+  const key=numKeyFor(kind,r);
+  if(kind==='income'){const i=INCOME_INFO[key]; return {big:'💰',fs:90,title:'وضعیت درآمد - '+i.name,secs:[['وضعیت کلی',i.d,'compass'],['فرصت‌ها',i.s,'shield'],['چالش‌ها',i.c,'mount'],['توصیه‌ها',i.a,'lotus']]};}
+  if(kind==='status'){const i=STATUS_INFO[key]||STATUS_INFO['راکد']; return {big:i.ic,fs:110,title:'پایگاه اجتماعی - '+key,secs:[['وضعیت کلی',i.d,'compass'],['فرصت‌ها',i.s,'shield'],['چالش‌ها',i.c,'mount'],['توصیه‌ها',i.a,'lotus']]};}
+  const k=NUM_KINDS[kind], e=NUM_INFO[key]||NUM_INFO['9'], main=(k.tbl()||{})[key]||'';
+  return {big:toFa(key),fs:key.length>1?96:120,title:`عدد ${toFa(key)} - عدد ${k.label==='ارتعاش تاریخ تولد'?'ارتعاش':k.label} و ${e.name}`,secs:[['ویژگی‌های شخصیتی',main,'compass'],['نقاط قوت',e.s,'shield'],['چالش‌ها',e.c,'mount'],['توصیه‌ها',e.a,'lotus']]};
+}
+const DT_ICONS={compass:'<path d="M24 3l5 16 16 5-16 5-5 16-5-16-16-5 16-5z"/>',shield:'<path d="M24 4l16 6v12c0 10-7 18-16 22C15 40 8 32 8 22V10z"/><path d="M24 15l2.6 5.6 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6-4.4-4.1 6-.7z"/>',mount:'<path d="M4 43l14-24 8 12 6-8 12 20z"/><path d="M18 19V6l10 3-10 3"/>',lotus:'<path d="M24 41c-8-3-13-9-13-17 5 0 10 2 13 6 3-4 8-6 13-6 0 8-5 14-13 17z"/><path d="M24 31c-4-6-4-14 0-20 4 6 4 14 0 20z"/>'};
+function medalSVG(t,fs){
+  let dots=''; for(let i=0;i<24;i++){const a=i*Math.PI/12; dots+=`<circle cx="${(120+95*Math.cos(a)).toFixed(1)}" cy="${(120+95*Math.sin(a)).toFixed(1)}" r="${i%2?1.5:2.6}" fill="#f0c96a"/>`;}
+  const dia=[0,90,180,270].map(a=>`<path d="M120 2l8 24h-16z" fill="#f0c96a" transform="rotate(${a} 120 120)"/>`).join('');
+  return `<svg viewBox="0 0 240 240" width="210" height="210"><defs><radialGradient id="mg"><stop offset="0" stop-color="#e8b84b" stop-opacity=".35"/><stop offset="1" stop-color="#e8b84b" stop-opacity="0"/></radialGradient></defs><circle cx="120" cy="120" r="118" fill="url(#mg)"/>${dia}${dots}<circle cx="120" cy="120" r="82" fill="#0b0d2a" stroke="#e8b84b" stroke-width="3"/><circle cx="120" cy="120" r="72" fill="none" stroke="#e8b84b" stroke-width="1" stroke-dasharray="2 4"/><circle cx="120" cy="120" r="88" fill="none" stroke="#e8b84b" stroke-width="1" opacity=".6"/><text x="120" y="120" text-anchor="middle" dominant-baseline="central" font-size="${fs*0.62}" font-weight="800" fill="#f0c96a" font-family="Vazirmatn,Tahoma,sans-serif">${t}</text></svg>`;
+}
+function showNumberDetail(kind){
+  const r=lastCosmic&&lastCosmic.r; if(!r) return showCosmicInputForm();
+  const d=numDetail(kind,r);
+  const shareTxt=`🌌 ${d.title}\n\n${d.secs.map(x=>x[0]+': '+x[1]).join('\n\n')}\n\nکد کیهانی خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`;
+  render(`${backBtn('reopenCosmic()')}<div class="medal">${medalSVG(d.big,d.fs)}</div>
+    <h2 class="dt-title">${esc(d.title)}</h2>${ORN_DIV}
+    <div class="card orn">${d.secs.map(x=>`<div class="dt-sec"><div style="flex:1"><h3>${x[0]}</h3><p>${esc(x[1])}</p></div><div class="dt-ic"><svg viewBox="0 0 48 48">${DT_ICONS[x[2]]}</svg></div></div>`).join('')}</div>
+    <button class="btn" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button>`);
+  window.scrollTo(0,0);
+}
 function showCosmicResult(firstName,familyName,r){
-  const card=(ic,t,big,txt,full)=>`<div class="num-card${full?' full':''}"><div class="nc-ic">${ic}</div><h4>${t}</h4>${big!==''?`<div class="big">${big}</div>`:''}${txt?`<p>${nl2br(txt)}</p>`:''}</div>`;
+  lastCosmic={f:firstName,l:familyName,r};
+  const card=(kind,ic,t,big,txt)=>`<div class="num-card" onclick="showNumberDetail('${kind}')"><div class="nc-ic">${ic}</div><h4>${t}</h4>${big!==''?`<div class="big">${big}</div>`:''}${txt?`<p>${esc(shortText(txt,70))}</p>`:''}<span class="nc-more">مشاهده‌ی کامل ›</span></div>`;
+  const st=r.statusText||'راکد', stInfo=STATUS_INFO[st]||STATUS_INFO['راکد'];
+  const incKey=numKeyFor('income',r);
+  const bt=(typeof BATEN_TABLE!=='undefined'&&BATEN_TABLE[String(r.batenNum)])||(NUM_INFO[String(r.batenNum)]||{}).s||'';
+  const pad=n=>String(n).padStart(2,'0');
   render(`${backBtn('showCosmicInputForm()')}${pageHead('','کد کیهانی')}
     <div class="card orn center"><div class="code">${esc(r.cosmicCode)}</div></div>
     <div class="cr-name">${esc(firstName)} ${esc(familyName)}</div>
     ${ORN_DIV}
-    <div class="chips"><span class="chip2">📅 تاریخ میلادی: ${r.gregorianDate}</span><span class="chip2">☀️ عدد خورشیدی: ${r.solarNum}</span></div>
+    <div class="chips"><span class="chip2">📅 تاریخ تولد: ${toFa(r.jy)}/${toFa(pad(r.jm))}/${toFa(pad(r.jd))}</span><span class="chip2">☀️ عدد خورشیدی: ${toFa(r.solarNum)}</span></div>
     <div class="num-grid">
-      ${card('🪷','عدد سرنوشت',r.destinyNum,r.destinyText)}
-      ${card('🧭','عدد تقدیر',r.fateNum,r.fateText)}
-      ${card('〰️','ارتعاش تاریخ تولد',r.vibrationNum,r.vibrationText,1)}
-      ${card('🌙','عدد باطن',r.batenNum,'')}
-      ${card('👥','پایگاه اجتماعی',r.statusText||'',r.statusText?'':'محاسبه نشد (نام مادر وارد نشده)')}
-      ${card('💰','وضعیت درآمد','',r.incomeText,1)}
+      ${card('destiny','🪷','عدد سرنوشت',toFa(r.destinyNum),r.destinyText)}
+      ${card('fate','🧭','عدد تقدیر',toFa(r.fateNum),r.fateText)}
+      ${card('vibration','〰️','ارتعاش تاریخ تولد',toFa(r.vibrationNum),r.vibrationText)}
+      ${card('baten','🌙','عدد باطن',toFa(r.batenNum),bt)}
+      ${card('status','👥','پایگاه اجتماعی',st,stInfo.d)}
+      ${card('income','💰','وضعیت درآمد','💰',INCOME_INFO[incKey].d)}
     </div>
     <div class="btn-row">
       <button class="btn secondary" onclick="showCosmicInputForm()">🔄 محاسبه‌ی جدید</button>
       <button class="btn" onclick='shareText(${JSON.stringify(`🌌 کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}\n\nکد کیهانیِ خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div>`);
+  fitCode(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitCode);
 }
 const APP_SHARE_URL="https://abasalt-cpu.github.io/cosmic-pwa/";
 function shareText(text){ if(navigator.share){navigator.share({text});} else {navigator.clipboard.writeText(text); alert('متن کپی شد.');} }
@@ -499,13 +538,13 @@ function showHafez(mode){
   const opt=(m,label)=>`<div class="mode-opt${hafezMode===m?' on':''}" onclick="showHafez('${m}')">${hafezMode===m?'◉':'○'} ${label}</div>`;
   const mainBtn=modern
     ? (modernToday
-        ? `<button class="btn" id="hafez-btn" disabled style="opacity:.5;cursor:not-allowed">✅ فال مدرن امروزت رو گرفتی</button>`
-        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">🌿 فال مدرنم رو بگیر (۱ بار در روز)</button>`)
+        ? `<button class="btn" id="hafez-btn" disabled style="opacity:.5;cursor:not-allowed">✅ فال AI امروزت رو گرفتی</button>`
+        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">🌿 فالم رو با AI بگیر (۱ بار در روز)</button>`)
     : `<button class="btn" id="hafez-btn" onclick="revealHafez()"${remaining<=0?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${remaining>0?` (${remaining} بار دیگه امروز)`:''}</button>`;
   const resultInit=(!modern && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
   render(`${backBtn('showHome()')}${pageHead('🔮','فال حافظ')}<div class="card orn">
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
-      <div class="hafez-mode">${opt('modern','تفسیر مدرن')}${opt('traditional','تفسیر سنتی')}</div>
+      <div class="hafez-mode">${opt('modern','تفسیر با AI')}${opt('traditional','تفسیر سنتی')}</div>
       <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}</p>
       ${mainBtn}
       <div id="hafez-result">${resultInit}</div></div>
@@ -516,6 +555,7 @@ function showHafez(mode){
       <button class="btn${falOn?' secondary':''}" id="fal-push-btn" onclick="handleDailyFalToggle()">${falOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری روزانه'}</button>
     </div>`);
   if(modern && modernToday) renderHafezModernResult(modernToday.id);
+  if(!modern){ try{ const ld=JSON.parse(localStorage.getItem('hafezLastDraw')||'null'); if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
 }
 async function revealHafezModern(){
   if(getHafezModernToday()) return;
@@ -523,7 +563,7 @@ async function revealHafezModern(){
   if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; }
   try{ await loadHafezModernData(); }
   catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='🌿 فال مدرنم رو بگیر (۱ بار در روز)'; }
+    if(btn){ btn.disabled=false; btn.textContent='🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
     document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`;
     return;
   }
@@ -539,7 +579,7 @@ async function renderHafezModernResult(id){
   catch(e){ box.innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`; return; }
   const g=HAFEZ_MODERN_DATA[id-1];
   if(!g){ box.innerHTML=''; return; }
-  const shareTxt=`🔮 فال حافظِ من (تفسیر مدرن):\n\n${g.p.join('\n')}\n\n${g.f.replace(/\s+/g,' ')}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`;
+  const shareTxt=`🔮 فال حافظِ من (تفسیر با AI):\n\n${g.p.join('\n')}\n\n${g.f.replace(/\s+/g,' ')}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`;
   box.innerHTML=`<div class="result-block">
     <div class="verse">${g.p.map(esc).join('<br>')}</div>
     ${g.t!==g.p[0]?`<h3 style="margin:12px 0 4px; color:var(--gold-soft)">${esc(g.t)}</h3>`:''}
@@ -550,7 +590,7 @@ async function renderHafezModernResult(id){
     <h3 class="hz-sec">💬 پیام پایانی</h3>${renderHafezText(g.f)}
     <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
     <button class="btn small secondary" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button>
-  </div><p class="small-note">این فال مدرنِ امروزته — فردا می‌تونی دوباره بگیری 🌙</p>`;
+  </div><p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>`;
 }
 function handleDailyFalToggle(){
   const btn=document.getElementById('fal-push-btn');
@@ -596,16 +636,20 @@ function revealHafez(){
   st.count++; localStorage.setItem('hafezDrawState', JSON.stringify(st));
   const g=getDailyFal(getDeviceId()+'-draw'+st.count);
   const remaining=3-st.count;
-  document.getElementById('hafez-result').innerHTML=`<div class="result-block"><div class="verse">${g.verses.join('<br>')}</div>
-    <p style="margin-top:10px"><b class="hz-sec">✦ تعبیر فال:</b><br>${esc(g.interpretation)}</p>
-    <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
-    <button class="btn small secondary" onclick='shareText(${JSON.stringify(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button></div>
-    <p class="small-note">${remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙'}</p>`;
+  localStorage.setItem('hafezLastDraw',JSON.stringify({date:todayStr(),remaining,g:{id:g.id,verses:g.verses,interpretation:g.interpretation}}));
+  renderTradResult(g,remaining);
   const btn=document.getElementById('hafez-btn');
   if(btn){
     if(remaining<=0){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='🔮 فالم رو بگیر'; }
     else{ btn.textContent=`🔮 فالم رو بگیر (${remaining} بار دیگه امروز)`; }
   }
+}
+function renderTradResult(g,remaining){
+  document.getElementById('hafez-result').innerHTML=`<div class="result-block"><div class="verse">${g.verses.join('<br>')}</div>
+    <p style="margin-top:10px"><b class="hz-sec">✦ تعبیر فال:</b><br>${esc(g.interpretation)}</p>
+    <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
+    <button class="btn small secondary" onclick='shareText(${JSON.stringify(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button></div>
+    <p class="small-note">${remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙'}</p>`;
 }
 function showFullGhazal(id){
   const g=getGhazalById(id);
@@ -680,7 +724,7 @@ function submitNatal(){
   const p=state.lastProfile;
   const [gy,gm,gd]=jalaliToGregorian(p.jy,p.jm,p.jd);
   const result=calculateNatal(gy,gm,gd,hour,minute,city);
-  render(`${backBtn('showNatalEntry()')}<div class="card orn"><div class="verse" style="white-space:pre-line; line-height:2.1; text-align:right">${esc(formatNatal(result))}</div></div>`);
+  render(`${backBtn('showNatalEntry()')}<div class="card orn"><div class="verse" style="white-space:pre-line; line-height:2.1; text-align:justify; text-align-last:right">${esc(formatNatal(result))}</div></div>`);
 }
 function showBabyNameForm(){
   render(`${backBtn('showHome()')}${pageHead('👶','پیشنهاد اسم فرزند')}<div class="card orn">
@@ -688,8 +732,12 @@ function showBabyNameForm(){
       <div class="chip-row two"><div class="chip" id="bn-boy" onclick="pickGender('boy')">👦 پسر</div><div class="chip" id="bn-girl" onclick="pickGender('girl')">👧 دختر</div></div>
       <label>نام خانوادگی پدر</label><input id="bn-family" class="ic-user" type="text" placeholder="نام خانوادگی پدر">
       <label>نام مادر فرزند</label><input id="bn-mother" class="ic-user" type="text" placeholder="نام مادر">
+      <label>وضعیت پایگاه اجتماعی</label>
+      <select id="bn-status"><option value="any">فرقی نداره</option><option value="2" selected>صعودی</option><option value="1">نزولی</option><option value="03">راکد</option></select>
+      <label>وضعیت درآمد</label>
+      <select id="bn-income"><option value="any">فرقی نداره</option><option value="0">پایدار و بخت‌باز</option><option value="2" selected>متوسط رو به بالا</option><option value="1">پرنوسان</option></select>
       <button class="btn" onclick="submitBabyName()">پیشنهاد بده</button>
-      <p class="small-note">پایگاه اجتماعی «صعودی» و درآمد «متوسط رو به بالا» به‌عنوان بهترین ترکیب پیش‌فرض در نظر گرفته می‌شه.</p></div>`);
+      <p class="small-note">اسم‌ها بر اساس ترکیب نام، فامیلی و نام مادر با وضعیت اجتماعی و درآمدی که انتخاب می‌کنی فیلتر می‌شن. هر کدوم رو «فرقی نداره» بذاری، گزینه‌های بیشتری می‌بینی.</p></div>`);
   window.selectedGender='boy'; document.getElementById('bn-boy').classList.add('active');
 }
 function pickGender(g){window.selectedGender=g; document.getElementById('bn-boy').classList.toggle('active',g==='boy'); document.getElementById('bn-girl').classList.toggle('active',g==='girl');}
@@ -698,7 +746,8 @@ function submitBabyName(){
   const family=document.getElementById('bn-family').value.trim();
   const mother=document.getElementById('bn-mother').value.trim();
   if(!family||!mother){alert('نام خانوادگی و نام مادر رو وارد کن.'); return;}
-  babyQuery={gender:window.selectedGender, family, mother, status:"2", income:"2"};
+  const sv=document.getElementById('bn-status').value, iv=document.getElementById('bn-income').value;
+  babyQuery={gender:window.selectedGender, family, mother, status:sv==='any'?null:(sv==='03'?['0','3']:sv), income:iv==='any'?null:iv, showTags:(sv==='any'||iv==='any')};
   renderBabyPage(0);
 }
 function renderBabyPage(page){

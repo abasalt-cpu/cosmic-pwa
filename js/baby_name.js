@@ -18,7 +18,7 @@ function getAllMatches(gender,familyName,motherName,desiredStatus,desiredIncome)
   const matches=[];
   for(const nameEntry of namePool(gender)){
     const info=evaluateName(nameEntry,familyName,motherName);
-    const statusOk=(desiredStatus===null)||(info.statusKey===desiredStatus);
+    const statusOk=(desiredStatus===null)||(Array.isArray(desiredStatus)?desiredStatus.includes(info.statusKey):info.statusKey===desiredStatus);
     const incomeOk=(desiredIncome===null)||(info.incomeKey===desiredIncome);
     if(statusOk&&incomeOk){info.harmony=harmonyScore(info.name,familyName); matches.push(info);}
   }
@@ -35,9 +35,12 @@ function formatBabyNamePage(gender,result,page,pageSize){
   if(page===0){
     lines.push(`👶 پیشنهاد اسم ${genderLabel} (از ${result.total} گزینه‌ی مطابق)\n`);
     lines.push('✨ سه گزینه‌ی برتر (هم‌آواترین با فامیلی):');
-    for(const r of result.top3)lines.push(`• ${r.name} — ${r.meaning}`);
+    for(const r of result.top3)lines.push(`• ${r.name} — ${r.meaning}${babyTag(r)}`);
     if(chunk.length)lines.push('\n📋 گزینه‌های بیشتر:');
   } else { lines.push(`📋 ادامه‌ی گزینه‌ها (صفحه ${page+1}):`); }
-  for(const r of chunk)lines.push(`• ${r.name} — ${r.meaning}`);
+  for(const r of chunk)lines.push(`• ${r.name} — ${r.meaning}${babyTag(r)}`);
   return {text:lines.join('\n'), hasMore};
 }
+
+const INCOME_SHORT={"0":"پایدار و بخت‌باز","1":"پرنوسان","2":"متوسط رو به بالا"};
+function babyTag(r){return (typeof babyQuery!=='undefined'&&babyQuery&&babyQuery.showTags)?` ‹${r.statusText} • ${INCOME_SHORT[r.incomeKey]}›`:'';}
