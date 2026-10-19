@@ -1,3 +1,10 @@
+// ---------- توابع کمکی امنیتی ----------
+function jsonAttr(v){return JSON.stringify(v).replace(/[<>&'\u2028\u2029]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));}
+function safeParse(key,fb){try{const v=safeParse(key,null); return v===null?fb:v;}catch(e){return fb;}}
+function jalaliLeap(y){return [1,5,9,13,17,22,26,30].includes(y%33);}
+function jalaliMonthLength(y,m){return m<=6?31:(m<=11?30:(jalaliLeap(y)?30:29));}
+function syncConsent(){return localStorage.getItem('syncConsent');}
+function setSyncConsent(v){localStorage.setItem('syncConsent',v?'1':'0');}
 const PERSIAN_MONTHS=["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
 const ICON_CALC=`<span class="icon-calc-glyph" style="vertical-align:-11px; margin-inline-end:6px">∞</span>`;
 const ICON_INFO=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="url(#gInfo)"/><circle cx="12" cy="7.6" r="1.3" fill="#241742"/><rect x="10.8" y="10.6" width="2.4" height="7" rx="1.2" fill="#241742"/><defs><linearGradient id="gInfo" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
@@ -5,7 +12,7 @@ const ICON_ACCOUNT=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http:
 const ICON_PRIVACY=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="url(#gLock)"/><rect x="7.8" y="11" width="8.4" height="6.6" rx="1.6" fill="#241742"/><path d="M9.2 11V9a2.8 2.8 0 0 1 5.6 0v2" stroke="#241742" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="12" cy="13.9" r="1" fill="#f0c96a"/><defs><linearGradient id="gLock" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
 const ICON_TERMS=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="url(#gDoc)"/><rect x="7.5" y="6.5" width="9" height="11" rx="1.3" fill="#241742"/><rect x="9.3" y="9.2" width="5.4" height="1.1" rx=".55" fill="#f0c96a"/><rect x="9.3" y="11.6" width="5.4" height="1.1" rx=".55" fill="#f0c96a"/><rect x="9.3" y="14" width="3.6" height="1.1" rx=".55" fill="#f0c96a"/><defs><linearGradient id="gDoc" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
 const GOOGLE_G_LOGO=`<svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.9-2.26 5.36-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.94 23.94 0 0 0 0 24c0 3.87.92 7.53 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.92-2.14 15.89-5.82l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.97 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
-const state={lastProfile:JSON.parse(localStorage.getItem('lastProfile')||'null'), savedProfiles:JSON.parse(localStorage.getItem('savedProfiles')||'[]')};
+const state={lastProfile:safeParse('lastProfile',null), savedProfiles:safeParse('savedProfiles',[])};
 function saveProfile(p){
   state.lastProfile=p; localStorage.setItem('lastProfile',JSON.stringify(p));
   state.savedProfiles=state.savedProfiles.filter(x=>!(x.firstName===p.firstName&&x.familyName===p.familyName));
@@ -17,21 +24,37 @@ function saveProfile(p){
     maybeAutoEnableBirthdayReminders();
   }
   syncProfilesToServer();
+  setTimeout(askSyncConsent,700);
 }
 function syncProfilesToServer(){
   if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')) return;
+  const loggedIn=(typeof currentUser!=='undefined' && currentUser);
+  if(!(loggedIn || syncConsent()==='1')) return; // بدون رضایت صریح یا ورود به حساب، هیچ داده‌ای ارسال نمی‌شود
   const deviceId=getDeviceId();
-  const userId=(typeof currentUser!=='undefined' && currentUser) ? currentUser.id : null;
+  const userId=loggedIn ? currentUser.id : null;
   const profiles=state.savedProfiles.map(p=>({
     firstName:p.firstName, familyName:p.familyName, motherName:p.motherName,
     jy:p.jy, jm:p.jm, jd:p.jd,
     report:p.report,
   }));
+  const headers={'Content-Type':'application/json'};
+  if(typeof authToken!=='undefined' && authToken) headers.Authorization='Bearer '+authToken;
   fetch(AUTH_API_BASE+'/profiles/sync', {
-    method:'POST', headers:{'Content-Type':'application/json'},
+    method:'POST', headers,
     body:JSON.stringify({deviceId, userId, profiles}),
   }).catch(()=>{});
 }
+function askSyncConsent(){
+  if(syncConsent()!==null || (typeof currentUser!=='undefined' && currentUser) || document.getElementById('consent-modal')) return;
+  const d=document.createElement('div'); d.id='consent-modal'; d.className='modal-back';
+  d.innerHTML=`<div class="modal-box card orn"><h3 class="hz-sec" style="text-align:center;margin:0 0 8px">پشتیبان‌گیری روی سرور</h3>
+    <p class="small-note" style="text-align:justify;text-align-last:right">آیا مایلید نسخه‌ی پشتیبان پروفایل‌های شما (نام، نام مادر و تاریخ تولد) برای پشتیبانی و بازیابی بر روی سرور ما نگهداری شود؟ در صورت عدم موافقت، اطلاعات فقط بر روی دستگاه شما می‌ماند. این انتخاب را می‌توانید در هر زمان از بخش «بیشتر» تغییر دهید.</p>
+    <button class="btn" onclick="answerSyncConsent(true)">موافقم</button>
+    <button class="btn secondary" onclick="answerSyncConsent(false)">فقط بر روی دستگاه من</button></div>`;
+  document.body.appendChild(d);
+}
+function answerSyncConsent(v){ setSyncConsent(v); const d=document.getElementById('consent-modal'); if(d) d.remove(); if(v) syncProfilesToServer(); }
+function toggleSyncConsent(){ setSyncConsent(syncConsent()!=='1'); if(syncConsent()==='1') syncProfilesToServer(); showMoreMenu(); }
 const app=document.getElementById('app');
 let __suppressPush=true;
 function currentNavKey(){const el=document.querySelector('nav.bottom .nav-btn.active'); return el?el.dataset.nav:null;}
@@ -144,11 +167,25 @@ function hubHTML(){
     </div>`;
 }
 function showNotifications(){
-  render(`${backBtn('showHome()')}<div class="card"><h2>🔔 اعلان‌ها</h2>
-      <p class="desc">فعلاً اعلان جدیدی نداری.</p></div>`);
+  const sup=isPushSupported(), fal=isDailyFalEnabled(), bd=isBirthdayRemindersEnabled();
+  const row=(title,text,ic,on,fn)=>`<div class="pv-card"><div class="pv-ic"><svg viewBox="0 0 24 24">${PV_ICONS[ic]}</svg></div><div class="pv-tx"><h3>${title}</h3><p>${text}</p><button class="btn${on?' secondary':''}" style="margin-top:10px" onclick="${fn}">${on?'غیرفعال‌سازی':'فعال‌سازی'}</button></div></div>`;
+  render(`${backBtn('showHome()')}${pageHead('','یادآوری‌ها','مدیریت اعلان‌های فال روزانه و یادآوری تولد')}
+    ${sup?'':'<p class="small-note center" style="color:#ff8a8a">دستگاه یا مرورگر شما از اعلان‌ها پشتیبانی نمی‌کند.</p>'}
+    ${row('یادآوری فال روزانه','هر روز صبح، اعلانی برای گرفتن فال حافظ دریافت می‌کنید.','bell',fal,"toggleReminder('fal')")}
+    ${row('یادآوری تولد','در روز تولد پروفایل‌های ذخیره‌شده، اعلانی برای شما ارسال می‌شود.','user',bd,"toggleReminder('bd')")}
+    <p id="rm-msg" class="small-note center" style="color:#ff8a8a; min-height:18px"></p>`);
+}
+async function toggleReminder(kind){
+  try{
+    if(kind==='fal'){ if(isDailyFalEnabled()) await disableDailyFalReminder(); else await enableDailyFalReminder(); }
+    else { if(isBirthdayRemindersEnabled()) await disableBirthdayReminders(); else await enableBirthdayReminders(); }
+    showNotifications();
+  }catch(e){ const m=document.getElementById('rm-msg'); if(m) m.textContent=(e&&e.message)||'انجام عملیات ممکن نشد.'; }
 }
 function showMoreMenu(){
   setNav('more');
+  const syncOn=!!currentUser||syncConsent()==='1';
+  const syncBlock=`<div class="card"><div class="list-item" ${currentUser?'':'onclick="toggleSyncConsent()"'}><span class="li-label">پشتیبان‌گیری پروفایل‌ها روی سرور: <b style="color:var(--gold-soft)">${syncOn?'فعال':'غیرفعال'}</b></span>${currentUser?'':'<span class="li-arrow">‹</span>'}</div>${currentUser?'<p class="small-note" style="margin:6px 0 0">برای حساب‌های کاربری، پشتیبان‌گیری همواره فعال است.</p>':''}</div>`;
   const adminBlock=(currentUser && currentUser.isAdmin)?`<div class="card">
       <div class="list-item" onclick="showAdminUsersPage()"><span class="li-label">👥 کاربران ثبت‌شده</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showAdminProfilesPage()"><span class="li-label">📇 همه‌ی پروفایل‌ها</span><span class="li-arrow">‹</span></div>
@@ -160,6 +197,7 @@ function showMoreMenu(){
       <div class="list-item" onclick="showPrivacyPage()"><span class="li-label">${ICON_PRIVACY}حریم خصوصی</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showTermsPage()"><span class="li-label">${ICON_TERMS}قوانین و شرایط استفاده</span><span class="li-arrow">‹</span></div>
     </div>
+    ${syncBlock}
     ${adminBlock}
     <div class="small-note">اطلاعات پروفایل‌های شما (نام، تاریخ تولد و نتایج) بر روی دستگاه شما و همچنین سرور اختصاصی ما ذخیره می‌شود. جزئیات کامل در بخش «حریم خصوصی» ارائه شده است.</div>`);
 }
@@ -208,7 +246,7 @@ async function showAdminProfilesPage(){
       <div class="card">
         <p style="margin:0; line-height:1.9">
           <b>${esc(p.first_name||'')} ${esc(p.family_name||'')}</b><br>
-          ${p.jy&&p.jm&&p.jd?`🗓️ تولد: ${p.jy}/${p.jm}/${p.jd}<br>`:''}
+          ${p.jy&&p.jm&&p.jd?`🗓️ تولد: ${esc(String(p.jy))}/${esc(String(p.jm))}/${esc(String(p.jd))}<br>`:''}
           کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft)">${esc(p.cosmic_code||'-')}</span><br>
           <span class="small-note">${p.user_id?'وابسته به حساب کاربری':'بدون حساب (محلی)'} — به‌روزرسانی: ${new Date(p.updated_at).toLocaleString('fa-IR')}</span>
         </p>
@@ -250,7 +288,7 @@ function showAboutPage(){
     ${pvCard('مقایسه و پیشنهاد نام','مقایسه‌ی عددی و ستاره‌ای دو نفر و پیشنهاد نام فرزند با توجه به نام خانوادگی و نام مادر.','people')}
     ${pvCard('پروفایل‌ها و حساب کاربری','ذخیره‌ی پروفایل چند نفر و عضویت اختیاری از طریق ایمیل یا حساب گوگل.','user')}
     ${pvCard('یادآوری‌ها','یادآوری روزانه‌ی فال و یادآوری تولد، در صورت فعال‌سازی توسط کاربر.','bell')}
-    <p class="small-note center">نسخه‌ی فعلی: ${toFa('1.0.0')} — این نرم‌افزار به‌طور مستمر به‌روزرسانی می‌شود و امکانات تازه به آن افزوده خواهد شد.</p>`);
+    <p class="small-note center">نسخه‌ی فعلی: ${toFa(APP_VERSION)} — این نرم‌افزار به‌طور مستمر به‌روزرسانی می‌شود و امکانات تازه به آن افزوده خواهد شد.</p>`);
 }
 function togglePw(){const i=document.getElementById('auth-password'),b=document.getElementById('pw-eye'); if(!i) return; const show=i.type==='password'; i.type=show?'text':'password'; b.innerHTML=`<svg viewBox="0 0 24 24">${PV_ICONS[show?'eye':'eyeOpen']}</svg>`;}
 function showMembershipPage(){
@@ -319,24 +357,6 @@ function authGuard(elId){
   }
   return true;
 }
-function handleOtpRequest(){
-  if(!authGuard('otp-error')) return;
-  const phone=document.getElementById('auth-phone').value.trim();
-  const errEl=document.getElementById('otp-error');
-  errEl.style.color='#ff8a8a'; errEl.textContent='';
-  requestOtp(phone).then(()=>{
-    document.getElementById('otp-verify-section').style.display='block';
-    errEl.style.color='var(--gold-soft)';
-    errEl.textContent='کد تایید برات پیامک شد.';
-  }).catch((err)=>{ errEl.style.color='#ff8a8a'; errEl.textContent=translateAuthError(err); });
-}
-function handleOtpVerify(){
-  const phone=document.getElementById('auth-phone').value.trim();
-  const code=document.getElementById('auth-otp-code').value.trim();
-  const errEl=document.getElementById('otp-error');
-  errEl.style.color='#ff8a8a'; errEl.textContent='';
-  verifyOtp(phone,code).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.style.color='#ff8a8a'; errEl.textContent=translateAuthError(err); });
-}
 function handleEmailSignIn(){
   if(!authGuard('auth-error')) return;
   const email=document.getElementById('auth-email').value.trim();
@@ -393,9 +413,9 @@ async function fetchMyProfilesFromServer(){
 function showPrivacyPage(){
   render(`${backBtn('showMoreMenu()')}${pageHead('','حریم خصوصی')}
     ${pvCard('احترام به حریم خصوصی شما','حفظ حریم خصوصی شما برای ما اهمیت بسیار دارد. تمام امکانات اصلی نرم‌افزار، از جمله محاسبه‌ی کد کیهانی، فال و طالع‌بینی، بدون نیاز به عضویت و به‌صورت محلی بر روی دستگاه شما در دسترس است؛ عضویت صرفاً یک امکان اختیاری است.','shield')}
-    ${pvCard('اطلاعات ذخیره‌شده','نام، تاریخ تولد و نتایج محاسبات هر پروفایل، هم بر روی دستگاه شما و هم، به‌منظور پشتیبانی و بهبود خدمات، بر روی سرور اختصاصی ما (Cloudflare) نگهداری می‌شود. این اطلاعات به فروش نمی‌رسد و با هیچ شخص ثالثی به اشتراک گذاشته نمی‌شود.','doc')}
-    ${pvCard('اطلاعات حساب کاربری','در صورت عضویت با ایمیل، نشانی ایمیل و رمز عبور (به‌صورت رمزنگاری‌شده) ذخیره می‌شود. در صورت ورود با گوگل، تنها نشانی ایمیل و نامی که گوگل در اختیار ما قرار می‌دهد برای شناسایی حساب نگهداری می‌شود. ورود با شماره‌ی تلفن همراه در آینده افزوده خواهد شد و شماره صرفاً برای ارسال یک‌باره‌ی کد تأیید به کار می‌رود.','user')}
-    ${pvCard('اعلان‌ها','در صورت فعال‌سازی یادآوری‌ها، شناسه‌ی فنی اشتراک اعلان دستگاه شما صرفاً برای ارسال یادآوری‌های انتخابی ذخیره می‌شود و با غیرفعال‌سازی یادآوری، این اشتراک لغو می‌گردد.','bell')}
+    ${pvCard('اطلاعات ذخیره‌شده','نام، تاریخ تولد، نام مادر و نتایج محاسبات هر پروفایل بر روی دستگاه شما ذخیره می‌شود. نسخه‌ی پشتیبان این اطلاعات تنها پس از رضایت صریح شما (یا در صورت ورود به حساب کاربری) بر روی سرور اختصاصی ما (Cloudflare) نگهداری می‌شود. این گزینه را می‌توانید در هر زمان از بخش «بیشتر» غیرفعال کنید. این اطلاعات به فروش نمی‌رسد و با هیچ شخص ثالثی به اشتراک گذاشته نمی‌شود.','doc')}
+    ${pvCard('اطلاعات حساب کاربری','در صورت عضویت با ایمیل، نشانی ایمیل و رمز عبور (به‌صورت رمزنگاری‌شده) ذخیره می‌شود. در صورت ورود با گوگل، تنها نشانی ایمیل و نامی که گوگل در اختیار ما قرار می‌دهد برای شناسایی حساب نگهداری می‌شود.','user')}
+    ${pvCard('اعلان‌ها','در صورت فعال‌سازی یادآوری‌ها، شناسه‌ی فنی اشتراک اعلان دستگاه شما ذخیره می‌شود. برای یادآوری تولد، نام و روز و ماه تولد پروفایل‌های ذخیره‌شده نیز به‌منظور ارسال اعلان بر روی سرور نگهداری می‌شود. با غیرفعال‌سازی یادآوری‌ها، این اشتراک لغو می‌گردد.','bell')}
     ${pvCard('استفاده از اطلاعات','اطلاعات شما صرفاً برای ارائه و بهبود خدمات، شخصی‌سازی نتایج و ارسال یادآوری‌های انتخابی به کار می‌رود و بدون رضایت شما در اختیار دیگران قرار نخواهد گرفت.','eye')}
     ${pvCard('آمار و ردیابی','برای بهبود نرم‌افزار از آمار بازدید ناشناس و بدون کوکی (Cloudflare Analytics) استفاده می‌شود که هیچ اطلاعات شخصی یا قابل‌شناسایی گردآوری نمی‌کند. از کوکی یا ابزار ردیابی تبلیغاتی استفاده نمی‌شود.','lock')}
     ${pvCard('حذف اطلاعات','شما می‌توانید در هر زمان با پاک‌کردن داده‌های مرورگر یا برنامه، اطلاعات ذخیره‌شده بر روی دستگاه را حذف کنید و از حساب کاربری خود خارج شوید.','trash')}`);
@@ -437,7 +457,7 @@ function submitCosmicForm(){
   const jd=parseInt(document.getElementById('cf-day').value,10);
   const jm=parseInt(document.getElementById('cf-month').value,10);
   const jy=parseInt(document.getElementById('cf-year').value,10);
-  if(!firstName||!familyName||!jd||!jy||jd<1||jd>31||jy<1300||jy>1420){alert('لطفاً نام، نام خانوادگی و تاریخ تولد رو کامل و درست وارد کن.'); return;}
+  if(!firstName||!familyName||!jd||!jy||!jm||jm<1||jm>12||jd<1||jy<1300||jy>1420||jd>jalaliMonthLength(jy,jm)){alert('لطفاً نام، نام خانوادگی و تاریخ تولد را به‌صورت کامل و صحیح وارد کنید.'); return;}
   const report=calculateCosmicReport(firstName,familyName,motherName,jy,jm,jd);
   saveProfile({firstName,familyName,motherName,jy,jm,jd,report,date:new Date().toISOString()});
   showCosmicResult(firstName,familyName,report);
@@ -472,7 +492,7 @@ function showNumberDetail(kind){
   render(`${backBtn('reopenCosmic()')}<div class="medal">${medalSVG(d.big,d.fs)}</div>
     <h2 class="dt-title">${esc(d.title)}</h2>${ORN_DIV}
     <div class="card orn">${d.secs.map(x=>`<div class="dt-sec"><div style="flex:1"><h3>${x[0]}</h3><p>${esc(x[1])}</p></div><div class="dt-ic"><svg viewBox="0 0 48 48">${DT_ICONS[x[2]]}</svg></div></div>`).join('')}</div>
-    <button class="btn" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button>`);
+    <button class="btn" onclick='shareText(${jsonAttr(shareTxt)})'>📤 اشتراک‌گذاری</button>`);
   window.scrollTo(0,0);
 }
 function showCosmicResult(firstName,familyName,r){
@@ -497,7 +517,7 @@ function showCosmicResult(firstName,familyName,r){
     </div>
     <div class="btn-row">
       <button class="btn secondary" onclick="showCosmicInputForm()">🔄 محاسبه‌ی جدید</button>
-      <button class="btn" onclick='shareText(${JSON.stringify(`🌌 کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}\n\nکد کیهانیِ خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
+      <button class="btn" onclick='shareText(${jsonAttr(`🌌 کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}\n\nکد کیهانیِ خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div>`);
   fitCode(); if(document.fonts){ document.fonts.ready.then(fitCode); document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',fitCode); } setTimeout(fitCode,300); setTimeout(fitCode,1200);
 }
@@ -505,13 +525,13 @@ const APP_SHARE_URL="https://abasalt-cpu.github.io/cosmic-pwa/";
 function shareText(text){ if(navigator.share){navigator.share({text});} else {navigator.clipboard.writeText(text); alert('متن کپی شد.');} }
 function getHafezDrawState(){
   const key='hafezDrawState'; const today=todayStr();
-  let st=JSON.parse(localStorage.getItem(key)||'null');
+  let st=safeParse(key,null);
   if(!st||st.date!==today){ st={date:today,count:0}; localStorage.setItem(key,JSON.stringify(st)); }
   return st;
 }
 let hafezMode='modern'; // پیش‌فرض: تفسیر مدرن
 function getHafezModernToday(){
-  const st=JSON.parse(localStorage.getItem('hafezModernState')||'null');
+  const st=safeParse('hafezModernState',null);
   return (st && st.date===todayStr()) ? st : null;
 }
 function loadHafezModernData(){
@@ -548,13 +568,13 @@ function showHafez(mode){
   const opt=(m,label)=>`<div class="mode-opt${hafezMode===m?' on':''}" onclick="showHafez('${m}')">${hafezMode===m?'◉':'○'} ${label}</div>`;
   const mainBtn=modern
     ? (modernToday
-        ? `<button class="btn" id="hafez-btn" disabled style="opacity:.5;cursor:not-allowed">✅ فال AI امروزت رو گرفتی</button>`
-        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">🌿 فالم رو با AI بگیر (۱ بار در روز)</button>`)
+        ? `<button class="btn" id="hafez-btn" disabled style="opacity:.5;cursor:not-allowed">✅ فال امروزت رو گرفتی</button>`
+        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">🌿 فالم رو بگیر (۱ بار در روز)</button>`)
     : `<button class="btn" id="hafez-btn" onclick="revealHafez()"${remaining<=0?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${remaining>0?` (${remaining} بار دیگه امروز)`:''}</button>`;
   const resultInit=(!modern && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
   render(`${backBtn('showHome()')}${pageHead('🔮','فال حافظ')}<div class="card orn">
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
-      <div class="hafez-mode">${opt('modern','تفسیر با AI')}${opt('traditional','تفسیر سنتی')}</div>
+      <div class="hafez-mode">${opt('modern','تفسیر امروزی')}${opt('traditional','تفسیر سنتی')}</div>
       <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}</p>
       ${mainBtn}
       <div id="hafez-result">${resultInit}</div></div>
@@ -565,7 +585,7 @@ function showHafez(mode){
       <button class="btn${falOn?' secondary':''}" id="fal-push-btn" onclick="handleDailyFalToggle()">${falOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری روزانه'}</button>
     </div>`);
   if(modern && modernToday) renderHafezModernResult(modernToday.id);
-  if(!modern){ try{ const ld=JSON.parse(localStorage.getItem('hafezLastDraw')||'null'); if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
+  if(!modern){ try{ const ld=safeParse('hafezLastDraw',null); if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
 }
 async function revealHafezModern(){
   if(getHafezModernToday()) return;
@@ -573,7 +593,7 @@ async function revealHafezModern(){
   if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; }
   try{ await loadHafezModernData(); }
   catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
+    if(btn){ btn.disabled=false; btn.textContent='🌿 فالم رو بگیر (۱ بار در روز)'; }
     document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`;
     return;
   }
@@ -589,7 +609,7 @@ async function renderHafezModernResult(id){
   catch(e){ box.innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`; return; }
   const g=HAFEZ_MODERN_DATA[id-1];
   if(!g){ box.innerHTML=''; return; }
-  const shareTxt=`🔮 فال حافظِ من (تفسیر با AI):\n\n${g.p.join('\n')}\n\n${g.f.replace(/\s+/g,' ')}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`;
+  const shareTxt=`🔮 فال حافظِ من (تفسیر امروزی):\n\n${g.p.join('\n')}\n\n${g.f.replace(/\s+/g,' ')}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`;
   box.innerHTML=`<div class="result-block">
     <div class="verse">${g.p.map(esc).join('<br>')}</div>
     ${g.t!==g.p[0]?`<h3 style="margin:12px 0 4px; color:var(--gold-soft)">${esc(g.t)}</h3>`:''}
@@ -599,7 +619,7 @@ async function renderHafezModernResult(id){
     <h3 class="hz-sec">🧭 گام‌های عملی</h3>${renderHafezText(g.x)}
     <h3 class="hz-sec">💬 پیام پایانی</h3>${renderHafezText(g.f)}
     <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
-    <button class="btn small secondary" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button>
+    <button class="btn small secondary" onclick='shareText(${jsonAttr(shareTxt)})'>📤 اشتراک‌گذاری</button>
   </div><p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>`;
 }
 function handleDailyFalToggle(){
@@ -619,6 +639,7 @@ function handleDailyFalToggle(){
 function getDeviceId(){let id=localStorage.getItem('deviceId'); if(!id){id='dev-'+Math.random().toString(36).slice(2); localStorage.setItem('deviceId',id);} return id;}
 // ---------- ردیابی خطا (به‌جای Sentry، چون از ایران فیلتره) ----------
 function reportError(message, stack){
+  window.__errCount=(window.__errCount||0)+1; if(window.__errCount>5) return;
   if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')) return;
   try{
     fetch(AUTH_API_BASE+'/errors/log', {
@@ -658,7 +679,7 @@ function renderTradResult(g,remaining){
   document.getElementById('hafez-result').innerHTML=`<div class="result-block"><div class="verse">${g.verses.join('<br>')}</div>
     <p style="margin-top:10px"><b class="hz-sec">✦ تعبیر فال:</b><br>${esc(g.interpretation)}</p>
     <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
-    <button class="btn small secondary" onclick='shareText(${JSON.stringify(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button></div>
+    <button class="btn small secondary" onclick='shareText(${jsonAttr(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button></div>
     <p class="small-note">${remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙'}</p>`;
 }
 function showFullGhazal(id){
@@ -681,7 +702,7 @@ function showElham(){
       ${item.poet?`${ORN_DIV}<div class="attrib center">${esc(item.poet)}</div>`:''}
       <div class="result-block"><b class="hz-sec">✦ تفسیر:</b><br>${esc(item.interpretation)}</div>
       <div class="small-note center">★ یک الهام ثابت در روز، بدون تکرار تا کل مجموعه تموم بشه.</div>
-      <button class="btn" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button></div>`);
+      <button class="btn" onclick='shareText(${jsonAttr(shareTxt)})'>📤 اشتراک‌گذاری</button></div>`);
 }
 function showZamanbandi(){
   const item=getRandomZamanbandi();
@@ -689,7 +710,7 @@ function showZamanbandi(){
     <div class="card orn center"><div class="big-time">${item.time}</div>${ORN_DIV}
       <div class="verse">${esc(item.quote)}</div>${ORN_DIV}
       <p class="small-note">📖 این جمله از کتاب «به زمان‌بندی خدا اعتماد کن» (آکیرا، ترجمه‌ی نهال سهیلی‌فر) است.<br>
-      <a href="${ZAMANBANDI_LINK}" target="_blank" style="color:var(--gold-soft)">برای خوندن کامل کتاب اینجا بزن</a></p>
+      <a href="${ZAMANBANDI_LINK}" target="_blank" rel="noopener noreferrer" style="color:var(--gold-soft)">برای خوندن کامل کتاب اینجا بزن</a></p>
       <button class="btn" onclick="showZamanbandi()">🔄 یکی دیگه</button></div>`);
 }
 function showZodiacEntry(){
@@ -795,7 +816,7 @@ function toggleCompareManual(n){
   const sel=document.getElementById('cp-sel'+n).value;
   document.getElementById('cp-manual'+n).style.display = sel==='manual' ? 'block':'none';
 }
-function parseDate(s){const parts=(s||'').split('/').map(x=>parseInt(x.trim(),10)); if(parts.length!==3||parts.some(isNaN))return null; return {jy:parts[0],jm:parts[1],jd:parts[2]};}
+function parseDate(s){const parts=(s||'').split('/').map(x=>parseInt(x.trim(),10)); if(parts.length!==3||parts.some(isNaN))return null; const [jy,jm,jd]=parts; if(jy<1300||jy>1420||jm<1||jm>12||jd<1||jd>jalaliMonthLength(jy,jm))return null; return {jy,jm,jd};}
 function getComparePerson(n){
   const hasProfiles=state.savedProfiles.length>0;
   if(hasProfiles){
@@ -903,7 +924,7 @@ function getGratitudeToday(){
     for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
     return arr;
   }
-  let order=JSON.parse(localStorage.getItem('gratitudeOrder')||'null');
+  let order=safeParse('gratitudeOrder',null);
   let position=parseInt(localStorage.getItem('gratitudePosition')||'-1',10);
   let lastDate=localStorage.getItem('gratitudeLastDate');
 
@@ -929,7 +950,7 @@ function showGratitude(){
     <div class="card orn">
       <p class="en-line">${esc(entry.english)}</p>
       <p class="verse" style="font-size:15.5px">${esc(entry.persian)}</p>
-      <button class="btn" onclick='shareText(${JSON.stringify(`🙏 شکرگزاری امروزم:\n\n${entry.persian}\n\n${entry.english}\n\nتو هم اینجا یه جمله‌ی شکرگزاری روزانه بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
+      <button class="btn" onclick='shareText(${jsonAttr(`🙏 شکرگزاری امروزم:\n\n${entry.persian}\n\n${entry.english}\n\nتو هم اینجا یه جمله‌ی شکرگزاری روزانه بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div>`);
 }
 function showSavedProfiles(){

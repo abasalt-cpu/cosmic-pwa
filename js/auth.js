@@ -50,15 +50,6 @@ async function signInWithEmail(email, password) {
   if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
   return data.user;
 }
-async function requestOtp(phone) {
-  return authFetch('/otp/request', { method: 'POST', body: JSON.stringify({ phone }) });
-}
-async function verifyOtp(phone, code) {
-  const data = await authFetch('/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) });
-  saveSession(data.token, data.user);
-  if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
-  return data.user;
-}
 async function signInWithGoogleCredential(accessToken) {
   const data = await authFetch('/google', { method: 'POST', body: JSON.stringify({ access_token: accessToken }) });
   saveSession(data.token, data.user);
