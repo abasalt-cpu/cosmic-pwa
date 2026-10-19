@@ -54,7 +54,17 @@ function askSyncConsent(){
   document.body.appendChild(d);
 }
 function answerSyncConsent(v){ setSyncConsent(v); const d=document.getElementById('consent-modal'); if(d) d.remove(); if(v) syncProfilesToServer(); }
-function toggleSyncConsent(){ setSyncConsent(syncConsent()!=='1'); if(syncConsent()==='1') syncProfilesToServer(); showMoreMenu(); }
+function deleteServerProfiles(){
+  if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')) return;
+  fetch(AUTH_API_BASE+'/profiles/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId:getDeviceId()})}).catch(()=>{});
+}
+function toggleSyncConsent(){ const on=syncConsent()!=='1'; setSyncConsent(on); if(on) syncProfilesToServer(); else deleteServerProfiles(); showMoreMenu(); }
+async function handleAccountDelete(){
+  if(!confirm('حساب کاربری و پروفایل‌های ذخیره‌شده‌ی آن بر روی سرور برای همیشه حذف می‌شود. آیا اطمینان دارید؟')) return;
+  try{ await authFetch('/account/delete',{method:'POST',headers:{Authorization:'Bearer '+authToken},body:'{}'}); }
+  catch(e){ alert(translateAuthError(e)); return; }
+  handleSignOut();
+}
 const app=document.getElementById('app');
 let __suppressPush=true;
 function currentNavKey(){const el=document.querySelector('nav.bottom .nav-btn.active'); return el?el.dataset.nav:null;}
@@ -288,6 +298,7 @@ function showAboutPage(){
     ${pvCard('مقایسه و پیشنهاد نام','مقایسه‌ی عددی و ستاره‌ای دو نفر و پیشنهاد نام فرزند با توجه به نام خانوادگی و نام مادر.','people')}
     ${pvCard('پروفایل‌ها و حساب کاربری','ذخیره‌ی پروفایل چند نفر و عضویت اختیاری از طریق ایمیل یا حساب گوگل.','user')}
     ${pvCard('یادآوری‌ها','یادآوری روزانه‌ی فال و یادآوری تولد، در صورت فعال‌سازی توسط کاربر.','bell')}
+    ${pvCard('ارتباط با ما','برای طرح پرسش، گزارش مشکل یا درخواست حذف اطلاعات، با نشانی <a href="mailto:cosmiccode396@gmail.com" style="color:var(--gold-soft)">cosmiccode396@gmail.com</a> در ارتباط باشید.','info')}
     <p class="small-note center">نسخه‌ی فعلی: ${toFa(APP_VERSION)} — این نرم‌افزار به‌طور مستمر به‌روزرسانی می‌شود و امکانات تازه به آن افزوده خواهد شد.</p>`);
 }
 function togglePw(){const i=document.getElementById('auth-password'),b=document.getElementById('pw-eye'); if(!i) return; const show=i.type==='password'; i.type=show?'text':'password'; b.innerHTML=`<svg viewBox="0 0 24 24">${PV_ICONS[show?'eye':'eyeOpen']}</svg>`;}
@@ -303,6 +314,7 @@ function showMembershipPage(){
         ${ORN_DIV}
         <p class="small-note center">شما با این حساب وارد شده‌اید.</p>
         <button class="btn secondary" onclick="handleSignOut()">خروج از حساب</button>
+        <button class="btn secondary" style="margin-top:8px; border-color:#ff8a8a; color:#ff8a8a" onclick="handleAccountDelete()">حذف حساب کاربری و اطلاعات آن</button>
       </div>`);
     return;
   }
@@ -315,7 +327,7 @@ function showMembershipPage(){
         <label>ایمیل</label>
         <input id="auth-email" class="ic-mail" type="email" dir="ltr" placeholder="example@email.com">
         <label>رمز عبور</label>
-        <div class="pw-wrap"><input id="auth-password" class="ic-lock" type="password" placeholder="رمز عبور (حداقل ۶ نویسه)"><button type="button" id="pw-eye" class="pw-eye" onclick="togglePw()" aria-label="نمایش رمز عبور"><svg viewBox="0 0 24 24">${PV_ICONS.eyeOpen}</svg></button></div>
+        <div class="pw-wrap"><input id="auth-password" class="ic-lock" type="password" placeholder="رمز عبور (حداقل ۸ نویسه)"><button type="button" id="pw-eye" class="pw-eye" onclick="togglePw()" aria-label="نمایش رمز عبور"><svg viewBox="0 0 24 24">${PV_ICONS.eyeOpen}</svg></button></div>
         <p id="auth-error" class="small-note" style="color:#ff8a8a; min-height:18px"></p>
         <button class="btn" onclick="handleEmailSignIn()">ورود</button>
         <button class="btn secondary" onclick="handleEmailSignUp()">ساخت حساب جدید</button>
@@ -418,7 +430,8 @@ function showPrivacyPage(){
     ${pvCard('اعلان‌ها','در صورت فعال‌سازی یادآوری‌ها، شناسه‌ی فنی اشتراک اعلان دستگاه شما ذخیره می‌شود. برای یادآوری تولد، نام و روز و ماه تولد پروفایل‌های ذخیره‌شده نیز به‌منظور ارسال اعلان بر روی سرور نگهداری می‌شود. با غیرفعال‌سازی یادآوری‌ها، این اشتراک لغو می‌گردد.','bell')}
     ${pvCard('استفاده از اطلاعات','اطلاعات شما صرفاً برای ارائه و بهبود خدمات، شخصی‌سازی نتایج و ارسال یادآوری‌های انتخابی به کار می‌رود و بدون رضایت شما در اختیار دیگران قرار نخواهد گرفت.','eye')}
     ${pvCard('آمار و ردیابی','برای بهبود نرم‌افزار از آمار بازدید ناشناس و بدون کوکی (Cloudflare Analytics) استفاده می‌شود که هیچ اطلاعات شخصی یا قابل‌شناسایی گردآوری نمی‌کند. از کوکی یا ابزار ردیابی تبلیغاتی استفاده نمی‌شود.','lock')}
-    ${pvCard('حذف اطلاعات','شما می‌توانید در هر زمان با پاک‌کردن داده‌های مرورگر یا برنامه، اطلاعات ذخیره‌شده بر روی دستگاه را حذف کنید و از حساب کاربری خود خارج شوید.','trash')}`);
+    ${pvCard('حذف اطلاعات','شما می‌توانید در هر زمان با پاک‌کردن داده‌های مرورگر یا برنامه، اطلاعات ذخیره‌شده بر روی دستگاه را حذف کنید و از حساب کاربری خود خارج شوید.','trash')}
+    ${pvCard('ارتباط با ما','برای طرح پرسش، گزارش مشکل یا درخواست حذف اطلاعات، با نشانی <a href="mailto:cosmiccode396@gmail.com" style="color:var(--gold-soft)">cosmiccode396@gmail.com</a> در ارتباط باشید.','info')}`);
 }
 function showTermsPage(){
   render(`${backBtn('showMoreMenu()')}${pageHead('','قوانین و شرایط استفاده','','sm')}
@@ -428,7 +441,8 @@ function showTermsPage(){
     ${pvCard('صحت اطلاعات','مسئولیت صحت اطلاعات واردشده، از جمله نام و تاریخ تولد، بر عهده‌ی کاربر است.','user')}
     ${pvCard('حساب کاربری','در صورت ایجاد حساب کاربری، حفظ رمز عبور و امنیت حساب بر عهده‌ی کاربر است و هر حساب منحصراً به یک نفر تعلق دارد.','lock')}
     ${pvCard('تغییرات و به‌روزرسانی','محتوا و امکانات نرم‌افزار ممکن است بدون اطلاع قبلی تغییر کند یا به‌روزرسانی شود.','refresh')}
-    ${pvCard('سلب مسئولیت','این نرم‌افزار به همان صورتی که هست و بدون هیچ‌گونه ضمانتی ارائه می‌شود و تضمینی برای دقت کامل نتایج وجود ندارد.','shield')}`);
+    ${pvCard('سلب مسئولیت','این نرم‌افزار به همان صورتی که هست و بدون هیچ‌گونه ضمانتی ارائه می‌شود و تضمینی برای دقت کامل نتایج وجود ندارد.','shield')}
+    ${pvCard('ارتباط با ما','برای طرح پرسش، گزارش مشکل یا درخواست حذف اطلاعات، با نشانی <a href="mailto:cosmiccode396@gmail.com" style="color:var(--gold-soft)">cosmiccode396@gmail.com</a> در ارتباط باشید.','info')}`);
 }
 function backBtn(fn,label){return `<button class="back-btn" aria-label="${label||'بازگشت'}" onclick="${fn}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>`;}
 const ORN_DIV='<div class="orn-div"><span></span><i>✦</i><span></span></div>';
@@ -574,8 +588,8 @@ function showHafez(mode){
   const resultInit=(!modern && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
   render(`${backBtn('showHome()')}${pageHead('🔮','فال حافظ')}<div class="card orn">
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
-      <div class="hafez-mode">${opt('modern','تفسیر امروزی')}${opt('traditional','تفسیر سنتی')}</div>
-      <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}</p>
+      <div class="hafez-mode">${opt('modern','تفسیر AI')}${opt('traditional','تفسیر سنتی')}</div>
+      <p class="small-note" style="margin-top:0">${modern?'تفسیرهایی که از پیش با کمک هوش مصنوعی برای هر غزل تهیه شده‌اند، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}</p>
       ${mainBtn}
       <div id="hafez-result">${resultInit}</div></div>
     <div class="card">
@@ -609,7 +623,7 @@ async function renderHafezModernResult(id){
   catch(e){ box.innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`; return; }
   const g=HAFEZ_MODERN_DATA[id-1];
   if(!g){ box.innerHTML=''; return; }
-  const shareTxt=`🔮 فال حافظِ من (تفسیر امروزی):\n\n${g.p.join('\n')}\n\n${g.f.replace(/\s+/g,' ')}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`;
+  const shareTxt=`🔮 فال حافظِ من (تفسیر AI):\n\n${g.p.join('\n')}\n\n${g.f.replace(/\s+/g,' ')}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`;
   box.innerHTML=`<div class="result-block">
     <div class="verse">${g.p.map(esc).join('<br>')}</div>
     ${g.t!==g.p[0]?`<h3 style="margin:12px 0 4px; color:var(--gold-soft)">${esc(g.t)}</h3>`:''}
@@ -707,7 +721,7 @@ function showElham(){
 function showZamanbandi(){
   const item=getRandomZamanbandi();
   render(`${backBtn('showHome()')}${pageHead('⏳','به زمان‌بندی خدا اعتماد کن','','sm')}
-    <div class="card orn center"><div class="big-time">${item.time}</div>${ORN_DIV}
+    <div class="card orn center"><div class="big-time">${toFa(item.time)}</div>${ORN_DIV}
       <div class="verse">${esc(item.quote)}</div>${ORN_DIV}
       <p class="small-note">📖 این جمله از کتاب «به زمان‌بندی خدا اعتماد کن» (آکیرا، ترجمه‌ی نهال سهیلی‌فر) است.<br>
       <a href="${ZAMANBANDI_LINK}" target="_blank" rel="noopener noreferrer" style="color:var(--gold-soft)">برای خوندن کامل کتاب اینجا بزن</a></p>
