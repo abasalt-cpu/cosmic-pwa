@@ -1,6 +1,6 @@
 // ---------- توابع کمکی امنیتی ----------
 function jsonAttr(v){return JSON.stringify(v).replace(/[<>&'\u2028\u2029]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));}
-function safeParse(key,fb){try{const v=safeParse(key,null); return v===null?fb:v;}catch(e){return fb;}}
+function safeParse(key,fb){try{const v=JSON.parse(localStorage.getItem(key)); return v===null?fb:v;}catch(e){return fb;}}
 function jalaliLeap(y){return [1,5,9,13,17,22,26,30].includes(y%33);}
 function jalaliMonthLength(y,m){return m<=6?31:(m<=11?30:(jalaliLeap(y)?30:29));}
 function syncConsent(){return localStorage.getItem('syncConsent');}
@@ -390,6 +390,8 @@ function handleSignOut(){
     // پروفایل‌های محلی رو هم پاک می‌کنیم تا حساب بعدی که وارد می‌شه، پروفایل‌های این حساب رو نبینه.
     state.savedProfiles=[];
     localStorage.removeItem('savedProfiles');
+    // رضایت همگام‌سازی مختص همین دستگاه/کاربر بود؛ با خروج، باطل می‌شه تا کاربر بعدی دوباره پرسیده بشه.
+    localStorage.removeItem('syncConsent');
     showMembershipPage();
   });
 }
@@ -650,7 +652,7 @@ function handleDailyFalToggle(){
     msg.style.color='#ff8a8a'; msg.textContent=err.message||'خطایی پیش اومد.';
   });
 }
-function getDeviceId(){let id=localStorage.getItem('deviceId'); if(!id){id='dev-'+Math.random().toString(36).slice(2); localStorage.setItem('deviceId',id);} return id;}
+function getDeviceId(){let id=localStorage.getItem('deviceId'); if(!id){ id=(typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():('dev-'+Math.random().toString(36).slice(2)+Date.now().toString(36)); localStorage.setItem('deviceId',id);} return id;}
 // ---------- ردیابی خطا (به‌جای Sentry، چون از ایران فیلتره) ----------
 function reportError(message, stack){
   window.__errCount=(window.__errCount||0)+1; if(window.__errCount>5) return;
@@ -975,9 +977,10 @@ function showSavedProfiles(){
       ${state.savedProfiles.length===0?'<p class="desc">هنوز پروفایلی ذخیره نشده.</p>':
         state.savedProfiles.map((p,i)=>{
           const isBday=p.report && p.report.gm===todayM && p.report.gd===todayD;
-          const fullName=`${p.firstName} ${p.familyName}`.trim();
+          // نکته‌ی امنیتی: اسم هرگز داخل رشته‌ی onclick قرار نمی‌گیرد؛ فقط ایندکس پاس داده می‌شود
+          // و اسم در لحظه‌ی اجرا از state خوانده می‌شود (جلوگیری از شکستن رشته‌ی JS با کاراکتر کوتیشن).
           const nameHtml=isBday
-            ? `<span onclick="event.stopPropagation(); launchBalloons(['${esc(fullName).replace(/'/g,"\\'")}'])" style="cursor:pointer"><b>${esc(p.firstName)} ${esc(p.familyName)}</b></span>`
+            ? `<span onclick="event.stopPropagation(); launchBalloonsFromProfile(${i})" style="cursor:pointer"><b>${esc(p.firstName)} ${esc(p.familyName)}</b></span>`
             : `<b>${esc(p.firstName)} ${esc(p.familyName)}</b>`;
           return `<div class="name-item" style="display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer${isBday?'; background:linear-gradient(90deg, #e8b84b22, transparent); border-radius:8px; padding-inline-start:8px':''}" onclick="showSavedProfile(${i})">
             <span style="flex:1; min-width:0; overflow-wrap:break-word">${isBday?'💐 ':''}${nameHtml}${isBday?' <span style="color:var(--gold-soft); font-size:12px">(امروز تولدشه 🎉)</span>':''} — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode)}</span></span>
@@ -991,6 +994,10 @@ function showSavedProfiles(){
       <p id="push-status-msg" class="small-note" style="min-height:18px"></p>
       <button class="btn${pushOn?' secondary':''}" id="push-toggle-btn" onclick="handlePushToggle()">${pushOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری تولد'}</button>
     </div>`);
+}
+function launchBalloonsFromProfile(i){
+  const p=state.savedProfiles[i];
+  if(p) launchBalloons([`${p.firstName} ${p.familyName}`.trim()]);
 }
 function handleDeleteProfile(i){
   const p=state.savedProfiles[i];

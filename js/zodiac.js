@@ -1,5 +1,7 @@
 function simpleHash(str){let hash=0; for(let i=0;i<str.length;i++){hash=(Math.imul(31,hash)+str.charCodeAt(i))|0;} return Math.abs(hash);}
-function todayStr(){const d=new Date(); return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;}
+// از تاریخ «محلی» استفاده می‌کنیم نه UTC؛ چون مخاطب اپ در ایران (UTC+3:30) است و
+// با UTC، مرز «امروز» به‌جای نیمه‌شب، ساعت ۳:۳۰ بامداد محلی عوض می‌شد.
+function todayStr(){const d=new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
 function getZodiacSign(jalaliMonth){return ZODIAC_DATA[String(jalaliMonth)];}
 function getDailyForecast(jalaliMonth){const seed=`${jalaliMonth}-${todayStr()}`; return ZODIAC_FORECASTS[simpleHash(seed)%ZODIAC_FORECASTS.length];}
 function getDailyLuckyColor(jalaliMonth){const sign=getZodiacSign(jalaliMonth); const seed=`color-${jalaliMonth}-${todayStr()}`; return sign.colors[simpleHash(seed)%sign.colors.length];}
