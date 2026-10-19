@@ -57,6 +57,11 @@ async function signInWithGoogleCredential(accessToken) {
   return data.user;
 }
 async function signOutUser() {
+  // باطل‌سازی سمت سرور: /logout نسخه‌ی توکن را بالا می‌برد و توکن‌های قبلی (تا ۳۰ روز) بی‌اعتبار می‌شوند.
+  // حتی اگر این فراخوانی شکست بخورد، خروج سمت کلاینت ادامه پیدا می‌کند.
+  try {
+    if (authToken) await authFetch('/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken } });
+  } catch (e) { /* آفلاین یا خطای شبکه — نشست سمت سرور بعداً با انقضای ۳۰ روزه یا /me بعدی باطل می‌شود */ }
   clearSession();
   if (typeof onAuthChanged === 'function') onAuthChanged(null);
 }
