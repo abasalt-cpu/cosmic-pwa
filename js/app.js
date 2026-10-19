@@ -581,17 +581,18 @@ function showHafez(mode){
   const st=getHafezDrawState(); const remaining=Math.max(0,3-st.count);
   const modernToday=getHafezModernToday();
   const falOn=typeof isDailyFalEnabled==='function' && isDailyFalEnabled();
+  const admin=isAppAdmin();
   const opt=(m,label)=>`<div class="mode-opt${hafezMode===m?' on':''}" onclick="showHafez('${m}')">${hafezMode===m?'◉':'○'} ${label}</div>`;
   const mainBtn=modern
-    ? (modernToday
+    ? (modernToday && !admin
         ? `<button class="btn" id="hafez-btn" disabled style="opacity:.5;cursor:not-allowed">✅ فال امروزت رو گرفتی</button>`
-        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">🌿 فالم رو بگیر (۱ بار در روز)</button>`)
-    : `<button class="btn" id="hafez-btn" onclick="revealHafez()"${remaining<=0?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${remaining>0?` (${remaining} بار دیگه امروز)`:''}</button>`;
-  const resultInit=(!modern && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
+        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">🌿 فالم رو بگیر${admin?' (نامحدود ✨)':' (۱ بار در روز)'}</button>`)
+    : `<button class="btn" id="hafez-btn" onclick="revealHafez()"${(!admin && remaining<=0)?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${admin?' (نامحدود ✨)':(remaining>0?` (${remaining} بار دیگه امروز)`:'')}</button>`;
+  const resultInit=(!modern && !admin && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
   render(`${backBtn('showHome()')}${pageHead('🔮','فال حافظ')}<div class="card orn">
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
       <div class="hafez-mode">${opt('modern','تفسیر AI')}${opt('traditional','تفسیر سنتی')}</div>
-      <p class="small-note" style="margin-top:0">${modern?'تفسیرهایی که از پیش با کمک هوش مصنوعی برای هر غزل تهیه شده‌اند، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}</p>
+      <p class="small-note" style="margin-top:0">${modern?'تفسیرهایی که از پیش با کمک هوش مصنوعی برای هر غزل تهیه شده‌اند، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}${admin?' <b style="color:var(--gold-soft)">حالت ادمین: بدون محدودیت.</b>':''}</p>
       ${mainBtn}
       <div id="hafez-result">${resultInit}</div></div>
     <div class="card">
@@ -604,16 +605,17 @@ function showHafez(mode){
   if(!modern){ try{ const ld=safeParse('hafezLastDraw',null); if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
 }
 async function revealHafezModern(){
-  if(getHafezModernToday()) return;
+  if(getHafezModernToday() && !isAppAdmin()) return; // ادمین: بدون محدودیت روزانه
   const btn=document.getElementById('hafez-btn');
   if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; }
   try{ await loadHafezModernData(); }
   catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='🌿 فالم رو بگیر (۱ بار در روز)'; }
+    if(btn){ btn.disabled=false; btn.textContent='🌿 فالم رو بگیر'+(isAppAdmin()?' (نامحدود ✨)':' (۱ بار در روز)'); }
     document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`;
     return;
   }
-  const id=(simpleHash(getDeviceId()+'-modern-'+todayStr())%HAFEZ_MODERN_DATA.length)+1;
+  // ادمین: هر بار یک غزل تصادفی؛ کاربر عادی: غزل قطعیِ مبتنی بر دستگاه+روز
+  const id=isAppAdmin() ? (Math.floor(Math.random()*HAFEZ_MODERN_DATA.length)+1) : ((simpleHash(getDeviceId()+'-modern-'+todayStr())%HAFEZ_MODERN_DATA.length)+1);
   localStorage.setItem('hafezModernState', JSON.stringify({date:todayStr(), id}));
   showHafez();
 }
@@ -678,17 +680,17 @@ function rerollSlogan(){
   if(el) el.textContent=s;
 }
 function revealHafez(){
-  const st=getHafezDrawState();
-  if(st.count>=3) return;
+  const st=getHafezDrawState(); const admin=isAppAdmin();
+  if(st.count>=3 && !admin) return; // ادمین: بدون محدودیت روزانه
   st.count++; localStorage.setItem('hafezDrawState', JSON.stringify(st));
   const g=getDailyFal(getDeviceId()+'-draw'+st.count);
-  const remaining=3-st.count;
+  const remaining=admin?99:(3-st.count); // برای ادمین عدد محدودیت معنا ندارد؛ 99 یعنی همیشه فعال
   localStorage.setItem('hafezLastDraw',JSON.stringify({date:todayStr(),remaining,g:{id:g.id,verses:g.verses,interpretation:g.interpretation}}));
   renderTradResult(g,remaining);
   const btn=document.getElementById('hafez-btn');
   if(btn){
     if(remaining<=0){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='🔮 فالم رو بگیر'; }
-    else{ btn.textContent=`🔮 فالم رو بگیر (${remaining} بار دیگه امروز)`; }
+    else{ btn.textContent=admin?'🔮 فالم رو بگیر (نامحدود ✨)':`🔮 فالم رو بگیر (${remaining} بار دیگه امروز)`; }
   }
 }
 function renderTradResult(g,remaining){
@@ -696,11 +698,12 @@ function renderTradResult(g,remaining){
     <p style="margin-top:10px"><b class="hz-sec">✦ تعبیر فال:</b><br>${esc(g.interpretation)}</p>
     <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
     <button class="btn small secondary" onclick='shareText(${jsonAttr(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button></div>
-    <p class="small-note">${remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙'}</p>`;
+    <p class="small-note">${isAppAdmin()?'حالت ادمین: بدون محدودیت ✨':(remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙')}</p>`;
 }
 function showFullGhazal(id){
   const g=getGhazalById(id);
-  render(`${backBtn('showHafez()')}${pageHead('📜','غزل شماره‌ی '+toFa(id.replace('hafez-extra-','')),'', 'sm')}<div class="card orn">
+  if(!g){ render(`${backBtn('showHafez()')}<div class="card"><p class="desc" style="margin:0">غزل مورد نظر پیدا نشد.</p></div>`); return; } // دفاع: رندر نکردن غزل موجود
+  render(`${backBtn('showHafez()')}${pageHead('📜','غزل شماره‌ی '+toFa(String(id).replace('hafez-extra-','')),'', 'sm')}<div class="card orn">
       <div class="verse" style="line-height:2.2">${(g.full_verses||g.verses).join('<br>')}</div></div>`);
 }
 function showMunajat(){

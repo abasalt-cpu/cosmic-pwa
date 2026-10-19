@@ -17,6 +17,11 @@ function clearSession() {
   currentUser = null;
   localStorage.removeItem('authToken');
 }
+// آیا کاربر فعلی ادمین است؟ (وضعیت isAdmin از سرور در userJson می‌آید)
+// کاربرد: آزادسازی محدودیت‌های روزانه‌ی سمت کلاینت (مثل سقف فال حافظ) برای ادمین.
+function isAppAdmin() {
+  return !!(typeof currentUser !== 'undefined' && currentUser && currentUser.isAdmin === true);
+}
 
 async function authFetch(path, options = {}) {
   const res = await fetch(AUTH_API_BASE + path, {
