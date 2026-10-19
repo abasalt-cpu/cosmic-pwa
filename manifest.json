@@ -1,6 +1,6 @@
 {
-  "name": "عدد کیهانی",
-  "short_name": "عدد کیهانی",
+  "name": "کد کیهانی",
+  "short_name": "کد کیهانی",
   "description": "عددشناسی، طالع‌بینی، فال حافظ و مناجات",
   "start_url": "./index.html",
   "scope": "./",

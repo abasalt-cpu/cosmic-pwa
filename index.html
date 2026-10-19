@@ -2,7 +2,9 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.gstatic.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.workers.dev https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="description" content="کد کیهانی؛ محاسبه‌ی کد کیهانی، عددشناسی، طالع‌بینی، فال حافظ، مناجات و متون الهام‌بخش فارسی. این نرم‌افزار جنبه‌ی پیش‌گویی قطعی ندارد.">
 <meta name="theme-color" content="#161233">
 <title>کد کیهانی</title>
 
@@ -12,7 +14,6 @@
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=Barlow+Semi+Condensed:wght@600;700&display=swap');
-@font-face{font-family:'BahnLocal'; src:url('fonts/bahnschrift.ttf') format('truetype'); font-weight:100 900; font-display:swap;}
 @font-face{font-family:'VazirLocal'; src:url('fonts/Vazirmatn%5Bwght%5D.woff2') format('woff2'); font-weight:100 900; font-display:swap;}
 @font-face{font-family:'Sahel'; src:url('fonts/Sahel-Bold.woff2') format('woff2'); font-weight:400 800; font-display:swap;}
 @font-face{font-family:'Sahel'; src:url('fonts/Sahel-Black.woff2') format('woff2'); font-weight:900; font-display:swap;}
@@ -131,7 +132,7 @@ cursor:pointer; background:none; border:none; padding:6px 0; font-family:inherit
 .result-block{border-top:1px dashed var(--line); padding-top:12px; margin-top:12px; font-size:14px; line-height:2;}
 .result-block .num{color:var(--gold-soft); font-weight:700;}
 .result-block .verse{font-style:italic; color:#e7e0ff;}
-.code{direction:ltr; white-space:nowrap; text-align:center; font-family:'BahnLocal','Barlow Semi Condensed','Arial Narrow',sans-serif; font-size:26px; font-weight:700; letter-spacing:.5px; background:transparent; border:none; color:var(--gold-soft); text-shadow:0 0 14px #e8b84b66; padding:12px 14px; margin:0; overflow:hidden;}
+.code{direction:ltr; white-space:nowrap; text-align:center; font-family:'Barlow Semi Condensed','Arial Narrow',sans-serif; font-size:26px; font-weight:700; letter-spacing:.5px; background:transparent; border:none; color:var(--gold-soft); text-shadow:0 0 14px #e8b84b66; padding:12px 14px; margin:0; overflow:hidden;}
 .verse{font-style:italic; color:#e7e0ff;}
 .name-item{padding:8px 0; border-bottom:1px solid var(--line); font-size:14px;}
 nav.bottom{position:fixed; bottom:0; inset-inline:0; z-index:5; background:#150f2ce6; backdrop-filter:blur(10px);
@@ -278,6 +279,8 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
 .banner-card .b-icon{width:34px; height:34px; font-size:16px;}
 .banner-card .b-text{font-size:12px; line-height:1.7;}
 @media (max-height:740px){.menu-tile .icon-img{width:58px; height:58px;} .menu-tile{padding:6px 4px;} .banner-card{padding:6px 12px;}}
+.modal-back{position:fixed; inset:0; z-index:50; background:#000b; display:flex; align-items:center; justify-content:center; padding:20px;}
+.modal-box{width:100%; max-width:420px;}
 </style>
 </head>
 <body>
@@ -288,7 +291,7 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
 <div class="stars"></div>
 <header class="top">
   <div class="top-bar">
-    <button class="icon-btn" onclick="showNotifications()" aria-label="اعلان‌ها">🔔<span class="dot"></span></button>
+    <button class="icon-btn" onclick="showNotifications()" aria-label="اعلان‌ها">🔔</button>
     <div class="brand-inline">✦ کد کیهانی ✦</div>
     <button class="icon-btn" onclick="showMoreMenu()" aria-label="منو">☰</button>
   </div>
@@ -319,6 +322,7 @@ window.addEventListener('resize', setHeaderHeightVar);
 <script src="js/natal_chart.js" defer></script>
 <script src="js/zodiac.js" defer></script>
 <script src="js/content_modules.js" defer></script>
+<script src="js/version.js" defer></script>
 <script src="js/baby_name.js" defer></script>
 <script src="js/number_info.js" defer></script>
 <script src="js/app.js" defer></script>
