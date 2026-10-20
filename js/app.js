@@ -267,6 +267,7 @@ function showMembershipPage(){
         ${ORN_DIV}
         <p class="small-note center">شما با این حساب وارد شده‌اید.</p>
         <button class="btn secondary" onclick="handleSignOut()">خروج از حساب</button>
+        <button class="btn danger" onclick="handleAccountDelete()">حذف حساب</button>
       </div>`);
     return;
   }
@@ -362,6 +363,18 @@ function handleSignOut(){
     localStorage.removeItem('savedProfiles');
     showMembershipPage();
   });
+}
+function handleAccountDelete(){
+  if(!confirm('حذف حساب، همه‌ی پروفایل‌ها و اطلاعات ذخیره‌شده‌ی شما را برای همیشه پاک می‌کند. ادامه می‌دهی؟')) return;
+  if(!confirm('این کار قابل بازگشت نیست. مطمئنی که می‌خواهی حساب خود را حذف کنی؟')) return;
+  authFetch('/account/delete', { method:'POST' }).then(()=>{
+    clearSession();
+    state.savedProfiles=[];
+    localStorage.removeItem('savedProfiles');
+    if(typeof onAuthChanged==='function') onAuthChanged(null);
+    alert('حساب شما و تمام اطلاعات آن حذف شد.');
+    showMembershipPage();
+  }).catch((err)=>{ alert(translateAuthError(err)); });
 }
 function onAuthChanged(user){
   if(user) mergeAndRestoreProfilesOnLogin();
@@ -699,8 +712,6 @@ function showZamanbandi(){
   render(`${backBtn('showHome()')}${pageHead('⏳','به زمان‌بندی خدا اعتماد کن','','sm')}
     <div class="card orn center"><div class="big-time">${item.time}</div>${ORN_DIV}
       <div class="verse">${esc(item.quote)}</div>${ORN_DIV}
-      <p class="small-note">📖 این جمله از کتاب «به زمان‌بندی خدا اعتماد کن» (آکیرا، ترجمه‌ی نهال سهیلی‌فر) است.<br>
-      <a href="${ZAMANBANDI_LINK}" target="_blank" style="color:var(--gold-soft)">برای خوندن کامل کتاب اینجا بزن</a></p>
       <button class="btn" onclick="showZamanbandi()">🔄 یکی دیگه</button></div>`);
 }
 function showZodiacEntry(){

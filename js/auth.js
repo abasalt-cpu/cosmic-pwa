@@ -1,5 +1,7 @@
 // ===== تنظیمات بک‌اند عضویت =====
-// بعد از دیپلوی Worker روی Cloudflare (طبق راهنمای backend/README.md)، این آدرس رو با آدرس واقعی خودت عوض کن:
+// ⚠️ دامنه‌ی workers.dev در ایران فیلتر است (خطای «Failed to fetch» در اپ).
+// راه‌حل: دامنه‌ی شخصی را در Cloudflare به همین Worker وصل کن (Custom Domain) و
+// فقط همین یک خط را با دامنه‌ی جدید عوض کن. بقیه‌ی کد نیازی به تغییر ندارد.
 const AUTH_API_BASE = "https://cosmic-code-auth.cosmiccode396.workers.dev";
 // Client ID که از Google Cloud Console گرفتی (مرحله‌ی ۹ راهنما) رو اینجا جایگزین کن:
 const GOOGLE_CLIENT_ID = "948644041400-q6k9d730s9ml847t6us27ufumkijfetc.apps.googleusercontent.com";
@@ -23,10 +25,17 @@ async function authFetch(path, options = {}) {
   // [S1-fix] توکن به‌صورت خودکار به همه‌ی درخواست‌ها اضافه می‌شود
   // (قبلاً /push/subscribe و /push/reminders اصلاً توکن نمی‌فرستادند)
   if (authToken && !headers.Authorization) headers.Authorization = 'Bearer ' + authToken;
-  const res = await fetch(AUTH_API_BASE + path, {
-    ...options,
-    headers,
-  });
+  let res;
+  try {
+    res = await fetch(AUTH_API_BASE + path, {
+      ...options,
+      headers,
+    });
+  } catch (networkErr) {
+    // خطای سطح شبکه (فیلترینگ، قطعی اینترنت، DNS و...) — پیام خام مرورگر («Failed to fetch»)
+    // برای کاربر بی‌معنی است؛ پیام قابل‌فهم جایگزین می‌کنیم.
+    throw new Error('ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید؛ اگر نشد، با فیلترشکن امتحان کنید.');
+  }
   let data;
   try {
     data = await res.json();

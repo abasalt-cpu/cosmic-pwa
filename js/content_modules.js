@@ -1,3 +1,12 @@
+// خواندن امن یک مقدار JSON از localStorage — اگر کلید نبود یا JSON خراب بود، مقدار پیش‌فرض برمی‌گردد.
+// (رفع خطای «safeParse is not defined» که الهام روز را از کار می‌انداخت)
+function safeParse(key, fallback){
+  try{
+    const raw=localStorage.getItem(key);
+    if(raw===null) return fallback;
+    return JSON.parse(raw);
+  }catch(e){ return fallback; }
+}
 function getDailyFal(userId){const seed=`${userId}-${todayStr()}`; return HAFEZ_DATA[simpleHash(seed)%HAFEZ_DATA.length];}
 function getGhazalById(id){return HAFEZ_DATA.find(g=>String(g.id)===String(id))||null;}
 function getRandomMunajat(){return MUNAJAT_DATA[Math.floor(Math.random()*MUNAJAT_DATA.length)];}
@@ -19,8 +28,6 @@ function getTodayElham(){
   }
   return ELHAM_DATA[order[position]];
 }
-// لینک کتاب با نویسه‌های فارسی به‌صورت percent-encoded (استاندارد URL) — سازگار با همه مرورگرها و ابزارهای اشتراک‌گذاری
-const ZAMANBANDI_LINK="https://taaghche.com/book/232958/%D8%A8%D9%87-%D8%B2%D9%85%D8%A7%D9%86-%D8%A8%D9%86%D8%AF%DB%8C-%D8%AE%D8%AF%D8%A7-%D8%A7%D8%B9%D8%AA%D9%85%D8%A7%D8%AF-%DA%A9%D9%86";
 function getDailyZamanbandi(userId){const seed=`${userId}-zamanbandi-${todayStr()}`; return ZAMANBANDI_DATA[simpleHash(seed)%ZAMANBANDI_DATA.length];}
 function getZamanbandiById(id){return ZAMANBANDI_DATA.find(z=>z.id===id)||null;}
 function getRandomZamanbandi(){return ZAMANBANDI_DATA[Math.floor(Math.random()*ZAMANBANDI_DATA.length)];}
