@@ -17,19 +17,15 @@ function clearSession() {
   currentUser = null;
   localStorage.removeItem('authToken');
 }
-// آیا کاربر فعلی ادمین است؟ (وضعیت isAdmin از سرور در userJson می‌آید)
-// کاربرد: آزادسازی محدودیت‌های روزانه‌ی سمت کلاینت (مثل سقف فال حافظ) برای ادمین.
-function isAppAdmin() {
-  return !!(typeof currentUser !== 'undefined' && currentUser && currentUser.isAdmin === true);
-}
 
 async function authFetch(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  // [S1-fix] توکن به‌صورت خودکار به همه‌ی درخواست‌ها اضافه می‌شود
+  // (قبلاً /push/subscribe و /push/reminders اصلاً توکن نمی‌فرستادند)
+  if (authToken && !headers.Authorization) headers.Authorization = 'Bearer ' + authToken;
   const res = await fetch(AUTH_API_BASE + path, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
+    headers,
   });
   let data;
   try {
@@ -55,6 +51,15 @@ async function signInWithEmail(email, password) {
   if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
   return data.user;
 }
+async function requestOtp(phone) {
+  return authFetch('/otp/request', { method: 'POST', body: JSON.stringify({ phone }) });
+}
+async function verifyOtp(phone, code) {
+  const data = await authFetch('/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) });
+  saveSession(data.token, data.user);
+  if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
+  return data.user;
+}
 async function signInWithGoogleCredential(accessToken) {
   const data = await authFetch('/google', { method: 'POST', body: JSON.stringify({ access_token: accessToken }) });
   saveSession(data.token, data.user);
@@ -62,11 +67,7 @@ async function signInWithGoogleCredential(accessToken) {
   return data.user;
 }
 async function signOutUser() {
-  // باطل‌سازی سمت سرور: /logout نسخه‌ی توکن را بالا می‌برد و توکن‌های قبلی (تا ۳۰ روز) بی‌اعتبار می‌شوند.
-  // حتی اگر این فراخوانی شکست بخورد، خروج سمت کلاینت ادامه پیدا می‌کند.
-  try {
-    if (authToken) await authFetch('/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken } });
-  } catch (e) { /* آفلاین یا خطای شبکه — نشست سمت سرور بعداً با انقضای ۳۰ روزه یا /me بعدی باطل می‌شود */ }
+  try { if (authToken) await authFetch('/logout', { method: 'POST' }); } catch (e) {} // [S9-fix] ابطال نشست در سرور
   clearSession();
   if (typeof onAuthChanged === 'function') onAuthChanged(null);
 }
