@@ -49,6 +49,10 @@ window.addEventListener('popstate', (e)=>{
   }
 });
 function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+// [S2-fix] JSON برای قرارگیری امن داخل attribute تک‌کوتیشنی (onclick='...'):
+// نام کاربر می‌تواند شامل ' باشد و JSON.stringify تنها آن را escape نمی‌کند → تزریق attribute.
+// HTML این نویسه‌ها را قبل از اجرای JS برمی‌گرداند، پس معنا تغییری نمی‌کند.
+function attrJson(v){return JSON.stringify(v).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/</g,'&lt;');}
 function nl2br(s){return esc(s).replace(/\n/g,'<br>');}
 document.querySelectorAll('nav.bottom .nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -280,7 +284,7 @@ function showMembershipPage(){
         <label>ایمیل</label>
         <input id="auth-email" class="ic-mail" type="email" dir="ltr" placeholder="example@email.com">
         <label>رمز عبور</label>
-        <div class="pw-wrap"><input id="auth-password" class="ic-lock" type="password" placeholder="رمز عبور (حداقل ۶ نویسه)"><button type="button" id="pw-eye" class="pw-eye" onclick="togglePw()" aria-label="نمایش رمز عبور"><svg viewBox="0 0 24 24">${PV_ICONS.eyeOpen}</svg></button></div>
+        <div class="pw-wrap"><input id="auth-password" class="ic-lock" type="password" placeholder="رمز عبور (حداقل ۸ نویسه)"><button type="button" id="pw-eye" class="pw-eye" onclick="togglePw()" aria-label="نمایش رمز عبور"><svg viewBox="0 0 24 24">${PV_ICONS.eyeOpen}</svg></button></div>
         <p id="auth-error" class="small-note" style="color:#ff8a8a; min-height:18px"></p>
         <button class="btn" onclick="handleEmailSignIn()">ورود</button>
         <button class="btn secondary" onclick="handleEmailSignUp()">ساخت حساب جدید</button>
@@ -487,7 +491,7 @@ function showNumberDetail(kind){
   render(`${backBtn('reopenCosmic()')}<div class="medal">${medalSVG(d.big,d.fs)}</div>
     <h2 class="dt-title">${esc(d.title)}</h2>${ORN_DIV}
     <div class="card orn">${d.secs.map(x=>`<div class="dt-sec"><div style="flex:1"><h3>${x[0]}</h3><p>${esc(x[1])}</p></div><div class="dt-ic"><svg viewBox="0 0 48 48">${DT_ICONS[x[2]]}</svg></div></div>`).join('')}</div>
-    <button class="btn" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button>`);
+    <button class="btn" onclick='shareText(${attrJson(shareTxt)})'>📤 اشتراک‌گذاری</button>`);
   window.scrollTo(0,0);
 }
 function showCosmicResult(firstName,familyName,r){
@@ -512,7 +516,7 @@ function showCosmicResult(firstName,familyName,r){
     </div>
     <div class="btn-row">
       <button class="btn secondary" onclick="showCosmicInputForm()">🔄 محاسبه‌ی جدید</button>
-      <button class="btn" onclick='shareText(${JSON.stringify(`🌌 کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}\n\nکد کیهانیِ خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
+      <button class="btn" onclick='shareText(${attrJson(`🌌 کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}\n\nکد کیهانیِ خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div>`);
   fitCode(); if(document.fonts){ document.fonts.ready.then(fitCode); document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',fitCode); } setTimeout(fitCode,300); setTimeout(fitCode,1200);
 }
@@ -615,7 +619,7 @@ async function renderHafezModernResult(id){
     <h3 class="hz-sec">💬 پیام پایانی</h3>${renderHafezText(g.f)}
     <div class="btn-row">
       <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
-      <button class="btn small secondary" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button>
+      <button class="btn small secondary" onclick='shareText(${attrJson(shareTxt)})'>📤 اشتراک‌گذاری</button>
     </div>
   </div><p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>`;
 }
@@ -685,7 +689,7 @@ function renderTradResult(g,remaining){
     <p style="margin-top:10px"><b class="hz-sec">✦ تعبیر فال:</b><br>${esc(g.interpretation)}</p>
     <div class="btn-row">
       <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
-      <button class="btn small secondary" onclick='shareText(${JSON.stringify(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
+      <button class="btn small secondary" onclick='shareText(${attrJson(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div></div>
     <p class="small-note">${remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙'}</p>`;
 }
@@ -709,7 +713,7 @@ function showElham(){
       ${item.poet?`${ORN_DIV}<div class="attrib center">${esc(item.poet)}</div>`:''}
       <div class="result-block"><b class="hz-sec">✦ تفسیر:</b><br>${esc(item.interpretation)}</div>
       <div class="small-note center">★ یک الهام ثابت در روز، بدون تکرار تا کل مجموعه تموم بشه.</div>
-      <button class="btn" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button></div>`);
+      <button class="btn" onclick='shareText(${attrJson(shareTxt)})'>📤 اشتراک‌گذاری</button></div>`);
 }
 function showZamanbandi(){
   const item=getRandomZamanbandi();
@@ -955,7 +959,7 @@ function showGratitude(){
     <div class="card orn">
       <p class="en-line">${esc(entry.english)}</p>
       <p class="verse" style="font-size:15.5px">${esc(entry.persian)}</p>
-      <button class="btn" onclick='shareText(${JSON.stringify(`🙏 شکرگزاری امروزم:\n\n${entry.persian}\n\n${entry.english}\n\nتو هم اینجا یه جمله‌ی شکرگزاری روزانه بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
+      <button class="btn" onclick='shareText(${attrJson(`🙏 شکرگزاری امروزم:\n\n${entry.persian}\n\n${entry.english}\n\nتو هم اینجا یه جمله‌ی شکرگزاری روزانه بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div>`);
 }
 function showSavedProfiles(){

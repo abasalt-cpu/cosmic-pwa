@@ -26,15 +26,24 @@ async function authFetch(path, options = {}) {
   // (قبلاً /push/subscribe و /push/reminders اصلاً توکن نمی‌فرستادند)
   if (authToken && !headers.Authorization) headers.Authorization = 'Bearer ' + authToken;
   let res;
+  // [S3-fix] مهلت ۲۰ ثانیه: روی شبکه‌های فیلترشده/کند، درخواست بی‌نهایت معلق نمی‌ماند
+  const ctl = ('AbortController' in window) ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), 20000) : null;
   try {
     res = await fetch(AUTH_API_BASE + path, {
       ...options,
       headers,
+      signal: ctl ? ctl.signal : undefined,
     });
   } catch (networkErr) {
-    // خطای سطح شبکه (فیلترینگ، قطعی اینترنت، DNS و...) — پیام خام مرورگر («Failed to fetch»)
+    // خطای سطح شبکه (فیلترینگ، قطعی اینترنت، DNS، تایم‌اوت و...) — پیام خام مرورگر («Failed to fetch»)
     // برای کاربر بی‌معنی است؛ پیام قابل‌فهم جایگزین می‌کنیم.
+    if (networkErr && networkErr.name === 'AbortError') {
+      throw new Error('پاسخی از سرور دریافت نشد (مهلت ۲۰ ثانیه تمام شد). اتصال اینترنت را بررسی کنید؛ اگر نشد، با فیلترشکن امتحان کنید.');
+    }
     throw new Error('ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید؛ اگر نشد، با فیلترشکن امتحان کنید.');
+  } finally {
+    if (timer) clearTimeout(timer);
   }
   let data;
   try {
