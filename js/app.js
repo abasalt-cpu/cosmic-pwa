@@ -252,7 +252,7 @@ function showAboutPage(){
     ${pvCard('مقایسه و پیشنهاد نام','مقایسه‌ی عددی و ستاره‌ای دو نفر و پیشنهاد نام فرزند با توجه به نام خانوادگی و نام مادر.','people')}
     ${pvCard('پروفایل‌ها و حساب کاربری','ذخیره‌ی پروفایل چند نفر و عضویت اختیاری از طریق ایمیل یا حساب گوگل.','user')}
     ${pvCard('یادآوری‌ها','یادآوری روزانه‌ی فال و یادآوری تولد، در صورت فعال‌سازی توسط کاربر.','bell')}
-    <p class="small-note center">نسخه‌ی فعلی: ${toFa('1.0.0')} — این نرم‌افزار به‌طور مستمر به‌روزرسانی می‌شود و امکانات تازه به آن افزوده خواهد شد.</p>`);
+    <p class="small-note center">نسخه‌ی فعلی: ${toFa(APP_VERSION)} — این نرم‌افزار به‌طور مستمر به‌روزرسانی می‌شود و امکانات تازه به آن افزوده خواهد شد.</p>`);
 }
 function togglePw(){const i=document.getElementById('auth-password'),b=document.getElementById('pw-eye'); if(!i) return; const show=i.type==='password'; i.type=show?'text':'password'; b.innerHTML=`<svg viewBox="0 0 24 24">${PV_ICONS[show?'eye':'eyeOpen']}</svg>`;}
 function showMembershipPage(){
@@ -613,8 +613,10 @@ async function renderHafezModernResult(id){
     <h3 class="hz-sec">⚡ چالش‌ها</h3>${renderHafezText(g.c)}
     <h3 class="hz-sec">🧭 گام‌های عملی</h3>${renderHafezText(g.x)}
     <h3 class="hz-sec">💬 پیام پایانی</h3>${renderHafezText(g.f)}
-    <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
-    <button class="btn small secondary" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button>
+    <div class="btn-row">
+      <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
+      <button class="btn small secondary" onclick='shareText(${JSON.stringify(shareTxt)})'>📤 اشتراک‌گذاری</button>
+    </div>
   </div><p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>`;
 }
 function handleDailyFalToggle(){
@@ -681,8 +683,10 @@ function revealHafez(){
 function renderTradResult(g,remaining){
   document.getElementById('hafez-result').innerHTML=`<div class="result-block"><div class="verse">${g.verses.join('<br>')}</div>
     <p style="margin-top:10px"><b class="hz-sec">✦ تعبیر فال:</b><br>${esc(g.interpretation)}</p>
-    <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
-    <button class="btn small secondary" onclick='shareText(${JSON.stringify(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button></div>
+    <div class="btn-row">
+      <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
+      <button class="btn small secondary" onclick='shareText(${JSON.stringify(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
+    </div></div>
     <p class="small-note">${remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙'}</p>`;
 }
 function showFullGhazal(id){
