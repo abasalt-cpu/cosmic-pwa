@@ -362,9 +362,10 @@ function handleEmailSignUp(){
 }
 function handleSignOut(){
   signOutUser().then(()=>{
-    // پروفایل‌های محلی رو هم پاک می‌کنیم تا حساب بعدی که وارد می‌شه، پروفایل‌های این حساب رو نبینه.
-    state.savedProfiles=[];
-    localStorage.removeItem('savedProfiles');
+    // [S5-fix] خروج از حساب فقط نشست را تمام می‌کند؛ پروفایل‌ها و اطلاعات ذخیره‌شده‌ی
+    // محلی حفظ می‌شوند (دقیقاً مثل حالتی که اپ به‌روزرسانی می‌شود). پاک‌سازی کامل
+    // اطلاعات فقط از مسیر «حذف حساب» انجام می‌شود. با ورود دوباره، پروفایل‌ها از
+    // سرور بازیابی و با نسخه‌ی محلی ادغام می‌شوند (mergeAndRestoreProfilesOnLogin).
     showMembershipPage();
   });
 }
@@ -382,6 +383,23 @@ function handleAccountDelete(){
 }
 function onAuthChanged(user){
   if(user) mergeAndRestoreProfilesOnLogin();
+  refreshMembershipViewIfVisible(user);
+}
+// [S5-fix] اگر صفحه‌ی «حساب کاربری» همین الان باز باشد، با تغییر وضعیت ورود (مثلاً
+// وقتی پاسخ /me چند لحظه بعد از بازشدن اپ می‌رسد) همان صفحه بلافاصله به‌روز شود؛
+// تا کاربر فرم ورود را نبیند و فکر نکند از حساب خارج شده است.
+function refreshMembershipViewIfVisible(user){
+  const loginEmail=document.getElementById('auth-email');
+  const accView=document.querySelector('.acc-name');
+  if(!loginEmail && !accView) return; // صفحه‌ی حساب باز نیست؛ کاری نکن
+  if(user && loginEmail){
+    // اگر کاربر وسط تایپ ایمیل/رمز است، صفحه را بازنویسی نکن
+    const pw=document.getElementById('auth-password');
+    if((loginEmail.value||'').trim() || (pw && pw.value)) return;
+    showMembershipPage();
+  } else if(!user && accView){
+    showMembershipPage();
+  }
 }
 async function mergeAndRestoreProfilesOnLogin(){
   const localProfiles=state.savedProfiles.slice(); // اسنپ‌شات از پروفایل‌های محلی قبل از بازنویسی

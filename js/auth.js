@@ -6,18 +6,27 @@ const AUTH_API_BASE = "https://cosmic-code-auth.cosmiccode396.workers.dev";
 // Client ID که از Google Cloud Console گرفتی (مرحله‌ی ۹ راهنما) رو اینجا جایگزین کن:
 const GOOGLE_CLIENT_ID = "948644041400-q6k9d730s9ml847t6us27ufumkijfetc.apps.googleusercontent.com";
 
-let currentUser = null;
 let authToken = localStorage.getItem('authToken') || null;
+// [S5-fix] اطلاعات کاربر هم کنار توکن در localStorage ذخیره می‌شود تا بعد از به‌روزرسانی اپ
+// یا بازکردن دوباره‌ی برنامه، وضعیت «واردشده» از همان اول نمایش داده شود.
+// قبلاً currentUser فقط در حافظه بود و تا برگشتن پاسخ /me (که روی دیتای موبایل/
+// شبکه‌های فیلترشده ممکن است اصلاً برنگردد) صفحه‌ی حساب، فرم ورود نشان می‌داد و
+// به نظر می‌رسید برنامه از حساب خارج شده است؛ در حالی که توکن ۳۰ روزه سالم بود.
+let currentUser = null;
+try { currentUser = JSON.parse(localStorage.getItem('authUser') || 'null'); } catch (e) { currentUser = null; }
+if (currentUser && !authToken) { currentUser = null; localStorage.removeItem('authUser'); }
 
 function saveSession(token, user) {
   authToken = token;
   currentUser = user;
   localStorage.setItem('authToken', token);
+  try { localStorage.setItem('authUser', JSON.stringify(user || null)); } catch (e) {}
 }
 function clearSession() {
   authToken = null;
   currentUser = null;
   localStorage.removeItem('authToken');
+  localStorage.removeItem('authUser');
 }
 
 async function authFetch(path, options = {}) {
@@ -108,6 +117,7 @@ async function refreshCurrentUser() {
     const data = await res.json();
     if (!res.ok) return currentUser; // خطای دیگه‌ای غیر از ۴۰۱ بود — فعلاً نشست رو دست نزن
     currentUser = data.user;
+    try { localStorage.setItem('authUser', JSON.stringify(data.user || null)); } catch (e) {}
     if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
     return currentUser;
   } catch (e) {
