@@ -129,15 +129,15 @@ function hubHTML(){
       </div>
     </div>
     <div class="grid-menu">
-      <div class="menu-tile" onclick="showHafez('modern')"><img src="icons/menu/icon_hafez.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">فال حافظ</span><span class="desc">پیام امروز حافظ برات</span></div>
-      <div class="menu-tile" onclick="showMunajat()"><img src="icons/menu/icon_munajat.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">مناجات</span><span class="desc">متون معنوی و مناجات</span></div>
-      <div class="menu-tile" onclick="showZamanbandi()"><img src="icons/menu/icon_zamanbandi.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">زمان‌بندی خدا</span><span class="desc">زمان‌بندی الهی زندگیت</span></div>
-      <div class="menu-tile" onclick="showElham()"><img src="icons/menu/icon_elham.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">الهام روز</span><span class="desc">پیام و الهام روزانه</span></div>
-      <div class="menu-tile" onclick="showZodiacEntry()"><img src="icons/menu/icon_zodiac.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">طالع‌بینی</span><span class="desc">طالع روزانه و شخصی</span></div>
-      <div class="menu-tile" onclick="showNatalEntry()"><img src="icons/menu/icon_natal.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">زایچه‌ی تقریبی</span><span class="desc">تقویم شخصی شما</span></div>
-      <div class="menu-tile" onclick="showCompareEntry()"><img src="icons/menu/icon_compare.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">مقایسه‌ی دو نفر</span><span class="desc">سازگاری عددی دو نفر</span></div>
-      <div class="menu-tile" onclick="showBabyNameForm()"><img src="icons/menu/icon_baby.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">اسم فرزند</span><span class="desc">انتخاب اسم با معنا</span></div>
-      <div class="menu-tile" onclick="showGratitude()"><img src="icons/menu/icon_gratitude.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='icons/menu/icon_gratitude.png'}else{this.outerHTML='<div class=&quot;icon-img&quot; style=&quot;display:flex;align-items:center;justify-content:center;font-size:40px&quot;>🙏</div>'}"><span class="label">شکرگزاری</span><span class="desc">یک جمله‌ی شکرگزاری روزانه</span></div>
+      <div class="menu-tile" onclick="showHafez('modern')"><img src="icons/menu/icon_hafez.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">فال حافظ</span></div>
+      <div class="menu-tile" onclick="showMunajat()"><img src="icons/menu/icon_munajat.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">مناجات</span></div>
+      <div class="menu-tile" onclick="showZamanbandi()"><img src="icons/menu/icon_zamanbandi.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">زمان‌بندی خدا</span></div>
+      <div class="menu-tile" onclick="showElham()"><img src="icons/menu/icon_elham.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">الهام روز</span></div>
+      <div class="menu-tile" onclick="showZodiacEntry()"><img src="icons/menu/icon_zodiac.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">طالع‌بینی</span></div>
+      <div class="menu-tile" onclick="showNatalEntry()"><img src="icons/menu/icon_natal.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">زایچه‌ی تقریبی</span></div>
+      <div class="menu-tile" onclick="showCompareEntry()"><img src="icons/menu/icon_compare.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">مقایسه‌ی دو نفر</span></div>
+      <div class="menu-tile" onclick="showBabyNameForm()"><img src="icons/menu/icon_baby.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">اسم فرزند</span></div>
+      <div class="menu-tile" onclick="showGratitude()"><img src="icons/menu/icon_gratitude.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='icons/menu/icon_gratitude.png'}else{this.outerHTML='<div class=&quot;icon-img&quot; style=&quot;display:flex;align-items:center;justify-content:center;font-size:40px&quot;>🙏</div>'}"><span class="label">شکرگزاری</span></div>
     </div>
     <div class="card banner-card">
       <span class="b-icon">🌟</span>
