@@ -95,7 +95,8 @@ padding:14px 6px; text-align:center; cursor:pointer; transition:transform .15s e
 .menu-tile:active{transform:scale(.96);}
 .menu-tile .emoji{font-size:24px; display:block; margin-bottom:8px;}
 .menu-tile .label{font-size:12.5px; font-weight:700; display:block;}
-.menu-tile .desc{font-size:10.5px; color:var(--text-dim); display:block; margin-top:4px; line-height:1.6;}
+/* توضیح زیر اسم آیکون‌های صفحه‌ی اول حذف شده — این قانون تضمین می‌کند حتی اگر span قدیمی برگردد، نمایش داده نشود */
+.menu-tile .desc{display:none !important;}
 .menu-tile.gold{border-color:var(--gold); box-shadow:0 0 0 1px #e8b84b33 inset;}
 .menu-tile .icon-img{width:88px; height:88px; border-radius:0; display:block; margin:0 auto 4px; object-fit:contain; box-shadow:none;}
 .brand-icon{width:34px; height:34px; border-radius:9px; vertical-align:middle; margin-inline-end:8px; object-fit:cover;}
