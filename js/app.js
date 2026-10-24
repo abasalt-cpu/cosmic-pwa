@@ -5,7 +5,17 @@ const ICON_ACCOUNT=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http:
 const ICON_PRIVACY=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="url(#gLock)"/><rect x="7.8" y="11" width="8.4" height="6.6" rx="1.6" fill="#241742"/><path d="M9.2 11V9a2.8 2.8 0 0 1 5.6 0v2" stroke="#241742" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="12" cy="13.9" r="1" fill="#f0c96a"/><defs><linearGradient id="gLock" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
 const ICON_TERMS=`<svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="url(#gDoc)"/><rect x="7.5" y="6.5" width="9" height="11" rx="1.3" fill="#241742"/><rect x="9.3" y="9.2" width="5.4" height="1.1" rx=".55" fill="#f0c96a"/><rect x="9.3" y="11.6" width="5.4" height="1.1" rx=".55" fill="#f0c96a"/><rect x="9.3" y="14" width="3.6" height="1.1" rx=".55" fill="#f0c96a"/><defs><linearGradient id="gDoc" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#f0c96a"/><stop offset="1" stop-color="#c9962e"/></linearGradient></defs></svg>`;
 const GOOGLE_G_LOGO=`<svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.9-2.26 5.36-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.94 23.94 0 0 0 0 24c0 3.87.92 7.53 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.92-2.14 15.89-5.82l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.97 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
-const state={lastProfile:JSON.parse(localStorage.getItem('lastProfile')||'null'), savedProfiles:JSON.parse(localStorage.getItem('savedProfiles')||'[]')};
+// [F2-fix] خواندن امن JSON از localStorage: اگر داده خراب شده باشد (مثلاً بعد از قطع‌وبصل
+// نوشتن یا نسخه‌ی قدیمی ناسازگار)، به‌جای کرش‌کردن کل اپ در همان خط اول، مقدار پیش‌فرض برمی‌گردد.
+function safeJSONParse(raw, fb){
+  try{ const v=JSON.parse(raw); return (v===null||v===undefined)?fb:v; }catch(e){ return fb; }
+}
+const state={
+  lastProfile: safeJSONParse(localStorage.getItem('lastProfile'), null),
+  savedProfiles: safeJSONParse(localStorage.getItem('savedProfiles'), []),
+};
+if(!Array.isArray(state.savedProfiles)) state.savedProfiles=[];
+if(!state.lastProfile || typeof state.lastProfile!=='object') state.lastProfile=null;
 function saveProfile(p){
   state.lastProfile=p; localStorage.setItem('lastProfile',JSON.stringify(p));
   state.savedProfiles=state.savedProfiles.filter(x=>!(x.firstName===p.firstName&&x.familyName===p.familyName));
@@ -542,14 +552,17 @@ const APP_SHARE_URL="https://abasalt-cpu.github.io/cosmic-pwa/";
 function shareText(text){ if(navigator.share){navigator.share({text});} else {navigator.clipboard.writeText(text); alert('متن کپی شد.');} }
 function getHafezDrawState(){
   const key='hafezDrawState'; const today=todayStr();
-  let st=JSON.parse(localStorage.getItem(key)||'null');
-  if(!st||st.date!==today){ st={date:today,count:0}; localStorage.setItem(key,JSON.stringify(st)); }
+  // [F3-fix] خواندن امن: JSON خراب دیگر صفحه‌ی فال را نمی‌اندازد
+  let st=safeJSONParse(localStorage.getItem(key), null);
+  if(!st || typeof st!=='object' || st.date!==today){ st={date:today,count:0}; localStorage.setItem(key,JSON.stringify(st)); }
+  if(!Number.isInteger(st.count)) st.count=0;
   return st;
 }
 let hafezMode='modern'; // پیش‌فرض: تفسیر مدرن
 function getHafezModernToday(){
-  const st=JSON.parse(localStorage.getItem('hafezModernState')||'null');
-  return (st && st.date===todayStr()) ? st : null;
+  // [F3-fix] خواندن امن
+  const st=safeJSONParse(localStorage.getItem('hafezModernState'), null);
+  return (st && typeof st==='object' && st.date===todayStr()) ? st : null;
 }
 function loadHafezModernData(){
   if(typeof HAFEZ_MODERN_DATA!=='undefined') return Promise.resolve();
@@ -951,8 +964,10 @@ function getGratitudeToday(){
     for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
     return arr;
   }
-  let order=JSON.parse(localStorage.getItem('gratitudeOrder')||'null');
+  let order=safeJSONParse(localStorage.getItem('gratitudeOrder'), null);
   let position=parseInt(localStorage.getItem('gratitudePosition')||'-1',10);
+  // [F3-fix] اگر مقدار خراب یا غیرعددی بود، از صفر شروع کن نه NaN
+  if(!Number.isInteger(position)) position=-1;
   let lastDate=localStorage.getItem('gratitudeLastDate');
 
   if(!Array.isArray(order) || order.length!==GRATITUDE_DATA.length){
@@ -989,8 +1004,12 @@ function showSavedProfiles(){
         state.savedProfiles.map((p,i)=>{
           const isBday=p.report && p.report.gm===todayM && p.report.gd===todayD;
           const fullName=`${p.firstName} ${p.familyName}`.trim();
+          // [F1-fix] نام کاربر دیگر داخل رشته‌ی JS سازه نمی‌شود (قبلاً با esc+replace
+          // قابل شکستن و تزریق کد بود؛ مثلاً نامی که ' دارد). حالا با attrJson (همان
+          // الگوی امن دکمه‌ی اشتراک‌گذاری) داخل attribute تک‌کوتیشنی قرار می‌گیرد:
+          // JSON دابل‌کوتیشن و ' به‌صورت &#39; — پس هیچ‌وقت رشته‌ی JS را نمی‌شکند.
           const nameHtml=isBday
-            ? `<span onclick="event.stopPropagation(); launchBalloons(['${esc(fullName).replace(/'/g,"\\'")}'])" style="cursor:pointer"><b>${esc(p.firstName)} ${esc(p.familyName)}</b></span>`
+            ? `<span onclick='event.stopPropagation(); launchBalloons(${attrJson([fullName])})' style="cursor:pointer"><b>${esc(p.firstName)} ${esc(p.familyName)}</b></span>`
             : `<b>${esc(p.firstName)} ${esc(p.familyName)}</b>`;
           return `<div class="name-item" style="display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer${isBday?'; background:linear-gradient(90deg, #e8b84b22, transparent); border-radius:8px; padding-inline-start:8px':''}" onclick="showSavedProfile(${i})">
             <span style="flex:1; min-width:0; overflow-wrap:break-word">${isBday?'💐 ':''}${nameHtml}${isBday?' <span style="color:var(--gold-soft); font-size:12px">(امروز تولدشه 🎉)</span>':''} — کد: <span style="direction:ltr; unicode-bidi:isolate; color:var(--gold-soft); display:inline-block">${esc(p.report.cosmicCode)}</span></span>

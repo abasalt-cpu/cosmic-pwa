@@ -1,8 +1,9 @@
 // ===== تنظیمات بک‌اند عضویت =====
-// ⚠️ دامنه‌ی workers.dev در ایران فیلتر است (خطای «Failed to fetch» در اپ).
-// راه‌حل: دامنه‌ی شخصی را در Cloudflare به همین Worker وصل کن (Custom Domain) و
-// فقط همین یک خط را با دامنه‌ی جدید عوض کن. بقیه‌ی کد نیازی به تغییر ندارد.
-const AUTH_API_BASE = "https://cosmic-code-auth.cosmiccode396.workers.dev";
+// [دامنه‌ی شخصی] آدرس Worker از طریق زیردامنه‌ی اختصاصی cosmic.carservbook.ir سرو می‌شود؛
+// این دامنه باید ابتدا در داشبورد Cloudflare (Workers → cosmic-code-auth → Settings →
+// Domains & Routes → Custom Domain) متصل شده باشد؛ وگرنه ارتباط برقرار نمی‌شود.
+// (دامنه‌ی قدیمی workers.dev هنوز در CSP index.html مجاز است برای سازگاری بازگشتی.)
+const AUTH_API_BASE = "https://cosmic.carservbook.ir";
 // Client ID که از Google Cloud Console گرفتی (مرحله‌ی ۹ راهنما) رو اینجا جایگزین کن:
 const GOOGLE_CLIENT_ID = "948644041400-q6k9d730s9ml847t6us27ufumkijfetc.apps.googleusercontent.com";
 
