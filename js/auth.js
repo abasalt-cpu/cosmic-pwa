@@ -1,9 +1,10 @@
 // ===== تنظیمات بک‌اند عضویت =====
-// [دامنه‌ی شخصی] آدرس Worker از طریق زیردامنه‌ی اختصاصی cosmic.carservbook.ir سرو می‌شود؛
-// این دامنه باید ابتدا در داشبورد Cloudflare (Workers → cosmic-code-auth → Settings →
-// Domains & Routes → Custom Domain) متصل شده باشد؛ وگرنه ارتباط برقرار نمی‌شود.
-// (دامنه‌ی قدیمی workers.dev هنوز در CSP index.html مجاز است برای سازگاری بازگشتی.)
-const AUTH_API_BASE = "https://cosmic.carservbook.ir";
+// [هاتفیکس 1.2.3] بازگشت موقت به workers.dev: نسخه‌ی 1.2.2 روی cosmic.carservbook.ir تنظیم
+// شده بود ولی آن دامنه هرگز متصل نشد (ممنوعیت CNAME بین‌اکانتی Cloudflare — خطای 1014)؛
+// یعنی همه‌ی درخواست‌های ورود/ثبت‌نام به آدرس ناموجود می‌رفتند و ورود برای همه قطع بود.
+// پس از خرید دامنه‌ی جدید و اتصال Custom Domain در اکانت کیهانی، فقط همین یک خط و
+// CSP در index.html با هم تغییر می‌کنند (نسخه‌ی بعدی).
+const AUTH_API_BASE = "https://cosmic-code-auth.cosmiccode396.workers.dev";
 // Client ID که از Google Cloud Console گرفتی (مرحله‌ی ۹ راهنما) رو اینجا جایگزین کن:
 const GOOGLE_CLIENT_ID = "948644041400-q6k9d730s9ml847t6us27ufumkijfetc.apps.googleusercontent.com";
 
