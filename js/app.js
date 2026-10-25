@@ -171,7 +171,7 @@ function showMoreMenu(){
       <div class="list-item" onclick="showAdminErrorsPage()"><span class="li-label">🐞 خطاهای اخیر</span><span class="li-arrow">‹</span></div>
     </div>`:'';
   render(`<div class="card">
-      <div class="list-item" onclick="showAboutPage()"><span class="li-label">${ICON_INFO}درباره‌ی نرم‌افزار</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showAboutPage()"><span class="li-label">${ICON_INFO}درباره‌ی نرم‌افزار <span style="color:#4ade80;font-weight:700">(${toFa(APP_VERSION)})</span></span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showMembershipPage()"><span class="li-label">${ICON_ACCOUNT}حساب کاربری</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showPrivacyPage()"><span class="li-label">${ICON_PRIVACY}حریم خصوصی</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showTermsPage()"><span class="li-label">${ICON_TERMS}قوانین و شرایط استفاده</span><span class="li-arrow">‹</span></div>
