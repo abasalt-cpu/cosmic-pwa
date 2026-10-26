@@ -550,6 +550,10 @@ function showCosmicResult(firstName,familyName,r){
 }
 const APP_SHARE_URL="https://abasalt-cpu.github.io/cosmic-pwa/";
 function shareText(text){ if(navigator.share){navigator.share({text});} else {navigator.clipboard.writeText(text); alert('متن کپی شد.');} }
+// [ADMIN-unlock 1.2.5] ادمین (cosmiccode396@gmail.com) در هیچ بخشی محدودیت روزانه ندارد.
+function isCosmicAdmin(){
+  try{ return !!(typeof currentUser!=='undefined' && currentUser && currentUser.isAdmin===true); }catch(e){ return false; }
+}
 function getHafezDrawState(){
   const key='hafezDrawState'; const today=todayStr();
   // [F3-fix] خواندن امن: JSON خراب دیگر صفحه‌ی فال را نمی‌اندازد
@@ -558,9 +562,6 @@ function getHafezDrawState(){
   if(!Number.isInteger(st.count)) st.count=0;
   return st;
 }
-// [ADM-free] ادمین از سقف‌های مصرفی روزانه معاف است (فال حافظ سنتی و فال AI)
-function userIsAdmin(){ return !!(typeof currentUser!=='undefined' && currentUser && currentUser.isAdmin); }
-function hafezMaxDraws(){ return userIsAdmin() ? Infinity : 3; }
 let hafezMode='modern'; // پیش‌فرض: تفسیر مدرن
 function getHafezModernToday(){
   // [F3-fix] خواندن امن
@@ -595,22 +596,21 @@ function renderHafezText(text){
 function showHafez(mode){
   if(mode) hafezMode=mode;
   const modern=hafezMode==='modern';
-  const st=getHafezDrawState(); const remaining=Math.max(0,hafezMaxDraws()-st.count);
+  const admin=isCosmicAdmin();
+  const st=getHafezDrawState(); const remaining=Math.max(0,3-st.count);
   const modernToday=getHafezModernToday();
   const falOn=typeof isDailyFalEnabled==='function' && isDailyFalEnabled();
   const opt=(m,label)=>`<div class="mode-opt${hafezMode===m?' on':''}" onclick="showHafez('${m}')">${hafezMode===m?'◉':'○'} ${label}</div>`;
   const mainBtn=modern
-    ? (modernToday
-        ? (userIsAdmin()
-            ? `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">🌿 یکی دیگه با AI بگیر</button>`
-            : `<button class="btn" id="hafez-btn" disabled style="opacity:.5;cursor:not-allowed">✅ فال AI امروزت رو گرفتی</button>`)
-        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">🌿 فالم رو با AI بگیر (۱ بار در روز)</button>`)
-    : `<button class="btn" id="hafez-btn" onclick="revealHafez()"${remaining<=0?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${remaining>0&&isFinite(remaining)?` (${remaining} بار دیگه امروز)`:''}</button>`;
-  const resultInit=(!modern && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
+    ? (modernToday && !admin
+        ? `<button class="btn" id="hafez-btn" disabled style="opacity:.5;cursor:not-allowed">✅ فال AI امروزت رو گرفتی</button>`
+        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">${admin?'🌿 فالم رو با AI بگیر (∞ ادمین)':'🌿 فالم رو با AI بگیر (۱ بار در روز)'}</button>`)
+    : `<button class="btn" id="hafez-btn" onclick="revealHafez()"${(!admin&&remaining<=0)?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${admin?' (∞ ادمین)':(remaining>0?` (${remaining} بار دیگه امروز)`:'')}</button>`;
+  const resultInit=(!modern && !admin && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
   render(`${backBtn('showHome()')}${pageHead('🔮','فال حافظ')}<div class="card orn">
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
       <div class="hafez-mode">${opt('modern','تفسیر با AI')}${opt('traditional','تفسیر سنتی')}</div>
-      <p class="small-note" style="margin-top:0">${modern?(userIsAdmin()?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — بدون محدودیت برای شما.':'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.'):(userIsAdmin()?'معنی کلاسیک غزل — بدون محدودیت برای شما.':'معنی کلاسیک غزل — تا ۳ بار در روز.')}</p>
+      <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}${admin?' <span style="color:#4ade80;font-weight:700">⚡ دسترسی ادمین: بدون محدودیت</span>':''}</p>
       ${mainBtn}
       <div id="hafez-result">${resultInit}</div></div>
     <div class="card">
@@ -620,22 +620,23 @@ function showHafez(mode){
       <button class="btn${falOn?' secondary':''}" id="fal-push-btn" onclick="handleDailyFalToggle()">${falOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری روزانه'}</button>
     </div>`);
   if(modern && modernToday) renderHafezModernResult(modernToday.id);
-  if(!modern){ try{ const ld=JSON.parse(localStorage.getItem('hafezLastDraw')||'null'); if(ld&&ld.date===todayStr()&&ld.g&&(userIsAdmin()?ld.remaining===-1:(hafezMaxDraws()-st.count)===ld.remaining)) renderTradResult(ld.g,userIsAdmin()?Infinity:ld.remaining); }catch(e){} }
+  if(!modern){ try{ const ld=JSON.parse(localStorage.getItem('hafezLastDraw')||'null'); if(admin&&ld&&ld.date===todayStr()&&ld.g) renderTradResult(ld.g,-1); else if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
 }
 async function revealHafezModern(){
-  if(getHafezModernToday() && !userIsAdmin()) return;
+  const admin=isCosmicAdmin();
+  if(!admin && getHafezModernToday()) return;
   const btn=document.getElementById('hafez-btn');
   if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; }
   try{ await loadHafezModernData(); }
   catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
+    if(btn){ btn.disabled=false; btn.textContent=admin?'🌿 فالم رو با AI بگیر (∞ ادمین)':'🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
     document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`;
     return;
   }
-  let drawN=1;
-  if(userIsAdmin()){ try{ const prev=JSON.parse(localStorage.getItem('hafezModernState')||'null'); if(prev&&prev.date===todayStr()&&Number.isInteger(prev.draw)) drawN=prev.draw+1; }catch(e){} }
-  const id=(simpleHash(getDeviceId()+'-modern-'+todayStr()+(drawN>1?'-d'+drawN:''))%HAFEZ_MODERN_DATA.length)+1;
-  localStorage.setItem('hafezModernState', JSON.stringify({date:todayStr(), id, draw:drawN}));
+  let seq=0;
+  if(admin){ try{ const s=safeJSONParse(localStorage.getItem('hafezModernAdminSeq'),null); seq=((s&&Number.isInteger(s.n))?s.n:0)+1; }catch(e){ seq=1; } localStorage.setItem('hafezModernAdminSeq', JSON.stringify({n:seq})); }
+  const id=(simpleHash(getDeviceId()+'-modern-'+todayStr()+(seq?'-a'+seq:''))%HAFEZ_MODERN_DATA.length)+1;
+  localStorage.setItem('hafezModernState', JSON.stringify({date:todayStr(), id}));
   showHafez();
 }
 async function renderHafezModernResult(id){
@@ -659,7 +660,7 @@ async function renderHafezModernResult(id){
       <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
       <button class="btn small secondary" onclick='shareText(${attrJson(shareTxt)})'>📤 اشتراک‌گذاری</button>
     </div>
-  </div><p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>`;
+  </div>${isCosmicAdmin()?'<p class="small-note" style="color:#4ade80">⚡ دسترسی ادمین — می‌تونی همین حالا یه فال جدید بگیری 🌙</p>':'<p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>'}`;
 }
 function handleDailyFalToggle(){
   const btn=document.getElementById('fal-push-btn');
@@ -709,18 +710,18 @@ function rerollSlogan(){
   if(el) el.textContent=s;
 }
 function revealHafez(){
+  const admin=isCosmicAdmin();
   const st=getHafezDrawState();
-  if(!userIsAdmin() && st.count>=hafezMaxDraws()) return;
+  if(!admin && st.count>=3) return;
   st.count++; localStorage.setItem('hafezDrawState', JSON.stringify(st));
   const g=getDailyFal(getDeviceId()+'-draw'+st.count);
-  const remaining=hafezMaxDraws()-st.count;
-  localStorage.setItem('hafezLastDraw',JSON.stringify({date:todayStr(),remaining:isFinite(remaining)?remaining:-1,g:{id:g.id,verses:g.verses,interpretation:g.interpretation}}));
+  const remaining=admin?-1:(3-st.count);
+  localStorage.setItem('hafezLastDraw',JSON.stringify({date:todayStr(),remaining,g:{id:g.id,verses:g.verses,interpretation:g.interpretation}}));
   renderTradResult(g,remaining);
   const btn=document.getElementById('hafez-btn');
   if(btn){
-    if(remaining===Infinity){ btn.textContent='🔮 فالم رو بگیر'; }
-    else if(remaining<=0){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='🔮 فالم رو بگیر'; }
-    else{ btn.textContent=`🔮 فالم رو بگیر (${remaining} بار دیگه امروز)`; }
+    if(!admin && remaining<=0){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='🔮 فالم رو بگیر'; }
+    else{ btn.textContent=admin?'🔮 فالم رو بگیر (∞ ادمین)':`🔮 فالم رو بگیر (${remaining} بار دیگه امروز)`; }
   }
 }
 function renderTradResult(g,remaining){
@@ -730,7 +731,7 @@ function renderTradResult(g,remaining){
       <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
       <button class="btn small secondary" onclick='shareText(${attrJson(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div></div>
-    <p class="small-note">${(remaining===Infinity||remaining<0)?'':(remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙')}</p>`;
+    <p class="small-note">${remaining===-1?'⚡ دسترسی ادمین — فال بی‌نهایت (∞)':(remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙')}</p>`;
 }
 function showFullGhazal(id){
   const g=getGhazalById(id);
