@@ -629,11 +629,13 @@ async function refreshIapStatus(){
 // [GOLD-gate 1.2.7] اگر وضعیت IAP کهنه است (مثلاً فچِ اولِ شروع اپ به‌خاطر قطعی
 // اینترنت شکست خورده)، قبل از تصمیم‌گیریِ گره‌ها یک‌بار تازه می‌کنیم — وگرنه عضو
 // طلایی ممکن است صفحه‌ی قفل ببیند. برای طلایی/ادمینِ تشخیص‌داده‌شده بدون انتظار.
+var __iapInFlight=null; // [FAST 1.2.10] فچِ هم‌زمان مشترک (dedup) — چند گیت منتظر یک فچ می‌مانند نه چند فچ
 async function ensureIapFresh(){
   if(typeof authToken==='undefined' || !authToken) return;
   if(hasPremiumAccess()) return;
-  if(Date.now()-__iapFetchedAt<15000) return;
-  await refreshIapStatus();
+  if(Date.now()-__iapFetchedAt<60000) return; // [FAST 1.2.10] پنجره‌ی تازگی ۱۵ ثانیه ← ۶۰ ثانیه
+  if(!__iapInFlight) __iapInFlight=refreshIapStatus().catch(()=>{}).then(()=>{ __iapInFlight=null; });
+  await __iapInFlight;
 }
 function iapGoldUntilFa(){
   if(!iapStatus.goldUntil) return '';
@@ -936,9 +938,11 @@ function renderHafezText(text){
   fq(); fp(); fl();
   return html;
 }
+var __hafezView=0; // [FAST 1.2.10] توکن رندر صفحه‌ی فال؛ برای رندر مجدد پس از تازه‌سازی پس‌زمینه
 async function showHafez(mode){
   if(mode) hafezMode=mode;
-  await ensureIapFresh(); // [GOLD-gate 1.2.7] اگر فچِ وضعیت طلایی شکست خورده، یک‌بار تازه کن
+  // [FAST 1.2.10] ورود به صفحه دیگر منتظر شبکه نمی‌ماند؛ با وضعیت فعلی فوراً رندر می‌شود و
+  // تازه‌سازی وضعیت در پس‌زمینه انجام می‌شود (اگر نتیجه‌ی گیت عوض شود صفحه بی‌صدا رندر می‌شود).
   const modern=hafezMode==='modern';
   const prem=hasFeatureAccess('hafez'); // ادمین/طلایی «یا» دسترسی ویژه‌ی فال = بدون محدودیت
   const premTag=isCosmicAdmin()?'ادمین':(isGoldUser()?'طلایی':'ویژه');
@@ -966,13 +970,15 @@ async function showHafez(mode){
     </div>`);
   if(modern && modernToday) renderHafezModernResult(modernToday.id);
   if(!modern){ try{ const ld=JSON.parse(localStorage.getItem('hafezLastDraw')||'null'); if(prem&&ld&&ld.date===todayStr()&&ld.g) renderTradResult(ld.g,-1); else if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
+  const myView=++__hafezView; // [FAST 1.2.10] تازه‌سازی پس‌زمینه؛ فقط اگر هنوز روی همین صفحه‌ایم و گیت عوض شده
+  ensureIapFresh().then(()=>{ if(__hafezView===myView && hasFeatureAccess('hafez')!==prem) showHafez(); });
 }
 async function revealHafezModern(){
+  const btn=document.getElementById('hafez-btn');
+  if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; } // [FAST 1.2.10] بازخورد فوری کلیک
   await ensureIapFresh(); // [GOLD-gate 1.2.7]
   const prem=hasFeatureAccess('hafez');
-  if(!prem && getHafezModernToday()) return;
-  const btn=document.getElementById('hafez-btn');
-  if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; }
+  if(!prem && getHafezModernToday()){ if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='✅ فال AI امروزت رو گرفتی'; } return; }
   try{ await loadHafezModernData(); }
   catch(e){
     if(btn){ btn.disabled=false; btn.textContent=prem?'🌿 فالم رو با AI بگیر (∞)':'🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
@@ -1056,7 +1062,8 @@ function rerollSlogan(){
   if(el) el.textContent=s;
 }
 async function revealHafez(){
-  await ensureIapFresh(); // [GOLD-gate 1.2.7]
+  // [FAST 1.2.10] فقط وقتی سهمیه‌ی محلی تمام به‌نظر می‌رسد یک‌بار تازه‌سازی (طلاییِ کش‌کهنه قفل نمی‌بیند، بقیه بدون انتظار)
+  if(!hasFeatureAccess('hafez') && getHafezDrawState().count>=3) await ensureIapFresh(); // [GOLD-gate 1.2.7]
   const prem=hasFeatureAccess('hafez');
   const st=getHafezDrawState();
   if(!prem && st.count>=3) return;
@@ -1127,10 +1134,13 @@ function showMonthPickerForZodiac(){
 }
 async function showZodiac(jm, name){
   // [GOLD-gate 1.2.7] طالع‌بینی: هر روز یک‌بار رایگان؛ ادمین/طلایی بی‌نهایت
-  await ensureIapFresh();
+  // [FAST 1.2.10] چک محلیِ فوری؛ فقط اگر رد شد یک‌بار تازه‌سازی و تصمیم مجدد (کاربر رایگان هرگز منتظر نمی‌ماند)
   if(!canUseFeature('zodiac')){
-    showFeaturePaywall('طالع‌بینی','ظرفیت رایگان امروزت برای طالع‌بینی تمام شد — هر روز یک‌بار می‌توانی رایگان ببینی. با عضویت طلایی، طالع‌بینی و همه‌ی بخش‌های اپ بدون محدودیت باز می‌شوند. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود 🌙','showHome()');
-    return;
+    await ensureIapFresh();
+    if(!canUseFeature('zodiac')){
+      showFeaturePaywall('طالع‌بینی','ظرفیت رایگان امروزت برای طالع‌بینی تمام شد — هر روز یک‌بار می‌توانی رایگان ببینی. با عضویت طلایی، طالع‌بینی و همه‌ی بخش‌های اپ بدون محدودیت باز می‌شوند. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود 🌙','showHome()');
+      return;
+    }
   }
   bumpIfFree('zodiac');
   const text=formatHoroscope(jm);
@@ -1156,10 +1166,13 @@ async function submitNatal(){
   const city=document.getElementById('nt-city').value;
   if(isNaN(hour)){alert('ساعت تولد رو وارد کن.'); return;}
   // [GOLD-gate 1.2.7] زایچه‌ی تقریبی: هر روز یک‌بار رایگان؛ ادمین/طلایی بی‌نهایت
-  await ensureIapFresh();
+  // [FAST 1.2.10] چک محلیِ فوری؛ فقط اگر رد شد یک‌بار تازه‌سازی و تصمیم مجدد
   if(!canUseFeature('natal')){
-    showFeaturePaywall('زایچه‌ی تقریبی','ظرفیت رایگان امروزت برای زایچه‌ی تقریبی تمام شد — هر روز یک‌بار می‌توانی رایگان محاسبه کنی. با عضویت طلایی، زایچه و همه‌ی بخش‌های اپ بدون محدودیت باز می‌شوند. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود 🌙','showNatalEntry()');
-    return;
+    await ensureIapFresh();
+    if(!canUseFeature('natal')){
+      showFeaturePaywall('زایچه‌ی تقریبی','ظرفیت رایگان امروزت برای زایچه‌ی تقریبی تمام شد — هر روز یک‌بار می‌توانی رایگان محاسبه کنی. با عضویت طلایی، زایچه و همه‌ی بخش‌های اپ بدون محدودیت باز می‌شوند. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود 🌙','showNatalEntry()');
+      return;
+    }
   }
   bumpIfFree('natal');
   const p=state.lastProfile;
@@ -1321,10 +1334,13 @@ async function submitCompare(){
   const person1=getComparePerson(1), person2=getComparePerson(2);
   if(!person1||!person2){alert('اطلاعات هر دو نفر رو کامل و درست وارد کن.'); return;}
   // [GOLD-gate 1.2.7] مقایسه‌ی دو نفر: هر روز یک‌بار رایگان؛ ادمین/طلایی بی‌نهایت
-  await ensureIapFresh();
+  // [FAST 1.2.10] چک محلیِ فوری؛ فقط اگر رد شد یک‌بار تازه‌سازی و تصمیم مجدد
   if(!canUseFeature('compare')){
-    showFeaturePaywall('مقایسه‌ی دو نفر','ظرفیت رایگان امروزت برای مقایسه تمام شد — هر روز یک‌بار می‌توانی رایگان مقایسه کنی. با عضویت طلایی، مقایسه و همه‌ی بخش‌های اپ بدون محدودیت باز می‌شوند. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود 🌙','showCompareEntry()');
-    return;
+    await ensureIapFresh();
+    if(!canUseFeature('compare')){
+      showFeaturePaywall('مقایسه‌ی دو نفر','ظرفیت رایگان امروزت برای مقایسه تمام شد — هر روز یک‌بار می‌توانی رایگان مقایسه کنی. با عضویت طلایی، مقایسه و همه‌ی بخش‌های اپ بدون محدودیت باز می‌شوند. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود 🌙','showCompareEntry()');
+      return;
+    }
   }
   bumpIfFree('compare');
   const r1=person1.report, r2=person2.report;
