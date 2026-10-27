@@ -717,10 +717,10 @@ function showGoldPage(){
     </div>
     <div class="card">
       <h3 style="margin:0 0 8px">🛠 مدیریت دسترسی‌ها</h3>
-      <p class="small-note">ایمیل حسابِ عضوشده را وارد کن، دسترسی‌ها را تیک بزن و «ثبت» کن — تیک‌دار = دسترسی باز، بدون تیک = لغو.</p>
+      <p class="small-note">ایمیل را وارد کن، دسترسی‌ها را تیک بزن و «ثبت» کن — تیک‌دار = دسترسی باز، بدون تیک = لغو. اگر ایمیل هنوز ثبت‌نام نکرده باشد، دسترسی‌ها ذخیره می‌شوند و با اولین ورودِ صاحب ایمیل خودکار فعال می‌شوند.</p>
       <label style="margin-top:8px">ایمیل حساب هدف</label>
       <input id="admin-target-email" type="email" dir="ltr" placeholder="example@email.com" style="width:100%; box-sizing:border-box; margin-bottom:10px">
-      <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-gold"> 👑 طلایی کامل — همه‌چیز بی‌نهایت (۳۱ روز، با هر ثبت تمدید می‌شود)</label></div>
+      <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-gold"> 👑 طلایی کامل — همه‌چیز بی‌نهایت (بدون تاریخ: ۳۱ روز از ثبت؛ با تاریخ: تا همان روز)</label></div>
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-ads"> 🔕 حذف تبلیغات (دائمی)</label></div>
       <p class="small-note" style="margin:10px 0 2px">بخش‌های محدود اپ (تیک = بدون محدودیت برای این حساب):</p>
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-hafez"> 🔮 فال حافظ بی‌نهایت</label></div>
@@ -728,6 +728,10 @@ function showGoldPage(){
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-natal"> 🌌 زایچه‌ی تقریبی</label></div>
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-compare"> 🔗 مقایسه‌ی دو نفر</label></div>
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-babyname"> 👶 ادامه‌ی اسم فرزند</label></div>
+      <label style="margin-top:10px; display:block">تاریخ انقضا (اختیاری — خالی = دائمی، میلادی)</label>
+      <input id="acc-expiry" type="date" dir="ltr" onchange="adminAccessExpiryFa()" style="width:100%; box-sizing:border-box; margin-bottom:4px">
+      <p class="small-note" id="acc-expiry-fa" style="min-height:16px">بدون تاریخ = دسترسی‌های ویژه دائمی و طلایی ۳۱ روزه.</p>
+      <p class="small-note">اگر تاریخ بگذاری، دسترسی‌های تیک‌دار (و طلایی) تا آخرِ همان روز به‌وقت تهران اعتبار دارند و بعدش خودکار بسته می‌شوند.</p>
       <div class="btn-row">
         <button class="btn small" onclick="adminAccessSave()">💾 ثبت دسترسی‌ها</button>
         <button class="btn small secondary" onclick="adminAccessRevokeAll()">🚫 لغو همه برای این ایمیل</button>
@@ -769,29 +773,65 @@ async function adminRevokeIapTest(){
 // [ADMIN-access 1.2.8] پنل مدیریت دسترسی‌ها — تیک‌ها = وضعیت کامل مطلوب کاربر؛
 // «ثبت» روی سرور یعنی تیک‌دارها فعال و بدون‌تیک‌ها لغو می‌شوند (یک endpoint: /admin/access/set)
 var __adminAccessData=[];
+// [1.2.9] تاریخ انقضا: ms → 'YYYY-MM-DD' بر پایه‌ی تقویم تهران (UTC+3:30)
+function tehranDateStr(ts){
+  try{ return new Date(Number(ts)+12600000).toISOString().slice(0,10); }catch(e){ return ''; }
+}
+function faDigits(v){ try{ return String(v).replace(/\d/g, (d)=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]); }catch(e){ return String(v); } }
+function adminAccessExpiryFa(){
+  const el=document.getElementById('acc-expiry'); const out=document.getElementById('acc-expiry-fa');
+  if(!out) return;
+  const v=(el&&el.value)?el.value:'';
+  if(!v){ out.textContent='بدون تاریخ = دسترسی‌های ویژه دائمی و طلایی ۳۱ روزه.'; return; }
+  try{
+    const p=v.split('-');
+    const end=Date.UTC(Number(p[0]),Number(p[1])-1,Number(p[2])+1,0,0,0)-12600000-1000;
+    out.textContent='اعتبار تا: '+new Date(end).toLocaleDateString('fa-IR')+' — میلادی: '+v;
+  }catch(e){ out.textContent=''; }
+}
 function adminAccessReadChecks(){
   const gv=(id)=>{ const el=document.getElementById(id); return !!(el&&el.checked); };
-  return { gold:gv('acc-gold'), removeAds:gv('acc-ads'),
+  const ex=document.getElementById('acc-expiry');
+  const r={ gold:gv('acc-gold'), removeAds:gv('acc-ads'),
     features:{ hafez:gv('acc-hafez'), zodiac:gv('acc-zodiac'), natal:gv('acc-natal'), compare:gv('acc-compare'), babyname:gv('acc-babyname') } };
+  if(ex&&ex.value) r.expiresAt=ex.value;
+  return r;
 }
 function adminAccessSetChecks(a){
   const sv=(id,v)=>{ const el=document.getElementById(id); if(el) el.checked=!!v; };
   sv('acc-gold',a.gold||a.isGold); sv('acc-ads',a.adsRemoved);
-  const f=Array.isArray(a.features)?a.features:[];
-  sv('acc-hafez',f.indexOf('hafez')>=0); sv('acc-zodiac',f.indexOf('zodiac')>=0);
-  sv('acc-natal',f.indexOf('natal')>=0); sv('acc-compare',f.indexOf('compare')>=0);
-  sv('acc-babyname',f.indexOf('babyname')>=0);
+  const raw=Array.isArray(a.features)?a.features:[];
+  const names=raw.map((x)=>(typeof x==='string')?x:(x&&x.f)).filter(Boolean);
+  sv('acc-hafez',names.indexOf('hafez')>=0); sv('acc-zodiac',names.indexOf('zodiac')>=0);
+  sv('acc-natal',names.indexOf('natal')>=0); sv('acc-compare',names.indexOf('compare')>=0);
+  sv('acc-babyname',names.indexOf('babyname')>=0);
+  const ex=document.getElementById('acc-expiry');
+  if(ex){
+    let until=a.goldUntil||null;
+    for(const x of raw){ if(x&&typeof x==='object'&&x.until&&(!until||x.until>until)) until=x.until; }
+    ex.value=until?tehranDateStr(until):'';
+  }
+  adminAccessExpiryFa();
 }
 function iapDateFa(ts){ try{ return new Date(ts).toLocaleDateString('fa-IR'); }catch(e){ return ''; } }
 // خلاصه‌ی یکخطی دسترسی‌ها (هم برای رندر لیست، هم برای پیامِ بعد از ثبت)
 function adminAccessSummary(a){
   const chips=[];
-  if(a.gold||a.isGold) chips.push('👑'+(a.goldUntil?(' تا '+iapDateFa(a.goldUntil)):''));
+  if(a.gold||a.isGold){
+    if(a.goldUntil) chips.push('👑 تا '+iapDateFa(a.goldUntil));
+    else if(a.goldDaysPending) chips.push('👑 '+faDigits(a.goldDaysPending)+' روز از اولین ورود');
+    else chips.push('👑');
+  }
   if(a.adsRemoved) chips.push('🔕 بی‌تبلیغ');
   const F={hafez:'🔮', zodiac:'♈️', natal:'🌌', compare:'🔗', babyname:'👶'};
-  const f=Array.isArray(a.features)?a.features:[];
-  for(let i=0;i<f.length;i++){ if(F[f[i]]) chips.push(F[f[i]]); }
-  return chips.length?chips.join(' '):'بدون دسترسی';
+  const raw=Array.isArray(a.features)?a.features:[];
+  for(let i=0;i<raw.length;i++){
+    const x=raw[i]; const f=(typeof x==='string')?x:(x&&x.f);
+    if(!f||!F[f]) continue;
+    const until=(x&&typeof x==='object'&&x.until)?x.until:null;
+    chips.push(F[f]+(until?(' تا '+iapDateFa(until)):''));
+  }
+  return (a.pending?'⏳ ثبت‌نام‌نشده | ':'')+(chips.length?chips.join(' '):'بدون دسترسی');
 }
 async function adminAccessSave(){
   const inp=document.getElementById('admin-target-email');
@@ -801,7 +841,10 @@ async function adminAccessSave(){
   try{
     const body=Object.assign({ email:em }, adminAccessReadChecks());
     const d=await authFetch('/admin/access/set', { method:'POST', body:JSON.stringify(body) });
-    if(msg) msg.textContent='💾 برای '+em+' ثبت شد ✅'+((d&&d.status)?(' — '+adminAccessSummary(d.status)):'');
+    if(msg){
+      if(d&&d.pending) msg.textContent='⏳ '+em+' هنوز ثبت‌نام نکرده است؛ دسترسی‌ها ذخیره شد و با اولین ورودِ صاحب ایمیل خودکار فعال می‌شود ✅';
+      else msg.textContent='💾 برای '+em+' ثبت شد ✅'+((d&&d.status)?(' — '+adminAccessSummary(d.status)):'');
+    }
     await loadAdminAccessList();
   }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
 }
@@ -824,7 +867,7 @@ async function loadAdminAccessList(){
     const d=await authFetch('/admin/access/list');
     __adminAccessData=(d&&d.accounts)||[];
     box.innerHTML=__adminAccessData.length
-      ?__adminAccessData.map((a,i)=>`<div class="name-item" style="cursor:pointer" onclick="adminAccessPick(${i})"><b style="direction:ltr; unicode-bidi:isolate; display:inline-block">${esc(a.email||a.userId)}</b><br><span class="small-note">${adminAccessSummary(a)}</span></div>`).join('')
+      ?__adminAccessData.map((a,i)=>`<div class="name-item" style="cursor:pointer" onclick="adminAccessPick(${i})"><b style="direction:ltr; unicode-bidi:isolate; display:inline-block">${esc(a.email||a.userId)}</b>${a.pending?'<span class="small-note" style="color:#f0c96a"> — ⏳ ثبت‌نام نشده</span>':''}<br><span class="small-note">${adminAccessSummary(a)}</span></div>`).join('')
       :'<p class="small-note">هنوز به کسی دسترسی نداده‌ای.</p>';
   }catch(e){ box.innerHTML='<p class="small-note" style="color:#ff8a8a">'+esc(translateAuthError(e))+'</p>'; }
 }
