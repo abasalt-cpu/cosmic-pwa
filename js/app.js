@@ -565,6 +565,12 @@ function isCosmicAdmin(){
 // /iap/status درست برمی‌گشت ولی فرانت نادیده‌اش می‌گرفت). از این نسخه همه‌ی گره‌ها
 // hasPremiumAccess() را چک می‌کنند: ادمین «یا» عضو طلایی = همه‌چیز بی‌نهایت.
 function hasPremiumAccess(){ return isCosmicAdmin() || isGoldUser(); }
+// [دسترسی جزئی 1.2.8] دسترسی‌های ویژه‌ی تک‌تک بخش‌ها که ادمین از پنل تیک می‌زند
+// (سرور در /iap/status آرایه‌ی features را برمی‌گرداند)
+function featureGranted(f){ return Array.isArray(iapStatus.features) && iapStatus.features.indexOf(f)>=0; }
+function hasFeatureAccess(f){ return hasPremiumAccess() || featureGranted(f); }
+// برچسب فارسی سطح دسترسی (برای متن‌های «∞» — ادمین/طلایی/ویژه)
+function premBadgeFa(){ return isCosmicAdmin()?'⚡ دسترسی ادمین':(isGoldUser()?'👑 دسترسی طلایی':'✨ دسترسی ویژه'); }
 // سهمیه‌ی رایگانِ روزانه برای بقیه‌ی کاربران (ریست روزانه، مثل فال حافظ)
 const FEATURE_FREE_LIMITS={ zodiac:1, natal:1, compare:1 };
 function getUsageState(){
@@ -583,8 +589,8 @@ function bumpFeature(f){
   st[f]=(Number.isInteger(st[f])?st[f]:0)+1;
   try{ localStorage.setItem('cosmicUsageState',JSON.stringify(st)); }catch(e){}
 }
-function canUseFeature(f){ return hasPremiumAccess() || featureUsed(f)<FEATURE_FREE_LIMITS[f]; }
-function bumpIfFree(f){ if(!hasPremiumAccess()) bumpFeature(f); }
+function canUseFeature(f){ return hasFeatureAccess(f) || featureUsed(f)<FEATURE_FREE_LIMITS[f]; }
+function bumpIfFree(f){ if(!hasFeatureAccess(f)) bumpFeature(f); }
 // صفحه‌ی قفلِ ویژگی — ارتقا به عضویت طلایی
 function showFeaturePaywall(title, msg, backFn){
   render(`${backBtn(backFn)}${pageHead('👑','بخش ویژه')}
@@ -604,7 +610,7 @@ const IAP_PRODUCTS=[
   {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۶۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک سال — ارزان‌تر از ماهانه'},
   {id:'remove_ads', icon:'🔕', title:'حذف دائمی تبلیغات', price:'۱۹۹٬۰۰۰ تومان', desc:'بنرهای تبلیغاتی برای همیشه حذف می‌شوند'},
 ];
-var iapStatus={isGold:false, goldUntil:null, adsRemoved:false};
+var iapStatus={isGold:false, goldUntil:null, adsRemoved:false, features:[]};
 var __adBannerEl=null;
 var __adCache={data:null, t:0};
 var __iapFetchedAt=0; // [GOLD-gate 1.2.7] برای تشخیص کهنگیِ وضعیت طلایی
@@ -612,10 +618,10 @@ function isGoldUser(){ return !!iapStatus.isGold; }
 function adsRemovedUser(){ return !!iapStatus.adsRemoved; }
 function isAdFreeViewer(){ return isGoldUser() || adsRemovedUser() || isCosmicAdmin(); }
 async function refreshIapStatus(){
-  if(typeof authToken==='undefined' || !authToken){ iapStatus={isGold:false, goldUntil:null, adsRemoved:false}; __iapFetchedAt=Date.now(); return iapStatus; }
+  if(typeof authToken==='undefined' || !authToken){ iapStatus={isGold:false, goldUntil:null, adsRemoved:false, features:[]}; __iapFetchedAt=Date.now(); return iapStatus; }
   try{
     const d=await authFetch('/iap/status');
-    iapStatus={isGold:!!d.isGold, goldUntil:d.goldUntil||null, adsRemoved:!!d.adsRemoved};
+    iapStatus={isGold:!!d.isGold, goldUntil:d.goldUntil||null, adsRemoved:!!d.adsRemoved, features:Array.isArray(d.features)?d.features:[]};
     __iapFetchedAt=Date.now();
   }catch(e){ /* خطای موقت شبکه — آخرین وضعیت حفظ می‌شود؛ فچ بعدی دوباره تلاش می‌کند */ }
   return iapStatus;
@@ -702,20 +708,36 @@ function showGoldPage(){
     </div>`).join('');
   const adminHtml=isCosmicAdmin()?`
     <div class="card">
-      <h3 style="margin:0 0 8px">🛠 پنل آزمایشی ادمین</h3>
-      <p class="small-note">تست بدون خرید واقعی: فعال‌سازی ۳۱ روزه‌ی طلایی و لغو همه‌ی مزایا.</p>
+      <h3 style="margin:0 0 8px">⚡ تست سریع روی خودم</h3>
+      <p class="small-note">کارت آزمایشی ۳۱ روزه برای اکانت خودت (بدون خرید واقعی) و لغو همه‌ی مزایا.</p>
       <div class="btn-row">
-        <button class="btn small" onclick="adminGrantGoldTest()">👑 کارت آزمایشی طلایی (۳۱ روز)</button>
-        <button class="btn small secondary" onclick="adminRevokeIapTest()">🚫 لغو مزایا</button>
+        <button class="btn small" onclick="adminGrantGoldTest()">👑 کارت آزمایشی طلایی</button>
+        <button class="btn small secondary" onclick="adminRevokeIapTest()">🚫 لغو مزایای من</button>
       </div>
-      <p class="small-note" style="margin:12px 0 6px">اعطا/لغو برای «کاربر دیگر»: ایمیلِ حسابِ عضوشده‌ی هدف را وارد کن (مثلاً برای تست با یک اکانت دوم).</p>
-      <input id="admin-target-email" type="email" dir="ltr" placeholder="example@email.com" style="width:100%; box-sizing:border-box; margin-bottom:8px">
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 8px">🛠 مدیریت دسترسی‌ها</h3>
+      <p class="small-note">ایمیل حسابِ عضوشده را وارد کن، دسترسی‌ها را تیک بزن و «ثبت» کن — تیک‌دار = دسترسی باز، بدون تیک = لغو.</p>
+      <label style="margin-top:8px">ایمیل حساب هدف</label>
+      <input id="admin-target-email" type="email" dir="ltr" placeholder="example@email.com" style="width:100%; box-sizing:border-box; margin-bottom:10px">
+      <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-gold"> 👑 طلایی کامل — همه‌چیز بی‌نهایت (۳۱ روز، با هر ثبت تمدید می‌شود)</label></div>
+      <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-ads"> 🔕 حذف تبلیغات (دائمی)</label></div>
+      <p class="small-note" style="margin:10px 0 2px">بخش‌های محدود اپ (تیک = بدون محدودیت برای این حساب):</p>
+      <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-hafez"> 🔮 فال حافظ بی‌نهایت</label></div>
+      <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-zodiac"> ♈️ طالع‌بینی</label></div>
+      <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-natal"> 🌌 زایچه‌ی تقریبی</label></div>
+      <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-compare"> 🔗 مقایسه‌ی دو نفر</label></div>
+      <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-babyname"> 👶 ادامه‌ی اسم فرزند</label></div>
       <div class="btn-row">
-        <button class="btn small" onclick="adminGrantOther('gold_month')">👑 طلایی ۳۱ روزه</button>
-        <button class="btn small" onclick="adminGrantOther('remove_ads')">🔕 حذف تبلیغات</button>
-        <button class="btn small secondary" onclick="adminRevokeOther()">🚫 لغو این کاربر</button>
+        <button class="btn small" onclick="adminAccessSave()">💾 ثبت دسترسی‌ها</button>
+        <button class="btn small secondary" onclick="adminAccessRevokeAll()">🚫 لغو همه برای این ایمیل</button>
       </div>
       <p id="iap-admin-msg" class="small-note" style="min-height:18px"></p>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 8px">📋 حساب‌های دارای دسترسی</h3>
+      <div id="admin-access-list"><p class="small-note">در حال بارگذاری...</p></div>
+      <p class="small-note" style="margin-top:8px">روی ایمیل بزن تا داخل کادر بالا بیاید و تیک‌های فعلی‌اش برای ویرایش بار شود.</p>
     </div>`:'';
   render(`${backBtn('showMoreMenu()')}${pageHead('👑','عضویت طلایی')}
     <div class="card orn">
@@ -724,6 +746,7 @@ function showGoldPage(){
     </div>
     <div class="card">${productHtml}</div>
     ${adminHtml}`);
+  if(isCosmicAdmin()){ try{ loadAdminAccessList(); }catch(e){} }
 }
 async function adminGrantGoldTest(){
   const msg=document.getElementById('iap-admin-msg');
@@ -743,31 +766,76 @@ async function adminRevokeIapTest(){
     showGoldPage();
   }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
 }
-// [IAP 1.2.6b] اعطا/لغو برای کاربر دیگر — سرور ایمیل/شناسه‌ی هدف را می‌پذیرد (resolveTargetUser)
-function adminTargetEmail(){
-  const el=document.getElementById('admin-target-email');
-  const email=el?(el.value||'').trim():'';
-  const msg=document.getElementById('iap-admin-msg');
-  if(!email){ if(msg) msg.textContent='ایمیل کاربر هدف را وارد کن.'; return null; }
-  return email;
+// [ADMIN-access 1.2.8] پنل مدیریت دسترسی‌ها — تیک‌ها = وضعیت کامل مطلوب کاربر؛
+// «ثبت» روی سرور یعنی تیک‌دارها فعال و بدون‌تیک‌ها لغو می‌شوند (یک endpoint: /admin/access/set)
+var __adminAccessData=[];
+function adminAccessReadChecks(){
+  const gv=(id)=>{ const el=document.getElementById(id); return !!(el&&el.checked); };
+  return { gold:gv('acc-gold'), removeAds:gv('acc-ads'),
+    features:{ hafez:gv('acc-hafez'), zodiac:gv('acc-zodiac'), natal:gv('acc-natal'), compare:gv('acc-compare'), babyname:gv('acc-babyname') } };
 }
-async function adminGrantOther(productId){
-  const email=adminTargetEmail(); if(!email) return;
+function adminAccessSetChecks(a){
+  const sv=(id,v)=>{ const el=document.getElementById(id); if(el) el.checked=!!v; };
+  sv('acc-gold',a.gold||a.isGold); sv('acc-ads',a.adsRemoved);
+  const f=Array.isArray(a.features)?a.features:[];
+  sv('acc-hafez',f.indexOf('hafez')>=0); sv('acc-zodiac',f.indexOf('zodiac')>=0);
+  sv('acc-natal',f.indexOf('natal')>=0); sv('acc-compare',f.indexOf('compare')>=0);
+  sv('acc-babyname',f.indexOf('babyname')>=0);
+}
+function iapDateFa(ts){ try{ return new Date(ts).toLocaleDateString('fa-IR'); }catch(e){ return ''; } }
+// خلاصه‌ی یکخطی دسترسی‌ها (هم برای رندر لیست، هم برای پیامِ بعد از ثبت)
+function adminAccessSummary(a){
+  const chips=[];
+  if(a.gold||a.isGold) chips.push('👑'+(a.goldUntil?(' تا '+iapDateFa(a.goldUntil)):''));
+  if(a.adsRemoved) chips.push('🔕 بی‌تبلیغ');
+  const F={hafez:'🔮', zodiac:'♈️', natal:'🌌', compare:'🔗', babyname:'👶'};
+  const f=Array.isArray(a.features)?a.features:[];
+  for(let i=0;i<f.length;i++){ if(F[f[i]]) chips.push(F[f[i]]); }
+  return chips.length?chips.join(' '):'بدون دسترسی';
+}
+async function adminAccessSave(){
+  const inp=document.getElementById('admin-target-email');
+  const em=inp?(inp.value||'').trim():'';
   const msg=document.getElementById('iap-admin-msg');
+  if(!em){ if(msg) msg.textContent='ایمیل کاربر هدف را وارد کن.'; return; }
   try{
-    const d=await authFetch('/admin/iap/grant', { method:'POST', body:JSON.stringify({ email, productId, days:productId==='gold_month'?31:0 }) });
-    const st=(d&&d.status)?d.status:null;
-    if(msg) msg.textContent=(productId==='gold_month'?'👑 طلایی ۳۱ روزه':'🔕 حذف تبلیغات')+' برای '+email+' اعمال شد ✅'
-      +(st?(' — طلایی: '+(st.isGold?'فعال':'خیر')+' | حذف تبلیغ: '+(st.adsRemoved?'بله':'خیر')):'');
+    const body=Object.assign({ email:em }, adminAccessReadChecks());
+    const d=await authFetch('/admin/access/set', { method:'POST', body:JSON.stringify(body) });
+    if(msg) msg.textContent='💾 برای '+em+' ثبت شد ✅'+((d&&d.status)?(' — '+adminAccessSummary(d.status)):'');
+    await loadAdminAccessList();
   }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
 }
-async function adminRevokeOther(){
-  const email=adminTargetEmail(); if(!email) return;
+async function adminAccessRevokeAll(){
+  const inp=document.getElementById('admin-target-email');
+  const em=inp?(inp.value||'').trim():'';
   const msg=document.getElementById('iap-admin-msg');
+  if(!em){ if(msg) msg.textContent='ایمیل کاربر هدف را وارد کن.'; return; }
   try{
-    await authFetch('/admin/iap/revoke', { method:'POST', body:JSON.stringify({ email }) });
-    if(msg) msg.textContent='🚫 همه‌ی مزایای فعالِ '+email+' لغو شد ✅';
+    await authFetch('/admin/access/set', { method:'POST', body:JSON.stringify({ email:em, gold:false, removeAds:false, features:{ hafez:false, zodiac:false, natal:false, compare:false, babyname:false } }) });
+    if(msg) msg.textContent='🚫 همه‌ی دسترسی‌های '+em+' لغو شد ✅';
+    adminAccessSetChecks({ gold:false, adsRemoved:false, features:[] });
+    await loadAdminAccessList();
   }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
+}
+async function loadAdminAccessList(){
+  const box=document.getElementById('admin-access-list');
+  if(!box) return;
+  try{
+    const d=await authFetch('/admin/access/list');
+    __adminAccessData=(d&&d.accounts)||[];
+    box.innerHTML=__adminAccessData.length
+      ?__adminAccessData.map((a,i)=>`<div class="name-item" style="cursor:pointer" onclick="adminAccessPick(${i})"><b style="direction:ltr; unicode-bidi:isolate; display:inline-block">${esc(a.email||a.userId)}</b><br><span class="small-note">${adminAccessSummary(a)}</span></div>`).join('')
+      :'<p class="small-note">هنوز به کسی دسترسی نداده‌ای.</p>';
+  }catch(e){ box.innerHTML='<p class="small-note" style="color:#ff8a8a">'+esc(translateAuthError(e))+'</p>'; }
+}
+function adminAccessPick(i){
+  const a=__adminAccessData[i]; if(!a) return;
+  const inp=document.getElementById('admin-target-email');
+  if(inp && a.email) inp.value=a.email;
+  adminAccessSetChecks(a);
+  const msg=document.getElementById('iap-admin-msg');
+  if(msg) msg.textContent='وضعیت فعلی «'+(a.email||a.userId)+'» بارگذاری شد — تغییر بده و «ثبت» کن.';
+  try{ if(inp) inp.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){}
 }
 async function showAdminIapPage(){
   render(`${backBtn('showMoreMenu()')}<div class="card"><h2>💳 خریدهای درون‌برنامه‌ای</h2><p class="desc" id="iap-admin-status">در حال بارگذاری...</p></div><div id="iap-admin-list"></div>`);
@@ -829,8 +897,8 @@ async function showHafez(mode){
   if(mode) hafezMode=mode;
   await ensureIapFresh(); // [GOLD-gate 1.2.7] اگر فچِ وضعیت طلایی شکست خورده، یک‌بار تازه کن
   const modern=hafezMode==='modern';
-  const prem=hasPremiumAccess(); // ادمین «یا» عضو طلایی = بدون محدودیت
-  const premTag=isCosmicAdmin()?'ادمین':'طلایی';
+  const prem=hasFeatureAccess('hafez'); // ادمین/طلایی «یا» دسترسی ویژه‌ی فال = بدون محدودیت
+  const premTag=isCosmicAdmin()?'ادمین':(isGoldUser()?'طلایی':'ویژه');
   const st=getHafezDrawState(); const remaining=Math.max(0,3-st.count);
   const modernToday=getHafezModernToday();
   const falOn=typeof isDailyFalEnabled==='function' && isDailyFalEnabled();
@@ -844,7 +912,7 @@ async function showHafez(mode){
   render(`${backBtn('showHome()')}${pageHead('🔮','فال حافظ')}<div class="card orn">
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
       <div class="hafez-mode">${opt('modern','تفسیر با AI')}${opt('traditional','تفسیر سنتی')}</div>
-      <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}${prem?` <span style="color:#4ade80;font-weight:700">${isCosmicAdmin()?'⚡ دسترسی ادمین':'👑 دسترسی طلایی'}: بدون محدودیت</span>`:''}</p>
+      <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}${prem?` <span style="color:#4ade80;font-weight:700">${premBadgeFa()}: بدون محدودیت</span>`:''}</p>
       ${mainBtn}
       <div id="hafez-result">${resultInit}</div></div>
     <div class="card">
@@ -858,7 +926,7 @@ async function showHafez(mode){
 }
 async function revealHafezModern(){
   await ensureIapFresh(); // [GOLD-gate 1.2.7]
-  const prem=hasPremiumAccess();
+  const prem=hasFeatureAccess('hafez');
   if(!prem && getHafezModernToday()) return;
   const btn=document.getElementById('hafez-btn');
   if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; }
@@ -895,7 +963,7 @@ async function renderHafezModernResult(id){
       <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
       <button class="btn small secondary" onclick='shareText(${attrJson(shareTxt)})'>📤 اشتراک‌گذاری</button>
     </div>
-  </div>${hasPremiumAccess()?(isCosmicAdmin()?'<p class="small-note" style="color:#4ade80">⚡ دسترسی ادمین — می‌تونی همین حالا یه فال جدید بگیری 🌙</p>':'<p class="small-note" style="color:#f0c96a">👑 دسترسی طلایی — می‌تونی همین حالا یه فال جدید بگیری 🌙</p>'):'<p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>'}`;
+  </div>${hasFeatureAccess('hafez')?`<p class="small-note" style="color:#4ade80">${premBadgeFa()} — می‌تونی همین حالا یه فال جدید بگیری 🌙</p>`:'<p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>'}`;
 }
 function handleDailyFalToggle(){
   const btn=document.getElementById('fal-push-btn');
@@ -946,7 +1014,7 @@ function rerollSlogan(){
 }
 async function revealHafez(){
   await ensureIapFresh(); // [GOLD-gate 1.2.7]
-  const prem=hasPremiumAccess();
+  const prem=hasFeatureAccess('hafez');
   const st=getHafezDrawState();
   if(!prem && st.count>=3) return;
   st.count++; localStorage.setItem('hafezDrawState', JSON.stringify(st));
@@ -967,7 +1035,7 @@ function renderTradResult(g,remaining){
       <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
       <button class="btn small secondary" onclick='shareText(${attrJson(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div></div>
-    <p class="small-note">${remaining===-1?(isCosmicAdmin()?'⚡ دسترسی ادمین — فال بی‌نهایت (∞)':'👑 عضویت طلایی — فال بی‌نهایت (∞)'):(remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙')}</p>`;
+    <p class="small-note">${remaining===-1?premBadgeFa()+' — فال بی‌نهایت (∞)':(remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙')}</p>`;
 }
 function showFullGhazal(id){
   const g=getGhazalById(id);
@@ -1081,8 +1149,8 @@ function submitBabyName(){
   renderBabyPage(0);
 }
 async function renderBabyPage(page){
-  // [GOLD-gate 1.2.7] اسم فرزند: صفحه‌ی اول رایگان؛ ادامه‌ی لیست فقط ادمین/طلایی
-  if(page>=1 && !hasPremiumAccess()){
+  // [GOLD-gate 1.2.7 + 1.2.8] اسم فرزند: صفحه‌ی اول رایگان؛ ادامه‌ی لیست فقط ادمین/طلایی/دسترسی ویژه
+  if(page>=1 && !hasFeatureAccess('babyname')){
     showFeaturePaywall('ادامه‌ی پیشنهاد اسم','ده پیشنهاد اول به‌صورت رایگان نمایش داده می‌شود و ادامه‌ی لیست مخصوص اعضای طلایی است. با عضویت طلایی، همه‌ی پیشنهادهای اسم فرزند بدون محدودیت باز می‌شوند.','showBabyNameForm()');
     return;
   }
@@ -1090,7 +1158,7 @@ async function renderBabyPage(page){
   const pageData=formatBabyNamePage(babyQuery.gender,result,page);
   render(`${backBtn('showBabyNameForm()')}<div class="card"><div style="white-space:pre-line; line-height:2">${esc(pageData.text)}</div>
       ${pageData.hasMore?`<button class="btn secondary" onclick="renderBabyPage(${page+1})">➡️ ۱۰ اسم بعدی</button>`:''}
-      ${pageData.hasMore&&!hasPremiumAccess()?'<p class="small-note">👑 ادامه‌ی لیست مخصوص اعضای طلایی است.</p>':''}</div>`);
+      ${pageData.hasMore&&!hasFeatureAccess('babyname')?'<p class="small-note">👑 ادامه‌ی لیست مخصوص اعضای طلایی است.</p>':''}</div>`);
 }
 function showCompareEntry(){
   const hasProfiles=state.savedProfiles.length>0;
