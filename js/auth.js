@@ -1,10 +1,16 @@
 // ===== تنظیمات بک‌اند عضویت =====
-// [هاتفیکس 1.2.3] بازگشت موقت به workers.dev: نسخه‌ی 1.2.2 روی cosmic.carservbook.ir تنظیم
-// شده بود ولی آن دامنه هرگز متصل نشد (ممنوعیت CNAME بین‌اکانتی Cloudflare — خطای 1014)؛
-// یعنی همه‌ی درخواست‌های ورود/ثبت‌نام به آدرس ناموجود می‌رفتند و ورود برای همه قطع بود.
-// پس از خرید دامنه‌ی جدید و اتصال Custom Domain در اکانت کیهانی، فقط همین یک خط و
-// CSP در index.html با هم تغییر می‌کنند (نسخه‌ی بعدی).
-const AUTH_API_BASE = "https://cosmic-code-auth.cosmiccode396.workers.dev";
+// [DOMAIN 1.2.11] اتصال به دامنه‌ی اختصاصی api.cosmiccode.ir:
+// workers.dev در ایران توسط بعضی اپراتورها فیلتر است و کاربر بدون فیلترشکن
+// نمی‌توانست وارد شود. حالا همان Worker (cosmic-code-auth) با Custom Domain
+// در اکانت کیهانی روی api.cosmiccode.ir سرو می‌شود — همان دیتابیس، همان
+// توکن‌ها؛ کاربران واردشده هیچ تغییری حس نمی‌کنند.
+// بازگشت اضطراری: مقدار قبلی = "https://cosmic-code-auth.cosmiccode396.workers.dev"
+// (CSP در index.html فعلاً هر دو هاست را اجازه می‌دهد؛ workers.dev در نسخه‌ی
+// بعدی که مطمئن شدیم همه‌چیز سالم است حذف می‌شود.)
+// تاریخچه: [هاتفیکس 1.2.3] cosmic.carservbook.ir هرگز متصل نشد (ممنوعیت CNAME
+// بین‌اکانتی Cloudflare — خطای 1014). این‌بار دامنه در همان اکانتِ Worker وصل
+// شده و با تست واقعی (/iap) جواب گرفته، پس خطای 1014 تکرار نمی‌شود.
+const AUTH_API_BASE = "https://api.cosmiccode.ir";
 // Client ID که از Google Cloud Console گرفتی (مرحله‌ی ۹ راهنما) رو اینجا جایگزین کن:
 const GOOGLE_CLIENT_ID = "948644041400-q6k9d730s9ml847t6us27ufumkijfetc.apps.googleusercontent.com";
 
