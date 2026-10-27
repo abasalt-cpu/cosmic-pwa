@@ -559,6 +559,42 @@ function shareText(text){ if(navigator.share){navigator.share({text});} else {na
 function isCosmicAdmin(){
   try{ return !!(typeof currentUser!=='undefined' && currentUser && currentUser.isAdmin===true); }catch(e){ return false; }
 }
+// ================== [GOLD-gate 1.2.7] قفل ویژگی‌ها بر اساس عضویت طلایی ==================
+// [رفع باگ 1.2.6] گره‌های قبلی فقط isCosmicAdmin() را چک می‌کردند؛ برای همین عضویت
+// طلاییِ اعطاشده از پنل ادمین هیچ محدودیتی را باز نمی‌کرد (وضعیت طلایی از سرور
+// /iap/status درست برمی‌گشت ولی فرانت نادیده‌اش می‌گرفت). از این نسخه همه‌ی گره‌ها
+// hasPremiumAccess() را چک می‌کنند: ادمین «یا» عضو طلایی = همه‌چیز بی‌نهایت.
+function hasPremiumAccess(){ return isCosmicAdmin() || isGoldUser(); }
+// سهمیه‌ی رایگانِ روزانه برای بقیه‌ی کاربران (ریست روزانه، مثل فال حافظ)
+const FEATURE_FREE_LIMITS={ zodiac:1, natal:1, compare:1 };
+function getUsageState(){
+  const key='cosmicUsageState'; const today=todayStr();
+  // [F3-fix الگو] خواندن امن: JSON خراب یا تاریخِ دیگر → شمارنده‌ی تازه
+  let st=safeJSONParse(localStorage.getItem(key), null);
+  if(!st || typeof st!=='object' || st.date!==today){ st={date:today}; try{ localStorage.setItem(key,JSON.stringify(st)); }catch(e){} }
+  return st;
+}
+function featureUsed(f){
+  const st=getUsageState();
+  return Number.isInteger(st[f])?st[f]:0;
+}
+function bumpFeature(f){
+  const st=getUsageState(); st.date=todayStr();
+  st[f]=(Number.isInteger(st[f])?st[f]:0)+1;
+  try{ localStorage.setItem('cosmicUsageState',JSON.stringify(st)); }catch(e){}
+}
+function canUseFeature(f){ return hasPremiumAccess() || featureUsed(f)<FEATURE_FREE_LIMITS[f]; }
+function bumpIfFree(f){ if(!hasPremiumAccess()) bumpFeature(f); }
+// صفحه‌ی قفلِ ویژگی — ارتقا به عضویت طلایی
+function showFeaturePaywall(title, msg, backFn){
+  render(`${backBtn(backFn)}${pageHead('👑','بخش ویژه')}
+    <div class="card orn center">
+      <div style="font-size:46px; line-height:1.2; margin:8px 0">👑</div>
+      <h2 style="margin:4px 0 8px">${esc(title)}</h2>
+      <p class="desc" style="line-height:2">${esc(msg)}</p>
+      <button class="btn" onclick="showGoldPage()">👑 مشاهده‌ی عضویت طلایی</button>
+    </div>`);
+}
 // ================== IAP کافه‌بازار / عضویت طلایی (1.2.6) ==================
 // خرید واقعی فقط داخل APK کافه‌بازار فعال می‌شود (پل CosmicBazaar)؛
 // در نسخه‌ی وب، وضعیت از سرور خوانده می‌شود و ادمین با کارت آزمایشی تست می‌کند.
@@ -571,16 +607,27 @@ const IAP_PRODUCTS=[
 var iapStatus={isGold:false, goldUntil:null, adsRemoved:false};
 var __adBannerEl=null;
 var __adCache={data:null, t:0};
+var __iapFetchedAt=0; // [GOLD-gate 1.2.7] برای تشخیص کهنگیِ وضعیت طلایی
 function isGoldUser(){ return !!iapStatus.isGold; }
 function adsRemovedUser(){ return !!iapStatus.adsRemoved; }
 function isAdFreeViewer(){ return isGoldUser() || adsRemovedUser() || isCosmicAdmin(); }
 async function refreshIapStatus(){
-  if(typeof authToken==='undefined' || !authToken){ iapStatus={isGold:false, goldUntil:null, adsRemoved:false}; return iapStatus; }
+  if(typeof authToken==='undefined' || !authToken){ iapStatus={isGold:false, goldUntil:null, adsRemoved:false}; __iapFetchedAt=Date.now(); return iapStatus; }
   try{
     const d=await authFetch('/iap/status');
     iapStatus={isGold:!!d.isGold, goldUntil:d.goldUntil||null, adsRemoved:!!d.adsRemoved};
-  }catch(e){ /* خطای موقت شبکه — آخرین وضعیت حفظ می‌شود */ }
+    __iapFetchedAt=Date.now();
+  }catch(e){ /* خطای موقت شبکه — آخرین وضعیت حفظ می‌شود؛ فچ بعدی دوباره تلاش می‌کند */ }
   return iapStatus;
+}
+// [GOLD-gate 1.2.7] اگر وضعیت IAP کهنه است (مثلاً فچِ اولِ شروع اپ به‌خاطر قطعی
+// اینترنت شکست خورده)، قبل از تصمیم‌گیریِ گره‌ها یک‌بار تازه می‌کنیم — وگرنه عضو
+// طلایی ممکن است صفحه‌ی قفل ببیند. برای طلایی/ادمینِ تشخیص‌داده‌شده بدون انتظار.
+async function ensureIapFresh(){
+  if(typeof authToken==='undefined' || !authToken) return;
+  if(hasPremiumAccess()) return;
+  if(Date.now()-__iapFetchedAt<15000) return;
+  await refreshIapStatus();
 }
 function iapGoldUntilFa(){
   if(!iapStatus.goldUntil) return '';
@@ -647,7 +694,7 @@ function showGoldPage(){
   setNav('more');
   const statusHtml = isGoldUser()
     ? `<p style="margin:4px 0; color:#f0c96a; font-weight:800">👑 عضویت طلایی فعال${iapGoldUntilFa()?` — تا ${iapGoldUntilFa()}`:''}</p>`
-    : (adsRemovedUser()?'<p style="margin:4px 0; color:#4ade80; font-weight:700">🔕 تبلیغات برای حساب شما حذف شده است.</p>':'<p class="desc">در حال حاضر عضویت طلایی نداری. با عضویت طلایی، بنرهای تبلیغاتی حذف می‌شوند و از مزایای ویژه بهره‌مند می‌شوی.</p>');
+    : (adsRemovedUser()?'<p style="margin:4px 0; color:#4ade80; font-weight:700">🔕 تبلیغات برای حساب شما حذف شده است.</p>':'<p class="desc">در حال حاضر عضویت طلایی نداری. با عضویت طلایی: فال حافظ بی‌نهایت، طالع‌بینی و زایچه‌ی تقریبی و مقایسه‌ی دو نفر بدون محدودیت روزانه، ادامه‌ی کامل پیشنهاد اسم فرزند، و حذف بنرهای تبلیغاتی.</p>');
   const productHtml=IAP_PRODUCTS.map(p=>`
     <div class="list-item" style="cursor:default">
       <span class="li-label">${p.icon} <b>${esc(p.title)}</b><br><span class="small-note">${esc(p.desc)}</span></span>
@@ -778,24 +825,26 @@ function renderHafezText(text){
   fq(); fp(); fl();
   return html;
 }
-function showHafez(mode){
+async function showHafez(mode){
   if(mode) hafezMode=mode;
+  await ensureIapFresh(); // [GOLD-gate 1.2.7] اگر فچِ وضعیت طلایی شکست خورده، یک‌بار تازه کن
   const modern=hafezMode==='modern';
-  const admin=isCosmicAdmin();
+  const prem=hasPremiumAccess(); // ادمین «یا» عضو طلایی = بدون محدودیت
+  const premTag=isCosmicAdmin()?'ادمین':'طلایی';
   const st=getHafezDrawState(); const remaining=Math.max(0,3-st.count);
   const modernToday=getHafezModernToday();
   const falOn=typeof isDailyFalEnabled==='function' && isDailyFalEnabled();
   const opt=(m,label)=>`<div class="mode-opt${hafezMode===m?' on':''}" onclick="showHafez('${m}')">${hafezMode===m?'◉':'○'} ${label}</div>`;
   const mainBtn=modern
-    ? (modernToday && !admin
+    ? (modernToday && !prem
         ? `<button class="btn" id="hafez-btn" disabled style="opacity:.5;cursor:not-allowed">✅ فال AI امروزت رو گرفتی</button>`
-        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">${admin?'🌿 فالم رو با AI بگیر (∞ ادمین)':'🌿 فالم رو با AI بگیر (۱ بار در روز)'}</button>`)
-    : `<button class="btn" id="hafez-btn" onclick="revealHafez()"${(!admin&&remaining<=0)?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${admin?' (∞ ادمین)':(remaining>0?` (${remaining} بار دیگه امروز)`:'')}</button>`;
-  const resultInit=(!modern && !admin && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
+        : `<button class="btn" id="hafez-btn" onclick="revealHafezModern()">${prem?`🌿 فالم رو با AI بگیر (∞ ${premTag})`:'🌿 فالم رو با AI بگیر (۱ بار در روز)'}</button>`)
+    : `<button class="btn" id="hafez-btn" onclick="revealHafez()"${(!prem&&remaining<=0)?' disabled style="opacity:.5;cursor:not-allowed"':''}>🔮 فالم رو بگیر${prem?` (∞ ${premTag})`:(remaining>0?` (${remaining} بار دیگه امروز)`:'')}</button>`;
+  const resultInit=(!modern && !prem && remaining<=0)?'<p class="small-note">امروز ۳ بار فال گرفتی؛ فردا دوباره سر بزن 🌙</p>':'';
   render(`${backBtn('showHome()')}${pageHead('🔮','فال حافظ')}<div class="card orn">
       <p class="desc">چند لحظه چشم‌هاتو ببند، یه آرزو یا سوال توی دلت نگه‌دار، و بعد نیت کن...</p>
       <div class="hafez-mode">${opt('modern','تفسیر با AI')}${opt('traditional','تفسیر سنتی')}</div>
-      <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}${admin?' <span style="color:#4ade80;font-weight:700">⚡ دسترسی ادمین: بدون محدودیت</span>':''}</p>
+      <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}${prem?` <span style="color:#4ade80;font-weight:700">${isCosmicAdmin()?'⚡ دسترسی ادمین':'👑 دسترسی طلایی'}: بدون محدودیت</span>`:''}</p>
       ${mainBtn}
       <div id="hafez-result">${resultInit}</div></div>
     <div class="card">
@@ -805,21 +854,22 @@ function showHafez(mode){
       <button class="btn${falOn?' secondary':''}" id="fal-push-btn" onclick="handleDailyFalToggle()">${falOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری روزانه'}</button>
     </div>`);
   if(modern && modernToday) renderHafezModernResult(modernToday.id);
-  if(!modern){ try{ const ld=JSON.parse(localStorage.getItem('hafezLastDraw')||'null'); if(admin&&ld&&ld.date===todayStr()&&ld.g) renderTradResult(ld.g,-1); else if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
+  if(!modern){ try{ const ld=JSON.parse(localStorage.getItem('hafezLastDraw')||'null'); if(prem&&ld&&ld.date===todayStr()&&ld.g) renderTradResult(ld.g,-1); else if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
 }
 async function revealHafezModern(){
-  const admin=isCosmicAdmin();
-  if(!admin && getHafezModernToday()) return;
+  await ensureIapFresh(); // [GOLD-gate 1.2.7]
+  const prem=hasPremiumAccess();
+  if(!prem && getHafezModernToday()) return;
   const btn=document.getElementById('hafez-btn');
   if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; }
   try{ await loadHafezModernData(); }
   catch(e){
-    if(btn){ btn.disabled=false; btn.textContent=admin?'🌿 فالم رو با AI بگیر (∞ ادمین)':'🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
+    if(btn){ btn.disabled=false; btn.textContent=prem?'🌿 فالم رو با AI بگیر (∞)':'🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
     document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`;
     return;
   }
   let seq=0;
-  if(admin){ try{ const s=safeJSONParse(localStorage.getItem('hafezModernAdminSeq'),null); seq=((s&&Number.isInteger(s.n))?s.n:0)+1; }catch(e){ seq=1; } localStorage.setItem('hafezModernAdminSeq', JSON.stringify({n:seq})); }
+  if(prem){ try{ const s=safeJSONParse(localStorage.getItem('hafezModernAdminSeq'),null); seq=((s&&Number.isInteger(s.n))?s.n:0)+1; }catch(e){ seq=1; } localStorage.setItem('hafezModernAdminSeq', JSON.stringify({n:seq})); }
   const id=(simpleHash(getDeviceId()+'-modern-'+todayStr()+(seq?'-a'+seq:''))%HAFEZ_MODERN_DATA.length)+1;
   localStorage.setItem('hafezModernState', JSON.stringify({date:todayStr(), id}));
   showHafez();
@@ -845,7 +895,7 @@ async function renderHafezModernResult(id){
       <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
       <button class="btn small secondary" onclick='shareText(${attrJson(shareTxt)})'>📤 اشتراک‌گذاری</button>
     </div>
-  </div>${isCosmicAdmin()?'<p class="small-note" style="color:#4ade80">⚡ دسترسی ادمین — می‌تونی همین حالا یه فال جدید بگیری 🌙</p>':'<p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>'}`;
+  </div>${hasPremiumAccess()?(isCosmicAdmin()?'<p class="small-note" style="color:#4ade80">⚡ دسترسی ادمین — می‌تونی همین حالا یه فال جدید بگیری 🌙</p>':'<p class="small-note" style="color:#f0c96a">👑 دسترسی طلایی — می‌تونی همین حالا یه فال جدید بگیری 🌙</p>'):'<p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>'}`;
 }
 function handleDailyFalToggle(){
   const btn=document.getElementById('fal-push-btn');
@@ -894,19 +944,20 @@ function rerollSlogan(){
   const el=document.getElementById('bannerSlogan');
   if(el) el.textContent=s;
 }
-function revealHafez(){
-  const admin=isCosmicAdmin();
+async function revealHafez(){
+  await ensureIapFresh(); // [GOLD-gate 1.2.7]
+  const prem=hasPremiumAccess();
   const st=getHafezDrawState();
-  if(!admin && st.count>=3) return;
+  if(!prem && st.count>=3) return;
   st.count++; localStorage.setItem('hafezDrawState', JSON.stringify(st));
   const g=getDailyFal(getDeviceId()+'-draw'+st.count);
-  const remaining=admin?-1:(3-st.count);
+  const remaining=prem?-1:(3-st.count);
   localStorage.setItem('hafezLastDraw',JSON.stringify({date:todayStr(),remaining,g:{id:g.id,verses:g.verses,interpretation:g.interpretation}}));
   renderTradResult(g,remaining);
   const btn=document.getElementById('hafez-btn');
   if(btn){
-    if(!admin && remaining<=0){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='🔮 فالم رو بگیر'; }
-    else{ btn.textContent=admin?'🔮 فالم رو بگیر (∞ ادمین)':`🔮 فالم رو بگیر (${remaining} بار دیگه امروز)`; }
+    if(!prem && remaining<=0){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='🔮 فالم رو بگیر'; }
+    else{ btn.textContent=prem?'🔮 فالم رو بگیر (∞)':`🔮 فالم رو بگیر (${remaining} بار دیگه امروز)`; }
   }
 }
 function renderTradResult(g,remaining){
@@ -916,7 +967,7 @@ function renderTradResult(g,remaining){
       <button class="btn small secondary" onclick="showFullGhazal('${g.id}')">📜 نمایش کل غزل</button>
       <button class="btn small secondary" onclick='shareText(${attrJson(`🔮 فال حافظ من:\n\n${g.verses.join("\n")}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
     </div></div>
-    <p class="small-note">${remaining===-1?'⚡ دسترسی ادمین — فال بی‌نهایت (∞)':(remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙')}</p>`;
+    <p class="small-note">${remaining===-1?(isCosmicAdmin()?'⚡ دسترسی ادمین — فال بی‌نهایت (∞)':'👑 عضویت طلایی — فال بی‌نهایت (∞)'):(remaining>0?`${remaining} فال دیگه برات مونده امروز`:'فال‌های امروزت تموم شد؛ فردا دوباره بیا 🌙')}</p>`;
 }
 function showFullGhazal(id){
   const g=getGhazalById(id);
@@ -963,7 +1014,14 @@ function showMonthPickerForZodiac(){
   render(`${backBtn('showHome()')}<div class="card"><h2>ماه تولدت رو انتخاب کن:</h2>
       <div class="chip-row">${PERSIAN_MONTHS.map((m,i)=>`<div class="chip" onclick="showZodiac(${i+1})">${m}</div>`).join('')}</div></div>`);
 }
-function showZodiac(jm, name){
+async function showZodiac(jm, name){
+  // [GOLD-gate 1.2.7] طالع‌بینی: هر روز یک‌بار رایگان؛ ادمین/طلایی بی‌نهایت
+  await ensureIapFresh();
+  if(!canUseFeature('zodiac')){
+    showFeaturePaywall('طالع‌بینی','ظرفیت رایگان امروزت برای طالع‌بینی تمام شد — هر روز یک‌بار می‌توانی رایگان ببینی. با عضویت طلایی، طالع‌بینی و همه‌ی بخش‌های اپ بدون محدودیت باز می‌شوند. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود 🌙','showHome()');
+    return;
+  }
+  bumpIfFree('zodiac');
   const text=formatHoroscope(jm);
   render(`${backBtn('showHome()')}<div class="card">${name?`<h2>♈️ طالع‌بینی ${esc(name)}</h2>`:''}<div class="verse" style="white-space:pre-line; line-height:2.1">${esc(text)}</div></div>`);
 }
@@ -981,11 +1039,18 @@ function showNatalEntry(){
       <label>شهر تولد</label><select id="nt-city">${Object.keys(IRAN_CITIES).map(k=>`<option value="${k}">${IRAN_CITIES[k].display_name}</option>`).join('')}</select>
       <button class="btn" onclick="submitNatal()">محاسبه‌ی زایچه</button></div>`);
 }
-function submitNatal(){
+async function submitNatal(){
   const hour=parseInt(document.getElementById('nt-hour').value,10);
   const minute=parseInt(document.getElementById('nt-min').value,10)||0;
   const city=document.getElementById('nt-city').value;
   if(isNaN(hour)){alert('ساعت تولد رو وارد کن.'); return;}
+  // [GOLD-gate 1.2.7] زایچه‌ی تقریبی: هر روز یک‌بار رایگان؛ ادمین/طلایی بی‌نهایت
+  await ensureIapFresh();
+  if(!canUseFeature('natal')){
+    showFeaturePaywall('زایچه‌ی تقریبی','ظرفیت رایگان امروزت برای زایچه‌ی تقریبی تمام شد — هر روز یک‌بار می‌توانی رایگان محاسبه کنی. با عضویت طلایی، زایچه و همه‌ی بخش‌های اپ بدون محدودیت باز می‌شوند. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود 🌙','showNatalEntry()');
+    return;
+  }
+  bumpIfFree('natal');
   const p=state.lastProfile;
   const [gy,gm,gd]=jalaliToGregorian(p.jy,p.jm,p.jd);
   const result=calculateNatal(gy,gm,gd,hour,minute,city);
@@ -1015,11 +1080,17 @@ function submitBabyName(){
   babyQuery={gender:window.selectedGender, family, mother, status:sv==='any'?null:(sv==='03'?['0','3']:sv), income:iv==='any'?null:iv, showTags:(sv==='any'||iv==='any')};
   renderBabyPage(0);
 }
-function renderBabyPage(page){
+async function renderBabyPage(page){
+  // [GOLD-gate 1.2.7] اسم فرزند: صفحه‌ی اول رایگان؛ ادامه‌ی لیست فقط ادمین/طلایی
+  if(page>=1 && !hasPremiumAccess()){
+    showFeaturePaywall('ادامه‌ی پیشنهاد اسم','ده پیشنهاد اول به‌صورت رایگان نمایش داده می‌شود و ادامه‌ی لیست مخصوص اعضای طلایی است. با عضویت طلایی، همه‌ی پیشنهادهای اسم فرزند بدون محدودیت باز می‌شوند.','showBabyNameForm()');
+    return;
+  }
   const result=getAllMatches(babyQuery.gender,babyQuery.family,babyQuery.mother,babyQuery.status,babyQuery.income);
   const pageData=formatBabyNamePage(babyQuery.gender,result,page);
   render(`${backBtn('showBabyNameForm()')}<div class="card"><div style="white-space:pre-line; line-height:2">${esc(pageData.text)}</div>
-      ${pageData.hasMore?`<button class="btn secondary" onclick="renderBabyPage(${page+1})">➡️ ۱۰ اسم بعدی</button>`:''}</div>`);
+      ${pageData.hasMore?`<button class="btn secondary" onclick="renderBabyPage(${page+1})">➡️ ۱۰ اسم بعدی</button>`:''}
+      ${pageData.hasMore&&!hasPremiumAccess()?'<p class="small-note">👑 ادامه‌ی لیست مخصوص اعضای طلایی است.</p>':''}</div>`);
 }
 function showCompareEntry(){
   const hasProfiles=state.savedProfiles.length>0;
@@ -1135,9 +1206,16 @@ function buildCompareNarrative(person1, person2, r1, r2){
     compareMetricBlock('عدد باطن','🔎',BATEN_TABLE,r1.batenNum,r2.batenNum,person1.name,person2.name,'batenNum'),
   ].join('');
 }
-function submitCompare(){
+async function submitCompare(){
   const person1=getComparePerson(1), person2=getComparePerson(2);
   if(!person1||!person2){alert('اطلاعات هر دو نفر رو کامل و درست وارد کن.'); return;}
+  // [GOLD-gate 1.2.7] مقایسه‌ی دو نفر: هر روز یک‌بار رایگان؛ ادمین/طلایی بی‌نهایت
+  await ensureIapFresh();
+  if(!canUseFeature('compare')){
+    showFeaturePaywall('مقایسه‌ی دو نفر','ظرفیت رایگان امروزت برای مقایسه تمام شد — هر روز یک‌بار می‌توانی رایگان مقایسه کنی. با عضویت طلایی، مقایسه و همه‌ی بخش‌های اپ بدون محدودیت باز می‌شوند. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود 🌙','showCompareEntry()');
+    return;
+  }
+  bumpIfFree('compare');
   const r1=person1.report, r2=person2.report;
   const fields=[["عدد سرنوشت","destinyNum"],["عدد تقدیر","fateNum"],["ارتعاش","vibrationNum"],["عدد باطن","batenNum"]];
   let shared=0, totalScore=0;
