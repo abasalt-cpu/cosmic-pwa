@@ -48,6 +48,7 @@ const app=document.getElementById('app');
 let __suppressPush=true;
 function currentNavKey(){const el=document.querySelector('nav.bottom .nav-btn.active'); return el?el.dataset.nav:null;}
 function render(html){
+  unmountAdBanner();
   app.innerHTML=html; window.scrollTo(0,0);
   if(!__suppressPush){ history.pushState({html, navKey:currentNavKey()}, '', location.href); }
   else { history.replaceState({html, navKey:currentNavKey()}, '', location.href); __suppressPush=false; }
@@ -74,7 +75,7 @@ document.querySelectorAll('nav.bottom .nav-btn').forEach(btn=>{
   });
 });
 function setNav(key){document.querySelectorAll('nav.bottom .nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.nav===key));}
-function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); maybeShowBirthdayCelebration(); }
+function showHome(){ setNav('home'); __wcCondensed=false; render(hubHTML()); maybeShowBirthdayCelebration(); mountAdBanner(); }
 function getTodaysBirthdayProfiles(){
   const now=new Date();
   const m=now.getMonth()+1, d=now.getDate();
@@ -169,10 +170,12 @@ function showMoreMenu(){
       <div class="list-item" onclick="showAdminUsersPage()"><span class="li-label">👥 کاربران ثبت‌شده</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showAdminProfilesPage()"><span class="li-label">📇 همه‌ی پروفایل‌ها</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showAdminErrorsPage()"><span class="li-label">🐞 خطاهای اخیر</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showAdminIapPage()"><span class="li-label">💳 خریدهای درون‌برنامه‌ای</span><span class="li-arrow">‹</span></div>
     </div>`:'';
   render(`<div class="card">
       <div class="list-item" onclick="showAboutPage()"><span class="li-label">${ICON_INFO}درباره‌ی نرم‌افزار <span style="color:#4ade80;font-weight:700">(${toFa(APP_VERSION)})</span></span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showMembershipPage()"><span class="li-label">${ICON_ACCOUNT}حساب کاربری</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showGoldPage()"><span class="li-label">👑 عضویت طلایی${isGoldUser()?' <span style="color:#f0c96a;font-weight:700">(فعال)</span>':''}</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showPrivacyPage()"><span class="li-label">${ICON_PRIVACY}حریم خصوصی</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showTermsPage()"><span class="li-label">${ICON_TERMS}قوانین و شرایط استفاده</span><span class="li-arrow">‹</span></div>
     </div>
@@ -394,6 +397,8 @@ function handleAccountDelete(){
 function onAuthChanged(user){
   if(user) mergeAndRestoreProfilesOnLogin();
   refreshMembershipViewIfVisible(user);
+  // [IAP 1.2.6] پس از هر تغییر وضعیت ورود، وضعیت طلایی/تبلیغ تازه می‌شود
+  if(typeof refreshIapStatus==='function'){ refreshIapStatus().then(()=>{ updateAdBannerIfHome(); }).catch(()=>{}); }
 }
 // [S5-fix] اگر صفحه‌ی «حساب کاربری» همین الان باز باشد، با تغییر وضعیت ورود (مثلاً
 // وقتی پاسخ /me چند لحظه بعد از بازشدن اپ می‌رسد) همان صفحه بلافاصله به‌روز شود؛
@@ -554,6 +559,153 @@ function shareText(text){ if(navigator.share){navigator.share({text});} else {na
 function isCosmicAdmin(){
   try{ return !!(typeof currentUser!=='undefined' && currentUser && currentUser.isAdmin===true); }catch(e){ return false; }
 }
+// ================== IAP کافه‌بازار / عضویت طلایی (1.2.6) ==================
+// خرید واقعی فقط داخل APK کافه‌بازار فعال می‌شود (پل CosmicBazaar)؛
+// در نسخه‌ی وب، وضعیت از سرور خوانده می‌شود و ادمین با کارت آزمایشی تست می‌کند.
+// [S-sec] هیچ داده‌ای از سرور بدون esc() نمایش داده نمی‌شود؛ stateها با var (بدون TDZ)
+const IAP_PRODUCTS=[
+  {id:'gold_month', icon:'👑', title:'عضویت طلایی ماهانه', price:'۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک ماه'},
+  {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۶۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک سال — ارزان‌تر از ماهانه'},
+  {id:'remove_ads', icon:'🔕', title:'حذف دائمی تبلیغات', price:'۱۹۹٬۰۰۰ تومان', desc:'بنرهای تبلیغاتی برای همیشه حذف می‌شوند'},
+];
+var iapStatus={isGold:false, goldUntil:null, adsRemoved:false};
+var __adBannerEl=null;
+var __adCache={data:null, t:0};
+function isGoldUser(){ return !!iapStatus.isGold; }
+function adsRemovedUser(){ return !!iapStatus.adsRemoved; }
+function isAdFreeViewer(){ return isGoldUser() || adsRemovedUser() || isCosmicAdmin(); }
+async function refreshIapStatus(){
+  if(typeof authToken==='undefined' || !authToken){ iapStatus={isGold:false, goldUntil:null, adsRemoved:false}; return iapStatus; }
+  try{
+    const d=await authFetch('/iap/status');
+    iapStatus={isGold:!!d.isGold, goldUntil:d.goldUntil||null, adsRemoved:!!d.adsRemoved};
+  }catch(e){ /* خطای موقت شبکه — آخرین وضعیت حفظ می‌شود */ }
+  return iapStatus;
+}
+function iapGoldUntilFa(){
+  if(!iapStatus.goldUntil) return '';
+  try{ return String(new Date(iapStatus.goldUntil).toLocaleDateString('fa-IR')); }catch(e){ return ''; }
+}
+// ---------- بنر تبلیغ ۳۲۰×۵۰ (فقط صفحه‌ی خانه، فقط برای غیر طلایی‌ها) ----------
+// منبع تبلیغ: یکتانت (ad.type==='yektanet') یا بنر دستی سرور (ad.type==='image')
+function unmountAdBanner(){ if(__adBannerEl){ __adBannerEl.remove(); __adBannerEl=null; } }
+function updateAdBannerIfHome(){ unmountAdBanner(); if(currentNavKey()==='home') mountAdBanner(); }
+// اجرای مجدد تگ‌های <script> بعد از innerHTML (مرورگر اسکریپتِ تزریق‌شده را خودش اجرا نمی‌کند)
+function rerunScriptsIn(container){
+  try{
+    container.querySelectorAll('script').forEach((old)=>{
+      const s=document.createElement('script');
+      for(const a of (old.attributes||[])) s.setAttribute(a.name, a.value);
+      s.text=old.textContent||'';
+      old.parentNode.replaceChild(s, old);
+    });
+  }catch(e){}
+}
+async function mountAdBanner(){
+  if(isAdFreeViewer()) return;
+  const now=Date.now();
+  if(now-__adCache.t>=600000){
+    __adCache.t=now;
+    try{ const d=await authFetch('/ads/banner'); __adCache.data=(d&&d.ad)?d.ad:null; }catch(e){ __adCache.data=null; }
+  }
+  const ad=__adCache.data;
+  if(!ad || isAdFreeViewer()) return;
+  unmountAdBanner();
+  const el=document.createElement('div');
+  el.setAttribute('role','complementary');
+  if(ad.type==='yektanet'){
+    // کد ناشری یکتانت — تنها innerHTML خام کل اپ؛ این کد فقط از طریق /admin/ads/yektanet
+    // و فقط توسط ادمین روی سرور ست می‌شود (همان سطح اعتماد کد خود اپ).
+    el.style.cssText='position:fixed; bottom:72px; left:12px; right:12px; max-width:420px; margin:0 auto; height:50px; z-index:60; background:#241742; border:1px solid #f0c96a55; border-radius:12px; box-shadow:0 4px 16px #00000066; overflow:hidden; direction:ltr;';
+    el.innerHTML='<span style="position:absolute; top:2px; left:6px; font-size:9px; color:#ffffff88; z-index:2; direction:rtl">تبلیغ</span>'+String(ad.html||'');
+    document.body.appendChild(el);
+    __adBannerEl=el;
+    rerunScriptsIn(el);
+    return;
+  }
+  el.style.cssText='position:fixed; bottom:72px; left:12px; right:12px; max-width:420px; margin:0 auto; height:50px; z-index:60; background:#241742; border:1px solid #f0c96a55; border-radius:12px; box-shadow:0 4px 16px #00000066; overflow:hidden; direction:rtl;';
+  el.innerHTML=`<div style="display:flex; align-items:center; gap:8px; height:100%; padding:0 10px; direction:rtl">
+      ${ad.imageUrl?`<img src="${esc(ad.imageUrl)}" alt="" style="height:40px; border-radius:8px; flex:none">`:''}
+      <span style="flex:1; color:#f5ead2; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(ad.title)}</span>
+      ${ad.linkUrl?'<span style="flex:none; color:#f0c96a; font-size:12px; font-weight:700">مشاهده ›</span>':''}
+    </div>
+    <span style="position:absolute; top:2px; left:6px; font-size:9px; color:#ffffff88">تبلیغ</span>`;
+  if(ad.linkUrl){ el.style.cursor='pointer'; el.addEventListener('click', ()=>{ try{ window.open(ad.linkUrl,'_blank','noopener'); }catch(e){} }); }
+  document.body.appendChild(el);
+  __adBannerEl=el;
+}
+// ---------- صفحه‌ی عضویت طلایی ----------
+function iapStartPurchase(productId){
+  // پل اندرویدی (TWA/APK): وقتی داخل APK کافه‌بازار اجرا شود، این پل موجود است
+  if(window.CosmicBazaar && typeof window.CosmicBazaar.purchase==='function'){
+    try{ window.CosmicBazaar.purchase(String(productId)); }catch(e){ alert('خطا در شروع خرید.'); }
+    return;
+  }
+  alert('خرید درون‌برنامه‌ای از طریق کافه‌بازار انجام می‌شود و فقط در نسخه‌ی اندرویدی فعال است.\nنسخه‌ی اندرویدی به‌زودی منتشر خواهد شد.');
+}
+function showGoldPage(){
+  setNav('more');
+  const statusHtml = isGoldUser()
+    ? `<p style="margin:4px 0; color:#f0c96a; font-weight:800">👑 عضویت طلایی فعال${iapGoldUntilFa()?` — تا ${iapGoldUntilFa()}`:''}</p>`
+    : (adsRemovedUser()?'<p style="margin:4px 0; color:#4ade80; font-weight:700">🔕 تبلیغات برای حساب شما حذف شده است.</p>':'<p class="desc">در حال حاضر عضویت طلایی نداری. با عضویت طلایی، بنرهای تبلیغاتی حذف می‌شوند و از مزایای ویژه بهره‌مند می‌شوی.</p>');
+  const productHtml=IAP_PRODUCTS.map(p=>`
+    <div class="list-item" style="cursor:default">
+      <span class="li-label">${p.icon} <b>${esc(p.title)}</b><br><span class="small-note">${esc(p.desc)}</span></span>
+      <button class="btn small" onclick="iapStartPurchase('${p.id}')">${p.price}</button>
+    </div>`).join('');
+  const adminHtml=isCosmicAdmin()?`
+    <div class="card">
+      <h3 style="margin:0 0 8px">🛠 پنل آزمایشی ادمین</h3>
+      <p class="small-note">تست بدون خرید واقعی: فعال‌سازی ۳۱ روزه‌ی طلایی و لغو همه‌ی مزایا.</p>
+      <div class="btn-row">
+        <button class="btn small" onclick="adminGrantGoldTest()">👑 کارت آزمایشی طلایی (۳۱ روز)</button>
+        <button class="btn small secondary" onclick="adminRevokeIapTest()">🚫 لغو مزایا</button>
+      </div>
+      <p id="iap-admin-msg" class="small-note" style="min-height:18px"></p>
+    </div>`:'';
+  render(`${backBtn('showMoreMenu()')}${pageHead('👑','عضویت طلایی')}
+    <div class="card orn">
+      ${statusHtml}
+      <p class="small-note" style="margin-top:6px">پرداخت امن از طریق کافه‌بازار انجام می‌شود و اعتبار رسید روی سرور تأیید می‌گردد.</p>
+    </div>
+    <div class="card">${productHtml}</div>
+    ${adminHtml}`);
+}
+async function adminGrantGoldTest(){
+  const msg=document.getElementById('iap-admin-msg');
+  try{
+    await authFetch('/admin/iap/grant', { method:'POST', body:JSON.stringify({ productId:'gold_month', days:31 }) });
+    await refreshIapStatus();
+    if(msg) msg.textContent='کارت آزمایشی ۳۱ روزه فعال شد ✅';
+    showGoldPage();
+  }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
+}
+async function adminRevokeIapTest(){
+  const msg=document.getElementById('iap-admin-msg');
+  try{
+    await authFetch('/admin/iap/revoke', { method:'POST', body:JSON.stringify({}) });
+    await refreshIapStatus();
+    if(msg) msg.textContent='همه‌ی مزایای فعال لغو شد ✅';
+    showGoldPage();
+  }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
+}
+async function showAdminIapPage(){
+  render(`${backBtn('showMoreMenu()')}<div class="card"><h2>💳 خریدهای درون‌برنامه‌ای</h2><p class="desc" id="iap-admin-status">در حال بارگذاری...</p></div><div id="iap-admin-list"></div>`);
+  try{
+    const data=await authFetch('/admin/iap/purchases');
+    document.getElementById('iap-admin-status').textContent=`تعداد: ${data.purchases.length} (آخرین ۲۰۰ مورد)`;
+    document.getElementById('iap-admin-list').innerHTML=data.purchases.length?data.purchases.map(p=>`
+      <div class="card"><p style="margin:0; line-height:1.9">
+        <b>${esc(p.email||p.user_id)}</b> — ${esc(p.product_id)}<br>
+        وضعیت: ${esc(p.status)} (${esc(p.source)})<br>
+        ${p.expires_at?`انقضا: ${esc(new Date(p.expires_at).toLocaleDateString('fa-IR'))}`:'دائمی'}
+      </p></div>`).join(''):'<div class="card"><p class="desc">هنوز خریدی ثبت نشده است.</p></div>';
+  }catch(e){
+    const el=document.getElementById('iap-admin-status'); if(el) el.textContent=translateAuthError(e);
+  }
+}
+// وضعیت اولیه: اگر از قبل وارد شده‌ایم، یک‌بار از سرور بگیر
+if(typeof authToken!=='undefined' && authToken){ refreshIapStatus().catch(()=>{}); }
 function getHafezDrawState(){
   const key='hafezDrawState'; const today=todayStr();
   // [F3-fix] خواندن امن: JSON خراب دیگر صفحه‌ی فال را نمی‌اندازد
