@@ -661,6 +661,13 @@ function showGoldPage(){
         <button class="btn small" onclick="adminGrantGoldTest()">👑 کارت آزمایشی طلایی (۳۱ روز)</button>
         <button class="btn small secondary" onclick="adminRevokeIapTest()">🚫 لغو مزایا</button>
       </div>
+      <p class="small-note" style="margin:12px 0 6px">اعطا/لغو برای «کاربر دیگر»: ایمیلِ حسابِ عضوشده‌ی هدف را وارد کن (مثلاً برای تست با یک اکانت دوم).</p>
+      <input id="admin-target-email" type="email" dir="ltr" placeholder="example@email.com" style="width:100%; box-sizing:border-box; margin-bottom:8px">
+      <div class="btn-row">
+        <button class="btn small" onclick="adminGrantOther('gold_month')">👑 طلایی ۳۱ روزه</button>
+        <button class="btn small" onclick="adminGrantOther('remove_ads')">🔕 حذف تبلیغات</button>
+        <button class="btn small secondary" onclick="adminRevokeOther()">🚫 لغو این کاربر</button>
+      </div>
       <p id="iap-admin-msg" class="small-note" style="min-height:18px"></p>
     </div>`:'';
   render(`${backBtn('showMoreMenu()')}${pageHead('👑','عضویت طلایی')}
@@ -687,6 +694,32 @@ async function adminRevokeIapTest(){
     await refreshIapStatus();
     if(msg) msg.textContent='همه‌ی مزایای فعال لغو شد ✅';
     showGoldPage();
+  }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
+}
+// [IAP 1.2.6b] اعطا/لغو برای کاربر دیگر — سرور ایمیل/شناسه‌ی هدف را می‌پذیرد (resolveTargetUser)
+function adminTargetEmail(){
+  const el=document.getElementById('admin-target-email');
+  const email=el?(el.value||'').trim():'';
+  const msg=document.getElementById('iap-admin-msg');
+  if(!email){ if(msg) msg.textContent='ایمیل کاربر هدف را وارد کن.'; return null; }
+  return email;
+}
+async function adminGrantOther(productId){
+  const email=adminTargetEmail(); if(!email) return;
+  const msg=document.getElementById('iap-admin-msg');
+  try{
+    const d=await authFetch('/admin/iap/grant', { method:'POST', body:JSON.stringify({ email, productId, days:productId==='gold_month'?31:0 }) });
+    const st=(d&&d.status)?d.status:null;
+    if(msg) msg.textContent=(productId==='gold_month'?'👑 طلایی ۳۱ روزه':'🔕 حذف تبلیغات')+' برای '+email+' اعمال شد ✅'
+      +(st?(' — طلایی: '+(st.isGold?'فعال':'خیر')+' | حذف تبلیغ: '+(st.adsRemoved?'بله':'خیر')):'');
+  }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
+}
+async function adminRevokeOther(){
+  const email=adminTargetEmail(); if(!email) return;
+  const msg=document.getElementById('iap-admin-msg');
+  try{
+    await authFetch('/admin/iap/revoke', { method:'POST', body:JSON.stringify({ email }) });
+    if(msg) msg.textContent='🚫 همه‌ی مزایای فعالِ '+email+' لغو شد ✅';
   }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
 }
 async function showAdminIapPage(){
