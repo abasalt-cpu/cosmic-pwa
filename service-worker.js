@@ -42,13 +42,23 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-  // کد و داده (JS/HTML/JSON): همیشه از سرور تازه بگیر تا آپدیت‌ها بلافاصله اعمال بشن.
+  // کد و داده (JS/HTML/JSON): اول تلاش برای نسخه‌ی تازه‌ی سرور تا آپدیت‌ها اعمال شوند؛
+  // [1.2.16] اما اگر شبکه کند بود و نسخه‌ی کش‌شده داشتیم، بعد از ۳.۵ ثانیه همان را فوراً
+  // نشان می‌دهیم تا اسپلش معطل نماند. فچِ شبکه در پس‌زمینه ادامه می‌یابد و کش را برای
+  // بازشدن‌های بعدی تازه می‌کند. اگر کشی نداریم (اولین بازدید) مثل قبل منتظر شبکه می‌مانیم.
   event.respondWith(
-    fetch(event.request, {cache: 'no-store'}).then((fresh) => {
-      if(fresh.ok){ const copy = fresh.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)); }
-      return fresh;
-    }).catch(() => caches.match(event.request).then((cached) => {
-      if (cached) return cached;
+    caches.match(event.request).then((cached) => {
+      const network = fetch(event.request, {cache: 'no-store'}).then((fresh) => {
+        if(fresh.ok){ const copy = fresh.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)); }
+        return fresh;
+      });
+      if(!cached) return network;
+      return Promise.race([
+        network,
+        new Promise((resolve) => { setTimeout(() => resolve(cached), 3500); }),
+      ]).catch(() => cached);
+    }).catch(() => caches.match(event.request).then((cachedFallback) => {
+      if (cachedFallback) return cachedFallback;
       if (event.request.mode === 'navigate') return caches.match('./offline.html');
       return Response.error();
     }))
