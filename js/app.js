@@ -693,7 +693,8 @@ async function mountAdBanner(){
   if(ad.type==='yektanet'){
     // کد ناشری یکتانت — تنها innerHTML خام کل اپ؛ این کد فقط از طریق /admin/ads/yektanet
     // و فقط توسط ادمین روی سرور ست می‌شود (همان سطح اعتماد کد خود اپ).
-    el.style.cssText='position:fixed; bottom:72px; left:12px; right:12px; max-width:420px; margin:0 auto; height:50px; z-index:60; background:#241742; border:1px solid #f0c96a55; border-radius:12px; box-shadow:0 4px 16px #00000066; overflow:hidden; direction:ltr;';
+    // [1.2.13] ارتفاع تطبیقی: قالب کوچک یکتانت ۳۲۰×۱۰۰ رندر می‌شود؛ جعبه ۵۰px نبود و بریده می‌شد.
+    el.style.cssText='position:fixed; bottom:72px; left:12px; right:12px; max-width:420px; margin:0 auto; min-height:50px; max-height:124px; display:flex; align-items:center; justify-content:center; z-index:60; background:#241742; border:1px solid #f0c96a55; border-radius:12px; box-shadow:0 4px 16px #00000066; overflow:hidden; direction:ltr;';
     el.innerHTML='<span style="position:absolute; top:2px; left:6px; font-size:9px; color:#ffffff88; z-index:2; direction:rtl">تبلیغ</span>'+String(ad.html||'');
     document.body.appendChild(el);
     __adBannerEl=el;
