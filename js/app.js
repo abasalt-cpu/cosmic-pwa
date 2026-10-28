@@ -575,7 +575,9 @@ function showCosmicResult(firstName,familyName,r){
     </div>`);
   fitCode(); if(document.fonts){ document.fonts.ready.then(fitCode); document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',fitCode); } setTimeout(fitCode,300); setTimeout(fitCode,1200);
 }
-const APP_SHARE_URL="https://abasalt-cpu.github.io/cosmic-pwa/";
+// [1.2.15] نشانی اشتراک‌گذاری هوشمند: روی میزبان قدیمی (github.io) همان مسیر پروژه؛
+// روی دامنهٔ اصلی (cosmiccode.ir / www) و هر میزبان دیگری، ریشهٔ دامنه — لینک‌ها همیشه درست می‌مانند.
+const APP_SHARE_URL = location.hostname==='abasalt-cpu.github.io' ? 'https://abasalt-cpu.github.io/cosmic-pwa/' : 'https://cosmiccode.ir/';
 function shareText(text){ if(navigator.share){navigator.share({text});} else {navigator.clipboard.writeText(text); alert('متن کپی شد.');} }
 // [ADMIN-unlock 1.2.5] ادمین (cosmiccode396@gmail.com) در هیچ بخشی محدودیت روزانه ندارد.
 function isCosmicAdmin(){
