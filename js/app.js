@@ -48,7 +48,7 @@ const app=document.getElementById('app');
 let __suppressPush=true;
 function currentNavKey(){const el=document.querySelector('nav.bottom .nav-btn.active'); return el?el.dataset.nav:null;}
 function render(html){
-  unmountAdBanner();
+  hideAdBanner(); // [1.2.16] مخفی به‌جای حذف — کریتیو یکتانت فقط یک بار در هر نشست رندر می‌شود
   app.innerHTML=html; window.scrollTo(0,0);
   if(!__suppressPush){ history.pushState({html, navKey:currentNavKey()}, '', location.href); }
   else { history.replaceState({html, navKey:currentNavKey()}, '', location.href); __suppressPush=false; }
@@ -57,6 +57,7 @@ window.addEventListener('popstate', (e)=>{
   if(e.state && typeof e.state.html==='string'){
     app.innerHTML=e.state.html; window.scrollTo(0,0);
     if(e.state.navKey) setNav(e.state.navKey);
+    mountAdBanner(); // [1.2.16] دکمهٔ بازگشت مرورگر/ژست back: بنر در بازگشت به خانه دوباره دیده شود
   }
 });
 function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -488,6 +489,15 @@ function backBtn(fn,label){return `<button class="back-btn" aria-label="${label|
 const ORN_DIV='<div class="orn-div"><span></span><i>✦</i><span></span></div>';
 function pageHead(icon,title,sub,cls){return `<div class="pg-head">${icon?`<div class="pg-ic">${icon}</div>`:''}<h1 class="pg-title ${cls||''}">${title}</h1>${ORN_DIV}${sub?`<p class="pg-sub">${sub}</p>`:''}</div>`;}
 function toFa(n){return String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);}
+// [QUOTA 1.2.16] یادآور سهمیهٔ روزانهٔ محاسبه (فقط برای کاربران رایگان نمایش داده می‌شود)
+function cosmicQuotaNoteHtml(){
+  try{
+    if(hasFeatureAccess('cosmic')) return '';
+    return canUseFeature('cosmic')
+      ? '<p class="small-note center">🎁 سهمیه‌ی رایگان امروز: ۱ محاسبه</p>'
+      : '<p class="small-note center" style="color:#f0c96a">ظرفیت رایگان امروز پر شده — با 👑 عضویت طلایی محاسبه بی‌نهایت است (فردا دوباره ۱ محاسبه‌ی رایگان).</p>';
+  }catch(e){ return ''; }
+}
 function showCosmicInputForm(){
   setNav('cosmic');
   render(`${backBtn('showHome()')}${pageHead('✦','محاسبه‌ی کد کیهانی','اطلاعات خود را وارد کنید تا کد کیهانی شما محاسبه شود.')}
@@ -502,9 +512,12 @@ function showCosmicInputForm(){
         <div><input id="cf-day" type="number" placeholder="15" min="1" max="31"><small>روز</small></div>
       </div>
       <button class="btn" onclick="submitCosmicForm()">✦ محاسبه کن</button>
+      ${cosmicQuotaNoteHtml()}
       <p class="small-note center">✦ کد شما، منحصر به شماست.</p></div>`);
 }
-function submitCosmicForm(){
+// [QUOTA 1.2.16] سهمیهٔ روزانه روی «ثبت محاسبه» اعمال می‌شود، نه ورود به فرم —
+// تا دکمهٔ بازگشت از صفحهٔ نتیجه کاربر را به ناگهان به پی‌وال نیندازد.
+async function submitCosmicForm(){
   const firstName=document.getElementById('cf-first').value.trim();
   const familyName=document.getElementById('cf-family').value.trim();
   const motherName=document.getElementById('cf-mother').value.trim();
@@ -512,7 +525,17 @@ function submitCosmicForm(){
   const jm=parseInt(document.getElementById('cf-month').value,10);
   const jy=parseInt(document.getElementById('cf-year').value,10);
   if(!firstName||!familyName||!jd||!jy||jd<1||jd>31||jy<1300||jy>1420){alert('لطفاً نام، نام خانوادگی و تاریخ تولد رو کامل و درست وارد کن.'); return;}
+  // [GOLD-gate 1.2.16] هر روز یک‌بار رایگان؛ ادمین/طلایی بی‌نهایت — همان الگوی طالع‌بینی:
+  // چک محلی فوری؛ فقط اگر رد شد یک‌بار تازه‌سازی وضعیت طلایی و تصمیم مجدد
+  if(!canUseFeature('cosmic')){
+    await ensureIapFresh();
+    if(!canUseFeature('cosmic')){
+      showFeaturePaywall('محاسبه‌ی کد کیهانی','ظرفیت رایگان امروزت برای محاسبه تمام شد — هر روز یک‌بار می‌توانی رایگان محاسبه کنی. با عضویت طلایی، محاسبه‌ی کد کیهانی برای هر تعداد نفر، بی‌نهایت و بدون محدودیت می‌شود. سهمیه‌ی رایگان فردا دوباره شارژ می‌شود ✨','showCosmicInputForm()');
+      return;
+    }
+  }
   const report=calculateCosmicReport(firstName,familyName,motherName,jy,jm,jd);
+  bumpIfFree('cosmic'); // فقط محاسبهٔ موفق مصرف می‌شود؛ ورودی نامعتبر سهمیه را نمی‌سوزاند
   saveProfile({firstName,familyName,motherName,jy,jm,jd,report,date:new Date().toISOString()});
   showCosmicResult(firstName,familyName,report);
 }
@@ -596,7 +619,9 @@ function hasFeatureAccess(f){ return hasPremiumAccess() || featureGranted(f); }
 // برچسب فارسی سطح دسترسی (برای متن‌های «∞» — ادمین/طلایی/ویژه)
 function premBadgeFa(){ return isCosmicAdmin()?'⚡ دسترسی ادمین':(isGoldUser()?'👑 دسترسی طلایی':'✨ دسترسی ویژه'); }
 // سهمیه‌ی رایگانِ روزانه برای بقیه‌ی کاربران (ریست روزانه، مثل فال حافظ)
-const FEATURE_FREE_LIMITS={ zodiac:1, natal:1, compare:1 };
+// [QUOTA 1.2.16] محاسبه‌ی کد کیهانی هم از این نسخه روزی یک‌بار رایگان است؛
+// ادمین و اعضای طلایی بی‌نهایت محاسبه دارند (درخواست صاحب اپ).
+const FEATURE_FREE_LIMITS={ zodiac:1, natal:1, compare:1, cosmic:1 };
 function getUsageState(){
   const key='cosmicUsageState'; const today=todayStr();
   // [F3-fix الگو] خواندن امن: JSON خراب یا تاریخِ دیگر → شمارنده‌ی تازه
@@ -631,7 +656,7 @@ function showFeaturePaywall(title, msg, backFn){
 // [S-sec] هیچ داده‌ای از سرور بدون esc() نمایش داده نمی‌شود؛ stateها با var (بدون TDZ)
 const IAP_PRODUCTS=[
   {id:'gold_month', icon:'👑', title:'عضویت طلایی ماهانه', price:'۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک ماه'},
-  {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۶۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک سال — ارزان‌تر از ماهانه'},
+  {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۴۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک سال — ارزان‌تر از ماهانه'},
   {id:'remove_ads', icon:'🔕', title:'حذف دائمی تبلیغات', price:'۱۹۹٬۰۰۰ تومان', desc:'بنرهای تبلیغاتی برای همیشه حذف می‌شوند'},
 ];
 var iapStatus={isGold:false, goldUntil:null, adsRemoved:false, features:[]};
@@ -668,7 +693,21 @@ function iapGoldUntilFa(){
 // ---------- بنر تبلیغ ۳۲۰×۵۰ (فقط صفحه‌ی خانه، فقط برای غیر طلایی‌ها) ----------
 // منبع تبلیغ: یکتانت (ad.type==='yektanet') یا بنر دستی سرور (ad.type==='image')
 function unmountAdBanner(){ if(__adBannerEl){ __adBannerEl.remove(); __adBannerEl=null; document.body.classList.remove('ad-on'); } }
-function updateAdBannerIfHome(){ unmountAdBanner(); if(currentNavKey()==='home') mountAdBanner(); }
+// [1.2.16] مخفی‌کردن بدون حذف: اسکریپت یکتانت (yn_pub) در هر بارگذاری صفحه فقط یک بار
+// مقداردهی می‌شود؛ حذف و ساخت دوبارهٔ جعبه یعنی کریتیو دیگر رندر نمی‌شود و «کادر خالی»
+// می‌ماند (باگ گزارش‌شده). حالا فقط display را بین flex و none عوض می‌کنیم.
+function hideAdBanner(){ if(__adBannerEl){ __adBannerEl.style.display='none'; document.body.classList.remove('ad-on'); } }
+function updateAdBannerIfHome(){
+  // فقط وقتی «وضعیت دسترسی» عوض شده (ورود/خروج/طلایی/حذف تبلیغ) فرق می‌کند؛
+  // هیچ‌وقت جعبهٔ زنده را از نو نمی‌سازیم تا کریتیو یکتانت نکُشد.
+  if(isAdFreeViewer()){ unmountAdBanner(); return; }
+  if(__adBannerEl){
+    if(currentNavKey()==='home'){ __adBannerEl.style.display='flex'; document.body.classList.add('ad-on'); }
+    else hideAdBanner();
+    return;
+  }
+  if(currentNavKey()==='home') mountAdBanner();
+}
 // اجرای مجدد تگ‌های <script> بعد از innerHTML (مرورگر اسکریپتِ تزریق‌شده را خودش اجرا نمی‌کند)
 function rerunScriptsIn(container){
   try{
@@ -682,6 +721,13 @@ function rerunScriptsIn(container){
 }
 async function mountAdBanner(){
   if(isAdFreeViewer()) return;
+  // [1.2.16] اگر جعبه از قبل ساخته شده (بازگشت به خانه) فقط نشان بده — ساخت دوباره = کادر خالی
+  if(__adBannerEl){
+    if(currentNavKey()!=='home'){ hideAdBanner(); return; }
+    __adBannerEl.style.display='flex';
+    document.body.classList.add('ad-on');
+    return;
+  }
   const now=Date.now();
   if(now-__adCache.t>=600000){
     __adCache.t=now;
