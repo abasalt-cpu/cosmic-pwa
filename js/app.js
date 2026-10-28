@@ -375,10 +375,11 @@ function handleEmailSignUp(){
 }
 function handleSignOut(){
   signOutUser().then(()=>{
-    // [S5-fix] خروج از حساب فقط نشست را تمام می‌کند؛ پروفایل‌ها و اطلاعات ذخیره‌شده‌ی
-    // محلی حفظ می‌شوند (دقیقاً مثل حالتی که اپ به‌روزرسانی می‌شود). پاک‌سازی کامل
-    // اطلاعات فقط از مسیر «حذف حساب» انجام می‌شود. با ورود دوباره، پروفایل‌ها از
-    // سرور بازیابی و با نسخه‌ی محلی ادغام می‌شوند (mergeAndRestoreProfilesOnLogin).
+    // [PRIVACY 1.2.12] پاک‌سازی پروفایل‌های محلی خودکار در onAuthChanged(null) انجام
+    // می‌شود (signOutUser آن را صدا می‌زند): خروج از حساب = پاک شدن اطلاعات پروفایل
+    // از گوشی. نسخه‌ی سمت سرور (مربوط به حساب) دست‌نخورده می‌ماند و با ورود دوباره
+    // کامل برمی‌گردد (mergeAndRestoreProfilesOnLogin → fetchMyProfilesFromServer).
+    // حذفِ داده از سرور فقط از مسیر «حذف حساب» انجام می‌شود.
     showMembershipPage();
   });
 }
@@ -394,8 +395,26 @@ function handleAccountDelete(){
     showMembershipPage();
   }).catch((err)=>{ alert(translateAuthError(err)); });
 }
+// [PRIVACY 1.2.12] خروج از حساب (یا منقضی شدن نشست) = پاک شدن اطلاعات پروفایل از
+// این دستگاه. پروفایل‌ها به «حساب» تعلق دارند نه به گوشی؛ نسخه‌ی سمت سرور (user_id)
+// دست‌نخورده می‌ماند و با ورود دوباره کامل برمی‌گردد. این کار همچنین از نشت
+// پروفایل‌های کاربر قبلی به حساب کاربر بعدی روی همان گوشی (از طریق merge هنگام ورود)
+// جلوگیری می‌کند.
+// نکته: شمارنده‌های مصرف روزانه (cosmicUsageState، hafezDrawState و...) داده‌ی
+// پروفایل نیستند و برای جلوگیری از دور زدن سهمیه‌های رایگان با خروج پاک نمی‌شوند.
+function clearLocalProfileData(){
+  state.lastProfile=null;
+  state.savedProfiles=[];
+  try{ localStorage.removeItem('lastProfile'); }catch(e){}
+  try{ localStorage.removeItem('savedProfiles'); }catch(e){}
+  // یادآوری تولد از پروفایل‌ها ساخته می‌شود؛ حالا که خالی شدند، فهرست خالی به سرور
+  // می‌رود تا اعلانِ با نام افراد بعد از خروج هم نیاید (تنظیم روشن/خاموش کاربر حفظ
+  // می‌شود و با ورود دوباره خودکار بازسازی می‌شود).
+  if(typeof syncBirthdayReminders==='function'){ try{ syncBirthdayReminders().catch(()=>{}); }catch(e){} }
+}
 function onAuthChanged(user){
   if(user) mergeAndRestoreProfilesOnLogin();
+  else clearLocalProfileData(); // [PRIVACY 1.2.12] خروج/انقضای نشست = پاک شدن پروفایل‌های محلی
   refreshMembershipViewIfVisible(user);
   // [IAP 1.2.6] پس از هر تغییر وضعیت ورود، وضعیت طلایی/تبلیغ تازه می‌شود
   if(typeof refreshIapStatus==='function'){ refreshIapStatus().then(()=>{ updateAdBannerIfHome(); }).catch(()=>{}); }
@@ -428,6 +447,9 @@ async function mergeAndRestoreProfilesOnLogin(){
     localStorage.setItem('savedProfiles', JSON.stringify(state.savedProfiles));
     syncProfilesToServer(); // فقط بعد از merge، لیست کامل رو دوباره به سرور می‌فرستیم
   }
+  // [PRIVACY 1.2.12] یادآوری‌های تولد هنگام خروج خالی شده بودند؛ حالا که پروفایل‌ها
+  // برگشتند (از سرور یا از merge)، فهرست تازه دوباره به سرور می‌رود.
+  if(typeof syncBirthdayReminders==='function'){ try{ syncBirthdayReminders().catch(()=>{}); }catch(e){} }
 }
 async function fetchMyProfilesFromServer(){
   if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER') || !authToken) return;
