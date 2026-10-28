@@ -665,7 +665,7 @@ function iapGoldUntilFa(){
 }
 // ---------- بنر تبلیغ ۳۲۰×۵۰ (فقط صفحه‌ی خانه، فقط برای غیر طلایی‌ها) ----------
 // منبع تبلیغ: یکتانت (ad.type==='yektanet') یا بنر دستی سرور (ad.type==='image')
-function unmountAdBanner(){ if(__adBannerEl){ __adBannerEl.remove(); __adBannerEl=null; } }
+function unmountAdBanner(){ if(__adBannerEl){ __adBannerEl.remove(); __adBannerEl=null; document.body.classList.remove('ad-on'); } }
 function updateAdBannerIfHome(){ unmountAdBanner(); if(currentNavKey()==='home') mountAdBanner(); }
 // اجرای مجدد تگ‌های <script> بعد از innerHTML (مرورگر اسکریپتِ تزریق‌شده را خودش اجرا نمی‌کند)
 function rerunScriptsIn(container){
@@ -687,6 +687,7 @@ async function mountAdBanner(){
   }
   const ad=__adCache.data;
   if(!ad || isAdFreeViewer()) return;
+  if(currentNavKey()!=='home') return; // [1.2.14] اگر حین دریافت بنر به صفحهٔ دیگری رفته بودیم، سوار نشود
   unmountAdBanner();
   const el=document.createElement('div');
   el.setAttribute('role','complementary');
@@ -695,9 +696,10 @@ async function mountAdBanner(){
     // و فقط توسط ادمین روی سرور ست می‌شود (همان سطح اعتماد کد خود اپ).
     // [1.2.13] ارتفاع تطبیقی: قالب کوچک یکتانت ۳۲۰×۱۰۰ رندر می‌شود؛ جعبه ۵۰px نبود و بریده می‌شد.
     el.style.cssText='position:fixed; bottom:72px; left:12px; right:12px; max-width:420px; margin:0 auto; min-height:50px; max-height:124px; display:flex; align-items:center; justify-content:center; z-index:60; background:#241742; border:1px solid #f0c96a55; border-radius:12px; box-shadow:0 4px 16px #00000066; overflow:hidden; direction:ltr;';
-    el.innerHTML='<span style="position:absolute; top:2px; left:6px; font-size:9px; color:#ffffff88; z-index:2; direction:rtl">تبلیغ</span>'+String(ad.html||'');
+    el.innerHTML='<span style="position:absolute; top:0; left:0; font-size:9px; color:#ffffffe6; background:#241742e0; padding:2px 7px; border-radius:10px 0 10px 0; z-index:2; direction:rtl">تبلیغ</span>'+String(ad.html||'');
     document.body.appendChild(el);
     __adBannerEl=el;
+    document.body.classList.add('ad-on'); // [1.2.14] فاصلهٔ اسکرول محتوای خانه تا بالای بنر
     rerunScriptsIn(el);
     return;
   }
@@ -707,7 +709,7 @@ async function mountAdBanner(){
       <span style="flex:1; color:#f5ead2; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(ad.title)}</span>
       ${ad.linkUrl?'<span style="flex:none; color:#f0c96a; font-size:12px; font-weight:700">مشاهده ›</span>':''}
     </div>
-    <span style="position:absolute; top:2px; left:6px; font-size:9px; color:#ffffff88">تبلیغ</span>`;
+    <span style="position:absolute; top:0; left:0; font-size:9px; color:#ffffffe6; background:#241742e0; padding:2px 7px; border-radius:10px 0 10px 0">تبلیغ</span>`;
   if(ad.linkUrl){ el.style.cursor='pointer'; el.addEventListener('click', ()=>{ try{ window.open(ad.linkUrl,'_blank','noopener'); }catch(e){} }); }
   document.body.appendChild(el);
   __adBannerEl=el;
