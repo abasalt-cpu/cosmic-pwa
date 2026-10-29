@@ -168,7 +168,7 @@ function showNotifications(){
 function showMoreMenu(){
   setNav('more');
   const adminBlock=(currentUser && currentUser.isAdmin)?`<div class="card">
-      <div class="list-item" onclick="showAdminUsersPage()"><span class="li-label">👥 کاربران ثبت‌شده</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showAdminUsersPage()"><span class="li-label">👥 حساب‌های کاربران</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showAdminProfilesPage()"><span class="li-label">📇 همه‌ی پروفایل‌ها</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showAdminErrorsPage()"><span class="li-label">🐞 خطاهای اخیر</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showAdminIapPage()"><span class="li-label">💳 خریدهای درون‌برنامه‌ای</span><span class="li-arrow">‹</span></div>
@@ -183,22 +183,72 @@ function showMoreMenu(){
     ${adminBlock}
     <div class="small-note">اطلاعات پروفایل‌های شما (نام، تاریخ تولد و نتایج) بر روی دستگاه شما و همچنین سرور اختصاصی ما ذخیره می‌شود. جزئیات کامل در بخش «حریم خصوصی» ارائه شده است.</div>`);
 }
+// [1.2.18] پنل «حساب‌های کاربران» — لیست اکانت‌ها با وضعیت عضویت/دسترسی هرکدام
+// (نیازمند Worker جدید: /admin/users حالا isGold/goldUntil/adsRemoved/features/provider را هم برمی‌گرداند)
+var __adminUsersData=[];
+var __adminUsersPendingCount=0;
+var __adminAccessPickEmail=null; // ایمیل انتخاب‌شده از این پنل برای ویرایش دسترسی
 async function showAdminUsersPage(){
-  render(`${backBtn('showMoreMenu()')}<div class="card"><h2>👥 کاربران ثبت‌شده</h2><p class="desc" id="admin-status">در حال بارگذاری...</p></div><div id="admin-list"></div>`);
+  render(`${backBtn('showMoreMenu()')}<div class="card"><h2>👥 حساب‌های کاربران</h2>
+    <p class="desc" id="admin-status">در حال بارگذاری...</p>
+    <input id="admin-users-search" type="search" dir="ltr" placeholder="جستجوی ایمیل یا نام..." style="width:100%; box-sizing:border-box; margin-top:6px" oninput="renderAdminUsersList()">
+    <p class="small-note" style="margin:8px 0 0">راهنمای نشان‌ها: ⚡ ادمین — 👑 طلایی — 🔕 بی‌تبلیغ — 🔮♈️🌌🔗👶 دسترسی ویژه — 🛒 خرید واقعی کافه‌بازار — 🛠 اعطای ادمین</p>
+  </div><div id="admin-list"></div>`);
   try{
     const data=await authFetch('/admin/users', { headers:{ Authorization:'Bearer '+authToken } });
-    document.getElementById('admin-status').textContent=`تعداد: ${data.users.length}`;
-    document.getElementById('admin-list').innerHTML=data.users.map(u=>`
-      <div class="card">
-        <p style="margin:0; line-height:1.9">
-          ${u.email?`✉️ ${esc(u.email)}<br>`:''}${u.phone?`📱 ${esc(u.phone)}<br>`:''}${u.display_name?`👤 ${esc(u.display_name)}<br>`:''}
-          <span class="small-note">عضویت: ${new Date(u.created_at).toLocaleString('fa-IR')}</span>
-        </p>
-      </div>`).join('') || '<div class="card"><p class="desc" style="margin:0">هنوز کاربری ثبت‌نام نکرده.</p></div>';
+    __adminUsersData=(data&&data.users)||[];
+    __adminUsersPendingCount=(data&&typeof data.pendingCount==='number')?data.pendingCount:0;
+    document.getElementById('admin-status').textContent=`تعداد حساب‌ها: ${toFa(__adminUsersData.length)}`+(__adminUsersPendingCount?` — ⏳ در انتظار ثبت‌نام: ${toFa(__adminUsersPendingCount)}`:'');
+    renderAdminUsersList();
   }catch(e){
     document.getElementById('admin-status').textContent='';
     document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
   }
+}
+function adminUserChipsHtml(u){
+  const chips=[];
+  if(u.isAdmin) chips.push('<span style="background:#f0c96a22; color:#f0c96a; border-radius:8px; padding:1px 7px; font-size:11px; font-weight:700">⚡ ادمین</span>');
+  if(u.isGold) chips.push('<span style="background:#f0c96a22; color:#f0c96a; border-radius:8px; padding:1px 7px; font-size:11px; font-weight:700">👑 طلایی'+(u.goldUntil?(' تا '+iapDateFa(u.goldUntil)):'')+'</span>');
+  if(u.adsRemoved) chips.push('<span style="background:#4ade8022; color:#4ade80; border-radius:8px; padding:1px 7px; font-size:11px">🔕 بی‌تبلیغ</span>');
+  const F={hafez:'🔮', zodiac:'♈️', natal:'🌌', compare:'🔗', babyname:'👶'};
+  const raw=Array.isArray(u.features)?u.features:[];
+  for(let i=0;i<raw.length;i++){
+    const x=raw[i]; const f=(typeof x==='string')?x:(x&&x.f);
+    if(!f||!F[f]) continue;
+    const until=(x&&typeof x==='object'&&x.until)?x.until:null;
+    chips.push('<span style="background:#8f7bff22; color:#cabfff; border-radius:8px; padding:1px 7px; font-size:11px">'+F[f]+(until?(' تا '+iapDateFa(until)):'')+'</span>');
+  }
+  if(u.hasBazaarPurchase) chips.push('<span style="background:#4ade8022; color:#4ade80; border-radius:8px; padding:1px 7px; font-size:11px">🛒 خرید بازار</span>');
+  else if(u.hasManualGrant) chips.push('<span style="background:#ffffff14; color:#cfc3e8; border-radius:8px; padding:1px 7px; font-size:11px">🛠 اعطای ادمین</span>');
+  return chips.join(' ');
+}
+function renderAdminUsersList(){
+  const box=document.getElementById('admin-list'); if(!box) return;
+  const inp=document.getElementById('admin-users-search');
+  const q=((inp&&inp.value)||'').trim().toLowerCase();
+  const list=__adminUsersData.filter((u)=>!q||String(u.email||'').toLowerCase().indexOf(q)>=0||String(u.displayName||'').toLowerCase().indexOf(q)>=0);
+  if(!list.length){ box.innerHTML='<div class="card"><p class="desc" style="margin:0">'+(q?'موردی مطابق جستجو پیدا نشد.':'هنوز کاربری ثبت‌نام نکرده.')+'</p></div>'; return; }
+  box.innerHTML=list.map((u)=>{
+    const chipHtml=adminUserChipsHtml(u);
+    const created=(u.createdAt||u.created_at);
+    let createdFa='';
+    try{ createdFa=new Date(created).toLocaleString('fa-IR'); }catch(e){}
+    const pickAttr=u.email?` style="cursor:pointer" onclick="adminUsersPick('${esc(u.email)}')"`:'';
+    return `
+      <div class="card"${pickAttr}>
+        <p style="margin:0; line-height:1.9">
+          ${u.email?`✉️ <b style="direction:ltr; unicode-bidi:isolate; display:inline-block">${esc(u.email)}</b>`:`📱 ${esc(u.phone||u.id)}`}
+          <span class="small-note">(${u.provider==='google'?'گوگل':'ایمیل'})</span>${u.displayName?`<br>👤 ${esc(u.displayName)}`:''}<br>
+          ${chipHtml||'<span class="small-note">عضویت عادی — بدون دسترسی ویژه</span>'}
+          ${u.email?`<br><span class="small-note">برای ویرایش دسترسی‌ها روی کارت بزن ↩︎</span>`:''}
+          <br><span class="small-note">عضویت: ${createdFa}</span>
+        </p>
+      </div>`;
+  }).join('');
+}
+function adminUsersPick(email){
+  __adminAccessPickEmail=email;
+  showGoldPage();
 }
 async function showAdminErrorsPage(){
   render(`${backBtn('showMoreMenu()')}<div class="card"><h2>🐞 خطاهای اخیر</h2><p class="desc" id="admin-status">در حال بارگذاری...</p></div><div id="admin-list"></div>`);
@@ -273,7 +323,7 @@ function showAboutPage(){
     <p class="small-note center">نسخه‌ی فعلی: ${toFa(APP_VERSION)} — این نرم‌افزار به‌طور مستمر به‌روزرسانی می‌شود و امکانات تازه به آن افزوده خواهد شد.</p>`);
 }
 function togglePw(){const i=document.getElementById('auth-password'),b=document.getElementById('pw-eye'); if(!i) return; const show=i.type==='password'; i.type=show?'text':'password'; b.innerHTML=`<svg viewBox="0 0 24 24">${PV_ICONS[show?'eye':'eyeOpen']}</svg>`;}
-function showMembershipPage(){
+function showMembershipPage(mode){ // [1.2.18] mode='buy': ورود برای ادامه‌ی خرید
   if(currentUser){
     const label = currentUser.displayName || currentUser.email || currentUser.phone || 'کاربر';
     const sub = currentUser.email || currentUser.phone || '';
@@ -330,7 +380,7 @@ function handleGoogleButtonClick(){
 }
 function handleGoogleTokenResponse(response){
   if(!response || response.error){ return; }
-  signInWithGoogleCredential(response.access_token).then(()=>{ showMembershipPage(); }).catch((err)=>{ alert(translateAuthError(err)); });
+  signInWithGoogleCredential(response.access_token).then(()=>{ handleAuthSuccess(); }).catch((err)=>{ alert(translateAuthError(err)); });
 }
 function authGuard(elId){
   if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')){
@@ -356,7 +406,7 @@ function handleOtpVerify(){
   const code=document.getElementById('auth-otp-code').value.trim();
   const errEl=document.getElementById('otp-error');
   errEl.style.color='#ff8a8a'; errEl.textContent='';
-  verifyOtp(phone,code).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.style.color='#ff8a8a'; errEl.textContent=translateAuthError(err); });
+  verifyOtp(phone,code).then(()=>{ handleAuthSuccess(); }).catch((err)=>{ errEl.style.color='#ff8a8a'; errEl.textContent=translateAuthError(err); });
 }
 function handleEmailSignIn(){
   if(!authGuard('auth-error')) return;
@@ -364,7 +414,7 @@ function handleEmailSignIn(){
   const password=document.getElementById('auth-password').value;
   const errEl=document.getElementById('auth-error');
   errEl.textContent='';
-  signInWithEmail(email,password).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
+  signInWithEmail(email,password).then(()=>{ handleAuthSuccess(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
 }
 function handleEmailSignUp(){
   if(!authGuard('auth-error')) return;
@@ -372,7 +422,7 @@ function handleEmailSignUp(){
   const password=document.getElementById('auth-password').value;
   const errEl=document.getElementById('auth-error');
   errEl.textContent='';
-  signUpWithEmail(email,password).then(()=>{ showMembershipPage(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
+  signUpWithEmail(email,password).then(()=>{ handleAuthSuccess(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
 }
 function handleSignOut(){
   signOutUser().then(()=>{
@@ -763,7 +813,19 @@ async function mountAdBanner(){
   __adBannerEl=el;
 }
 // ---------- صفحه‌ی عضویت طلایی ----------
+// [1.2.18] محصولی که کاربر خواست بخرد ولی هنوز وارد نشده — بعد از ورود، همین خرید ادامه پیدا می‌کند
+var __pendingIapProduct=null;
 function iapStartPurchase(productId){
+  // [1.2.18] قفلِ خرید پشت ورود به حساب: هر خرید باید به حسابِ واردشده متصل شود
+  // (سرور هم در /iap/verify خرید را فقط برای کاربرِ احرازشده ثبت می‌کند) تا مزایای
+  // طلایی با تعویض گوشی/نصب دوباره گم نشوند. اگر وارد نباشی → صفحه‌ی ورود می‌آید و
+  // بعد از ورود موفق، خودِ همین خرید ادامه پیدا می‌کند (handleAuthSuccess).
+  if(typeof authToken==='undefined' || !authToken || !currentUser){
+    __pendingIapProduct=String(productId||'');
+    showPurchaseLoginGate();
+    return;
+  }
+  __pendingIapProduct=null;
   // پل اندرویدی (TWA/APK): وقتی داخل APK کافه‌بازار اجرا شود، این پل موجود است
   if(window.CosmicBazaar && typeof window.CosmicBazaar.purchase==='function'){
     try{ window.CosmicBazaar.purchase(String(productId)); }catch(e){ alert('خطا در شروع خرید.'); }
@@ -771,11 +833,36 @@ function iapStartPurchase(productId){
   }
   alert('خرید درون‌برنامه‌ای از طریق کافه‌بازار انجام می‌شود و فقط در نسخه‌ی اندرویدی فعال است.\nنسخه‌ی اندرویدی به‌زودی منتشر خواهد شد.');
 }
+// [1.2.18] گیتِ ورود برای خرید — توضیح شفافِ «چرا» + بازگشت بدون اجبار
+function showPurchaseLoginGate(){
+  render(`${backBtn('showGoldPage()')}${pageHead('🔐','ورود برای خرید')}
+    <div class="card orn center">
+      <div style="font-size:44px; line-height:1.2; margin:8px 0">🔐</div>
+      <h2 style="margin:4px 0 8px">اول وارد حسابت شو</h2>
+      <p class="desc" style="line-height:2">برای خرید عضویت طلایی باید با حساب کاربری (گوگل یا ایمیل) وارد شوی.<br>این‌طور پرداختِ تو دقیقاً به حسابت وصل می‌شود و عضویت طلایی‌ات هیچ‌وقت گم نمی‌شود — حتی با تعویض گوشی یا نصب دوباره‌ی اپ.</p>
+      <button class="btn" onclick="showMembershipPage('buy')">ورود / عضویت</button>
+      <button class="btn secondary" onclick="showGoldPage()">فعلاً نه</button>
+    </div>`);
+}
+// [1.2.18] مقصد مشترک همه‌ی مسیرهای موفق ورود (گوگل/ایمیل/OTP):
+// اگر ورود برای ادامه‌ی خرید بود → صفحه‌ی طلایی با وضعیت تازه باز می‌شود.
+function handleAuthSuccess(){
+  const pending=(typeof __pendingIapProduct!=='undefined')?__pendingIapProduct:null;
+  __pendingIapProduct=null;
+  if(pending && typeof showGoldPage==='function'){
+    if(typeof refreshIapStatus==='function'){ refreshIapStatus().catch(()=>{}).then(()=>{ showGoldPage(); }).catch(()=>{ showGoldPage(); }); }
+    else showGoldPage();
+    return;
+  }
+  showMembershipPage();
+}
 function showGoldPage(){
   setNav('more');
   const statusHtml = isGoldUser()
     ? `<p style="margin:4px 0; color:#f0c96a; font-weight:800">👑 عضویت طلایی فعال${iapGoldUntilFa()?` — تا ${iapGoldUntilFa()}`:''}</p>`
     : (adsRemovedUser()?'<p style="margin:4px 0; color:#4ade80; font-weight:700">🔕 تبلیغات برای حساب شما حذف شده است.</p>':'<p class="desc">در حال حاضر عضویت طلایی نداری. با عضویت طلایی: فال حافظ بی‌نهایت، طالع‌بینی و زایچه‌ی تقریبی و مقایسه‌ی دو نفر بدون محدودیت روزانه، ادامه‌ی کامل پیشنهاد اسم فرزند، و حذف بنرهای تبلیغاتی.</p>');
+  // [1.2.18] یادآوری ورود برای خرید (خرید بدون ورود اصلاً شروع نمی‌شود)
+  const buyGateNoteHtml=(typeof currentUser!=='undefined'&&currentUser)?'':'<p class="small-note" style="margin:0 0 10px">💡 برای خرید، اول وارد حسابت شو تا پرداخت دقیقاً به حسابت وصل شود — دکمهٔ خرید خودت راهنمایی‌ات می‌کند.</p>';
   const productHtml=IAP_PRODUCTS.map(p=>`
     <div class="list-item" style="cursor:default">
       <span class="li-label">${p.icon} <b>${esc(p.title)}</b><br><span class="small-note">${esc(p.desc)}</span></span>
@@ -823,9 +910,27 @@ function showGoldPage(){
       ${statusHtml}
       <p class="small-note" style="margin-top:6px">پرداخت امن از طریق کافه‌بازار انجام می‌شود و اعتبار رسید روی سرور تأیید می‌گردد.</p>
     </div>
-    <div class="card">${productHtml}</div>
+    <div class="card">${buyGateNoteHtml}${productHtml}</div>
     ${adminHtml}`);
-  if(isCosmicAdmin()){ try{ loadAdminAccessList(); }catch(e){} }
+  if(isCosmicAdmin()){
+    try{ loadAdminAccessList(); }catch(e){}
+    // [1.2.18] اگر از پنل «حساب‌های کاربران» با یک ایمیل مشخص اینجا آمدیم، فرم دسترسی را آماده کن
+    try{
+      if(typeof __adminAccessPickEmail!=='undefined' && __adminAccessPickEmail){
+        const pickEmail=String(__adminAccessPickEmail);
+        __adminAccessPickEmail=null;
+        const inp=document.getElementById('admin-target-email');
+        if(inp) inp.value=pickEmail;
+        const u=(typeof __adminUsersData!=='undefined')?__adminUsersData.find((x)=>String(x.email||'').toLowerCase()===pickEmail.toLowerCase()):null;
+        if(u && typeof adminAccessSetChecks==='function'){
+          adminAccessSetChecks({ gold:!!u.isGold, goldUntil:u.goldUntil||null, adsRemoved:!!u.adsRemoved, features:(u.features||[]).map((f)=>({ f:(typeof f==='string')?f:(f&&f.f), until:(f&&typeof f==='object')?f.until:null })) });
+        }
+        const msg=document.getElementById('iap-admin-msg');
+        if(msg) msg.textContent='وضعیت «'+pickEmail+'» بارگذاری شد — تغییر بده و «ثبت» کن.';
+        try{ if(inp) inp.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e2){}
+      }
+    }catch(e){}
+  }
 }
 async function adminGrantGoldTest(){
   const msg=document.getElementById('iap-admin-msg');
