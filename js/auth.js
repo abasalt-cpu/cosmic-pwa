@@ -1,16 +1,8 @@
 // ===== تنظیمات بک‌اند عضویت =====
-// [DOMAIN 1.2.11] اتصال به دامنه‌ی اختصاصی api.cosmiccode.ir:
-// workers.dev در ایران توسط بعضی اپراتورها فیلتر است و کاربر بدون فیلترشکن
-// نمی‌توانست وارد شود. حالا همان Worker (cosmic-code-auth) با Custom Domain
-// در اکانت کیهانی روی api.cosmiccode.ir سرو می‌شود — همان دیتابیس، همان
-// توکن‌ها؛ کاربران واردشده هیچ تغییری حس نمی‌کنند.
-// بازگشت اضطراری: مقدار قبلی = "https://cosmic-code-auth.cosmiccode396.workers.dev"
-// (CSP در index.html فعلاً هر دو هاست را اجازه می‌دهد؛ workers.dev در نسخه‌ی
-// بعدی که مطمئن شدیم همه‌چیز سالم است حذف می‌شود.)
-// تاریخچه: [هاتفیکس 1.2.3] cosmic.carservbook.ir هرگز متصل نشد (ممنوعیت CNAME
-// بین‌اکانتی Cloudflare — خطای 1014). این‌بار دامنه در همان اکانتِ Worker وصل
-// شده و با تست واقعی (/iap) جواب گرفته، پس خطای 1014 تکرار نمی‌شود.
-const AUTH_API_BASE = "https://api.cosmiccode.ir";
+// ⚠️ دامنه‌ی workers.dev در ایران فیلتر است (خطای «Failed to fetch» در اپ).
+// راه‌حل: دامنه‌ی شخصی را در Cloudflare به همین Worker وصل کن (Custom Domain) و
+// فقط همین یک خط را با دامنه‌ی جدید عوض کن. بقیه‌ی کد نیازی به تغییر ندارد.
+const AUTH_API_BASE = "https://cosmic-code-auth.cosmiccode396.workers.dev";
 // Client ID که از Google Cloud Console گرفتی (مرحله‌ی ۹ راهنما) رو اینجا جایگزین کن:
 const GOOGLE_CLIENT_ID = "948644041400-q6k9d730s9ml847t6us27ufumkijfetc.apps.googleusercontent.com";
 
@@ -78,13 +70,15 @@ async function signUpWithEmail(email, password) {
   const data = await authFetch('/signup', { method: 'POST', body: JSON.stringify({ email, password }) });
   saveSession(data.token, data.user);
   if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
-  return data.user;
+  // [1.2.19] isNew برای فعال‌سازی دعوتِ درانتظار — ثبت‌نام همیشه حساب تازه است
+  return { user: data.user, isNew: (data.isNew !== undefined) ? !!data.isNew : true };
 }
 async function signInWithEmail(email, password) {
   const data = await authFetch('/login', { method: 'POST', body: JSON.stringify({ email, password }) });
   saveSession(data.token, data.user);
   if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
-  return data.user;
+  // [1.2.19] ورودِ حسابِ موجود هیچ‌وقت دعوتِ جدید فعال نمی‌کند
+  return { user: data.user, isNew: false };
 }
 async function requestOtp(phone) {
   return authFetch('/otp/request', { method: 'POST', body: JSON.stringify({ phone }) });
@@ -93,13 +87,15 @@ async function verifyOtp(phone, code) {
   const data = await authFetch('/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) });
   saveSession(data.token, data.user);
   if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
-  return data.user;
+  // [1.2.19] اگر سرور isNew فرستاد معتبر است؛ وگرنه محتاطانه false
+  return { user: data.user, isNew: (data.isNew !== undefined) ? !!data.isNew : false };
 }
 async function signInWithGoogleCredential(accessToken) {
   const data = await authFetch('/google', { method: 'POST', body: JSON.stringify({ access_token: accessToken }) });
   saveSession(data.token, data.user);
   if (typeof onAuthChanged === 'function') onAuthChanged(currentUser);
-  return data.user;
+  // [1.2.19] فقط ساختِ حسابِ نو از سمت سرور isNew=true برمی‌گرداند
+  return { user: data.user, isNew: !!data.isNew };
 }
 async function signOutUser() {
   try { if (authToken) await authFetch('/logout', { method: 'POST' }); } catch (e) {} // [S9-fix] ابطال نشست در سرور

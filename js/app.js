@@ -177,6 +177,7 @@ function showMoreMenu(){
       <div class="list-item" onclick="showAboutPage()"><span class="li-label">${ICON_INFO}درباره‌ی نرم‌افزار <span style="color:#4ade80;font-weight:700">(${toFa(APP_VERSION)})</span></span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showMembershipPage()"><span class="li-label">${ICON_ACCOUNT}حساب کاربری</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showGoldPage()"><span class="li-label">👑 عضویت طلایی${isGoldUser()?' <span style="color:#f0c96a;font-weight:700">(فعال)</span>':''}</span><span class="li-arrow">‹</span></div>
+      <div class="list-item" onclick="showInvitePage()"><span class="li-label">🎁 دعوت دوستان</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showPrivacyPage()"><span class="li-label">${ICON_PRIVACY}حریم خصوصی</span><span class="li-arrow">‹</span></div>
       <div class="list-item" onclick="showTermsPage()"><span class="li-label">${ICON_TERMS}قوانین و شرایط استفاده</span><span class="li-arrow">‹</span></div>
     </div>
@@ -380,7 +381,7 @@ function handleGoogleButtonClick(){
 }
 function handleGoogleTokenResponse(response){
   if(!response || response.error){ return; }
-  signInWithGoogleCredential(response.access_token).then(()=>{ handleAuthSuccess(); }).catch((err)=>{ alert(translateAuthError(err)); });
+  signInWithGoogleCredential(response.access_token).then((res)=>{ handleAuthSuccess(res); }).catch((err)=>{ alert(translateAuthError(err)); });
 }
 function authGuard(elId){
   if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')){
@@ -406,7 +407,7 @@ function handleOtpVerify(){
   const code=document.getElementById('auth-otp-code').value.trim();
   const errEl=document.getElementById('otp-error');
   errEl.style.color='#ff8a8a'; errEl.textContent='';
-  verifyOtp(phone,code).then(()=>{ handleAuthSuccess(); }).catch((err)=>{ errEl.style.color='#ff8a8a'; errEl.textContent=translateAuthError(err); });
+  verifyOtp(phone,code).then((res)=>{ handleAuthSuccess(res); }).catch((err)=>{ errEl.style.color='#ff8a8a'; errEl.textContent=translateAuthError(err); });
 }
 function handleEmailSignIn(){
   if(!authGuard('auth-error')) return;
@@ -414,7 +415,7 @@ function handleEmailSignIn(){
   const password=document.getElementById('auth-password').value;
   const errEl=document.getElementById('auth-error');
   errEl.textContent='';
-  signInWithEmail(email,password).then(()=>{ handleAuthSuccess(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
+  signInWithEmail(email,password).then((res)=>{ handleAuthSuccess(res); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
 }
 function handleEmailSignUp(){
   if(!authGuard('auth-error')) return;
@@ -422,7 +423,7 @@ function handleEmailSignUp(){
   const password=document.getElementById('auth-password').value;
   const errEl=document.getElementById('auth-error');
   errEl.textContent='';
-  signUpWithEmail(email,password).then(()=>{ handleAuthSuccess(); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
+  signUpWithEmail(email,password).then((res)=>{ handleAuthSuccess(res); }).catch((err)=>{ errEl.textContent=translateAuthError(err); });
 }
 function handleSignOut(){
   signOutUser().then(()=>{
@@ -846,7 +847,12 @@ function showPurchaseLoginGate(){
 }
 // [1.2.18] مقصد مشترک همه‌ی مسیرهای موفق ورود (گوگل/ایمیل/OTP):
 // اگر ورود برای ادامه‌ی خرید بود → صفحه‌ی طلایی با وضعیت تازه باز می‌شود.
-function handleAuthSuccess(){
+// [1.2.19] authResult.isNew → فعال‌سازی دعوتِ درانتظار؛ __pendingAfterAuth='invite' → برگشت به صفحهٔ دعوت
+var __pendingAfterAuth=null;
+function handleAuthSuccess(authResult){
+  // دعوتِ درانتظار فقط با حسابِ تازه‌ساخت فعال می‌شود (سرور هم مستقلاً چک می‌کند)
+  if(authResult && authResult.isNew && typeof claimPendingReferral==='function'){ try{ claimPendingReferral(); }catch(e){} }
+  if(__pendingAfterAuth==='invite' && typeof showInvitePage==='function'){ __pendingAfterAuth=null; showInvitePage(); return; }
   const pending=(typeof __pendingIapProduct!=='undefined')?__pendingIapProduct:null;
   __pendingIapProduct=null;
   if(pending && typeof showGoldPage==='function'){
@@ -855,6 +861,127 @@ function handleAuthSuccess(){
     return;
   }
   showMembershipPage();
+}
+// ================== [1.2.19] دعوت دوستان — هر ۳ دعوت موفق = ۱ ماه طلایی ==================
+var __inviteData=null;
+var __refClaimInFlight=false;
+var __toastTimer=null;
+function showToastFa(msg){
+  try{
+    let el=document.getElementById('cc-toast');
+    if(!el){ el=document.createElement('div'); el.id='cc-toast'; el.setAttribute('role','status');
+      el.style.cssText='position:fixed; bottom:96px; left:50%; transform:translateX(-50%); z-index:90; background:#2a1b4d; color:#f5ead2; border:1px solid #f0c96a66; border-radius:12px; padding:10px 16px; font-size:14px; box-shadow:0 6px 20px #00000088; max-width:86vw; text-align:center; line-height:1.9';
+      document.body.appendChild(el); }
+    el.textContent=msg; el.style.display='block';
+    if(__toastTimer) clearTimeout(__toastTimer);
+    __toastTimer=setTimeout(()=>{ if(el) el.style.display='none'; }, 4500);
+  }catch(e){ try{ alert(msg); }catch(_e){} }
+}
+// گرفتن کد دعوت از لینک ورود (?ref=CODE) — در شروع اپ؛ ۳۰ روز مهلت فعال‌سازی؛
+// کد از نوار آدرس پاک می‌شود تا لینک کثیف جایی کپی/اشتراک نشود.
+function captureReferralFromUrl(){
+  try{
+    const p=new URLSearchParams(location.search || '');
+    const code=(p.get('ref')||'').trim().toUpperCase();
+    if(!code || !/^[A-Z0-9]{4,16}$/.test(code)) return;
+    localStorage.setItem('cosmicPendingRef', JSON.stringify({code:code, at:Date.now()}));
+    try{
+      if(history && history.replaceState){
+        const u=new URL(location.href); u.searchParams.delete('ref');
+        history.replaceState({}, '', u.pathname + (u.search||'') + (u.hash||''));
+      }
+    }catch(_e){}
+  }catch(e){}
+}
+// ثبت دعوت پس از ثبت‌نام موفق (فقط از handleAuthSuccess با isNew صدا زده می‌شود)
+async function claimPendingReferral(){
+  if(__refClaimInFlight) return;
+  try{
+    const raw=localStorage.getItem('cosmicPendingRef'); if(!raw) return;
+    const o=safeJSONParse(raw, null);
+    if(!o || !o.code || !/^[A-Z0-9]{4,16}$/.test(o.code)){ localStorage.removeItem('cosmicPendingRef'); return; }
+    if(Date.now()-(o.at||0) > 30*24*3600*1000){ localStorage.removeItem('cosmicPendingRef'); return; }
+    __refClaimInFlight=true;
+    const d=await authFetch('/invite/claim', { method:'POST', body:JSON.stringify({ code:o.code, deviceId:getDeviceId() }) });
+    localStorage.removeItem('cosmicPendingRef');
+    if(d && d.accepted){
+      if(typeof refreshIapStatus==='function') refreshIapStatus().catch(()=>{});
+      showToastFa(d.message || '🎁 دعوت‌ات ثبت شد!');
+    }
+  }catch(e){ /* دعوت نامعتبر/تکراری نباید مزاحم ثبت‌نام شود — ساکت رد می‌شود */ }
+  finally{ __refClaimInFlight=false; }
+}
+async function showInvitePage(){
+  setNav('more');
+  if(typeof authToken==='undefined' || !authToken || !currentUser){
+    render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان')}
+      <div class="card orn center">
+        <div style="font-size:44px; line-height:1.2; margin:8px 0">🎁</div>
+        <h2 style="margin:4px 0 8px">دعوت کن، طلایی شو</h2>
+        <p class="desc" style="line-height:2">هر ۳ دوستی که با لینک تو وارد اپ شوند و حساب بسازند، یک ماه عضویت طلایی هدیه می‌گیری.<br>دوستِ دعوت‌شده هم ۳ روز طلایی هدیه می‌گیرد.</p>
+        <p class="small-note">برای دیدن لینک دعوتت، اول وارد حسابت شو.</p>
+        <button class="btn" onclick="__pendingAfterAuth='invite'; showMembershipPage()">ورود / عضویت</button>
+        <button class="btn secondary" onclick="showMoreMenu()">بازگشت</button>
+      </div>`);
+    return;
+  }
+  render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان')}<div class="card orn center"><p class="desc">در حال دریافت لینک دعوت...</p></div>`);
+  try{
+    const d=await authFetch('/invite/me');
+    __inviteData=d;
+    const credits=Math.max(0, Number(d.credits)||0), per=Math.max(1, Number(d.invitesPerReward)||3);
+    const inProgress=credits%per, remaining=Number(d.nextRewardIn)||0;
+    let dots='';
+    for(let i=0;i<per;i++) dots+='<span style="font-size:22px; margin:0 3px">'+(i<inProgress?'🟡':'⚪')+'</span>';
+    render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان','دعوت کن، طلایی شو — هر ۳ دعوت موفق = ۱ ماه عضویت طلایی')}
+      <div class="card orn">
+        <h3 style="margin:0 0 6px">🔗 لینک دعوت اختصاصی تو</h3>
+        <input readonly dir="ltr" value="${esc(d.link||'')}" onclick="this.select()" style="width:100%; box-sizing:border-box; font-size:13px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2; margin-bottom:10px">
+        <div class="btn-row">
+          <button class="btn small" onclick="inviteShare()">📤 اشتراک‌گذاری</button>
+          <button class="btn small secondary" onclick="inviteCopy()">📋 کپی لینک</button>
+        </div>
+        <p class="small-note" style="margin:8px 0 0">کد دعوت: <span style="direction:ltr; unicode-bidi:isolate; font-weight:800; color:var(--gold-soft)">${esc(d.code||'')}</span></p>
+      </div>
+      <div class="card orn center">
+        <h3 style="margin:0 0 8px">مسیر جایزهٔ بعدی</h3>
+        <div style="margin:6px 0">${dots}</div>
+        <p class="desc" style="margin:4px 0">${remaining>0?('🟡 '+toFa(inProgress)+' از '+toFa(per)+' دعوت — '+toFa(remaining)+' دعوت دیگر تا 👑 ۱ ماه طلایی'):('🎉 جایزهٔ بعدی با اولین دعوت جدید فعال می‌شود — تاکنون '+toFa(Number(d.rewards)||0)+' ماه هدیه گرفتی')}</p>
+        <p class="small-note" style="margin:6px 0 0">دعوت‌های موفق: <b>${toFa(credits)}</b> — ماه‌های طلاییِ هدیه‌گرفته: <b>${toFa(Number(d.rewards)||0)}</b></p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 6px">✅ دعوتِ «موفق» چیست؟</h3>
+        <p class="desc" style="line-height:2">دوستی که با لینک تو وارد اپ شود و <b>برای اولین‌بار حساب بسازد</b> (گوگل یا ایمیل)، یک دعوت موفق برایت ثبت می‌کند و خودش هم ۳ روز طلایی هدیه می‌گیرد.</p>
+        <p class="small-note">فقط حساب‌های تازه‌ساخت حساب می‌شوند؛ از هر دستگاه یک دعوت؛ ورود مجدد یا دعوت از خودت جایزه‌ای ندارد.</p>
+      </div>`);
+  }catch(e){
+    render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان')}<div class="card"><p class="desc" style="color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`);
+  }
+}
+function inviteShareText(){
+  const d=__inviteData||{};
+  return '✨ «کد کیهانی» — خودشناسی با عددشناسی، طالع‌بینی و فال حافظ\nبا لینک زیر وارد شو و حسابت را بساز؛ هر دومان هدیه می‌گیریم 👇\n'+(d.link||'');
+}
+function inviteShare(){
+  const t=inviteShareText();
+  if(navigator && typeof navigator.share==='function'){ navigator.share({ title:'کد کیهانی 🌌', text:t }).catch(()=>{}); return; }
+  inviteCopy();
+}
+function inviteCopy(){
+  const d=__inviteData||{};
+  const txt=d.link||'';
+  if(navigator.clipboard && typeof navigator.clipboard.writeText==='function'){
+    navigator.clipboard.writeText(txt).then(()=>{ showToastFa('لینک دعوت کپی شد ✅'); }).catch(()=>{ inviteCopyFallback(txt); });
+    return;
+  }
+  inviteCopyFallback(txt);
+}
+function inviteCopyFallback(txt){
+  try{
+    const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    showToastFa('لینک دعوت کپی شد ✅');
+  }catch(e){ showToastFa(txt || 'کپی ناموفق بود'); }
 }
 function showGoldPage(){
   setNav('more');
@@ -868,6 +995,12 @@ function showGoldPage(){
       <span class="li-label">${p.icon} <b>${esc(p.title)}</b><br><span class="small-note">${esc(p.desc)}</span></span>
       <button class="btn small" onclick="iapStartPurchase('${p.id}')">${p.price}</button>
     </div>`).join('');
+  // [1.2.19] کارت تبلیغ دعوت — طلاییِ رایگان با دعوت دوستان
+  const invitePromoHtml=`<div class="card" style="border:1px dashed #f0c96a66">
+      <h3 style="margin:0 0 6px">👑 طلاییِ رایگان می‌خواهی؟</h3>
+      <p class="small-note">هر ۳ دوست که با لینک دعوتت وارد شوند و حساب بسازند = ۱ ماه عضویت طلایی برای تو (دوستت هم ۳ روز طلایی هدیه می‌گیرد).</p>
+      <div class="btn-row"><button class="btn small" onclick="showInvitePage()">🎁 دریافت لینک دعوت</button></div>
+    </div>`;
   const adminHtml=isCosmicAdmin()?`
     <div class="card">
       <h3 style="margin:0 0 8px">⚡ تست سریع روی خودم</h3>
@@ -911,6 +1044,7 @@ function showGoldPage(){
       <p class="small-note" style="margin-top:6px">پرداخت امن از طریق کافه‌بازار انجام می‌شود و اعتبار رسید روی سرور تأیید می‌گردد.</p>
     </div>
     <div class="card">${buyGateNoteHtml}${productHtml}</div>
+    ${invitePromoHtml}
     ${adminHtml}`);
   if(isCosmicAdmin()){
     try{ loadAdminAccessList(); }catch(e){}
@@ -1629,6 +1763,8 @@ function handlePushToggle(){
   });
 }
 function showSavedProfile(i){const p=state.savedProfiles[i]; showCosmicResult(p.firstName,p.familyName,p.report);}
+// [1.2.19] گرفتن کد دعوت از لینک (؟ref=) در شروع اپ — قبل از اولین رندر
+captureReferralFromUrl();
 showHome();
 (function hideSplash(){
   const splash=document.getElementById('splash-screen');
