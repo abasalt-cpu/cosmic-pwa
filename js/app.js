@@ -646,7 +646,7 @@ function showCosmicResult(firstName,familyName,r){
     <div class="btn-row">
       <button class="btn secondary" onclick="showCosmicInputForm()">🔄 محاسبه‌ی جدید</button>
       <button class="btn" onclick='shareText(${attrJson(`🌌 کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}\n\nکد کیهانیِ خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
-    </div>`);
+    </div>${inviteMiniBannerHtml()}`);
   fitCode(); if(document.fonts){ document.fonts.ready.then(fitCode); document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',fitCode); } setTimeout(fitCode,300); setTimeout(fitCode,1200);
 }
 // [1.2.15] نشانی اشتراک‌گذاری هوشمند: روی میزبان قدیمی (github.io) همان مسیر پروژه؛
@@ -995,7 +995,20 @@ function showGoldPage(){
       <span class="li-label">${p.icon} <b>${esc(p.title)}</b><br><span class="small-note">${esc(p.desc)}</span></span>
       <button class="btn small" onclick="iapStartPurchase('${p.id}')">${p.price}</button>
     </div>`).join('');
-  // [1.2.19] کارت تبلیغ دعوت — طلاییِ رایگان با دعوت دوستان
+  // [1.2.20] بنر جمع‌وجور دعوت در صفحه‌های پرترافیک (فال حافظ + نتیجهٔ کد کیهانی) —
+// متن برای طلایی‌ها «تمدید» و برای بقیه «طلایی رایگان»؛ مهمان با لمس، به گیت ورود صفحهٔ دعوت می‌رود.
+function inviteMiniBannerHtml(){
+  const gold=(typeof isGoldUser==='function') && isGoldUser();
+  return `<div class="card invite-mini" style="border:1px dashed #f0c96a66; margin-top:12px; padding:10px 12px; display:flex; align-items:center; gap:10px">
+    <span style="font-size:26px; line-height:1; flex:none">🎁</span>
+    <div style="flex:1; min-width:0">
+      <b style="color:var(--gold-soft); font-size:14px">${gold?'یک ماه طلاییِ دیگر می‌خواهی؟':'طلاییِ رایگان می‌خواهی؟'}</b>
+      <div class="small-note" style="margin:2px 0 0">${gold?'هر ۳ دعوت موفق = ۱ ماه تمدید طلایی‌ت 👑':'هر ۳ دعوت موفق = ۱ ماه عضویت طلایی 👑'}</div>
+    </div>
+    <button class="btn small" style="flex:none" onclick="showInvitePage()">لینک دعوت</button>
+  </div>`;
+}
+// [1.2.19] کارت تبلیغ دعوت — طلاییِ رایگان با دعوت دوستان
   const invitePromoHtml=`<div class="card" style="border:1px dashed #f0c96a66">
       <h3 style="margin:0 0 6px">👑 طلاییِ رایگان می‌خواهی؟</h3>
       <p class="small-note">هر ۳ دوست که با لینک دعوتت وارد شوند و حساب بسازند = ۱ ماه عضویت طلایی برای تو (دوستت هم ۳ روز طلایی هدیه می‌گیرد).</p>
@@ -1273,7 +1286,7 @@ async function showHafez(mode){
       <div class="hafez-mode">${opt('modern','تفسیر با AI')}${opt('traditional','تفسیر سنتی')}</div>
       <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}${prem?` <span style="color:#4ade80;font-weight:700">${premBadgeFa()}: بدون محدودیت</span>`:''}</p>
       ${mainBtn}
-      <div id="hafez-result">${resultInit}</div></div>
+      <div id="hafez-result">${resultInit}</div>${inviteMiniBannerHtml()}</div>
     <div class="card">
       <h3 style="margin-bottom:8px">🔔 یادآوری فال روزانه</h3>
       <p class="desc">هر روز صبح یه اعلان بهت می‌رسه که یادت بندازه فالت رو بگیری.</p>
