@@ -911,6 +911,21 @@ async function claimPendingReferral(){
   }catch(e){ /* دعوت نامعتبر/تکراری نباید مزاحم ثبت‌نام شود — ساکت رد می‌شود */ }
   finally{ __refClaimInFlight=false; }
 }
+// [1.2.21] بنر جمع‌وجور دعوت در صفحه‌های پرترافیک (فال حافظ + نتیجهٔ کد کیهانی) — تعریف در سطح بالای اسکریپت.
+// (هات‌فیکس: در 1.2.20 این تابع اشتباهی داخل بدنهٔ showGoldPage بود و از showHafez/showCosmicResult
+//  دیده نمی‌شد → ReferenceError و باز نشدن فال حافظ. هویستینگ تابع فقط در همان تابعِ دربرگیرنده کار می‌کند.)
+// متن برای طلایی‌ها «تمدید» و برای بقیه «طلایی رایگان»؛ مهمان با لمس، به گیت ورود صفحهٔ دعوت می‌رود.
+function inviteMiniBannerHtml(){
+  const gold=(typeof isGoldUser==='function') && isGoldUser();
+  return `<div class="card invite-mini" style="border:1px dashed #f0c96a66; margin-top:12px; padding:10px 12px; display:flex; align-items:center; gap:10px">
+    <span style="font-size:26px; line-height:1; flex:none">🎁</span>
+    <div style="flex:1; min-width:0">
+      <b style="color:var(--gold-soft); font-size:14px">${gold?'یک ماه طلاییِ دیگر می‌خواهی؟':'طلاییِ رایگان می‌خواهی؟'}</b>
+      <div class="small-note" style="margin:2px 0 0">${gold?'هر ۳ دعوت موفق = ۱ ماه تمدید طلایی‌ت 👑':'هر ۳ دعوت موفق = ۱ ماه عضویت طلایی 👑'}</div>
+    </div>
+    <button class="btn small" style="flex:none" onclick="showInvitePage()">لینک دعوت</button>
+  </div>`;
+}
 async function showInvitePage(){
   setNav('more');
   if(typeof authToken==='undefined' || !authToken || !currentUser){
@@ -995,20 +1010,7 @@ function showGoldPage(){
       <span class="li-label">${p.icon} <b>${esc(p.title)}</b><br><span class="small-note">${esc(p.desc)}</span></span>
       <button class="btn small" onclick="iapStartPurchase('${p.id}')">${p.price}</button>
     </div>`).join('');
-  // [1.2.20] بنر جمع‌وجور دعوت در صفحه‌های پرترافیک (فال حافظ + نتیجهٔ کد کیهانی) —
-// متن برای طلایی‌ها «تمدید» و برای بقیه «طلایی رایگان»؛ مهمان با لمس، به گیت ورود صفحهٔ دعوت می‌رود.
-function inviteMiniBannerHtml(){
-  const gold=(typeof isGoldUser==='function') && isGoldUser();
-  return `<div class="card invite-mini" style="border:1px dashed #f0c96a66; margin-top:12px; padding:10px 12px; display:flex; align-items:center; gap:10px">
-    <span style="font-size:26px; line-height:1; flex:none">🎁</span>
-    <div style="flex:1; min-width:0">
-      <b style="color:var(--gold-soft); font-size:14px">${gold?'یک ماه طلاییِ دیگر می‌خواهی؟':'طلاییِ رایگان می‌خواهی؟'}</b>
-      <div class="small-note" style="margin:2px 0 0">${gold?'هر ۳ دعوت موفق = ۱ ماه تمدید طلایی‌ت 👑':'هر ۳ دعوت موفق = ۱ ماه عضویت طلایی 👑'}</div>
-    </div>
-    <button class="btn small" style="flex:none" onclick="showInvitePage()">لینک دعوت</button>
-  </div>`;
-}
-// [1.2.19] کارت تبلیغ دعوت — طلاییِ رایگان با دعوت دوستان
+  // [1.2.19] کارت تبلیغ دعوت — طلاییِ رایگان با دعوت دوستان
   const invitePromoHtml=`<div class="card" style="border:1px dashed #f0c96a66">
       <h3 style="margin:0 0 6px">👑 طلاییِ رایگان می‌خواهی؟</h3>
       <p class="small-note">هر ۳ دوست که با لینک دعوتت وارد شوند و حساب بسازند = ۱ ماه عضویت طلایی برای تو (دوستت هم ۳ روز طلایی هدیه می‌گیرد).</p>
