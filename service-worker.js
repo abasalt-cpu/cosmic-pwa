@@ -2,7 +2,7 @@ importScripts('./js/version.js');
 const CACHE_NAME = 'cosmic-code-' + APP_VERSION;
 // [1.2.17] هشدار انتشار: مرورگرِ آپدیتِ سرویس‌ورکر را فقط با مقایسهٔ بایت‌به‌بایتِ همین فایل تشخیص می‌دهد.
 // پس با هر انتشار جدید، علاوه بر js/version.js، شمارهٔ خط «build:» پایین را هم دقیقاً همان عدد کنید.
-// build: 1.2.22
+// build: 1.2.23
 const ASSETS = ['./','./index.html','./offline.html','./manifest.json','./data/data.js','./data/tables.js','./fonts/Sahel-Bold.woff2','./fonts/Sahel-Black.woff2',
 './js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/version.js','./js/baby_name.js','./js/number_info.js','./js/app.js','./js/auth.js','./js/push.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
