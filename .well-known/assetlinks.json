@@ -2,7 +2,7 @@
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
-        "package_name": "io.github.abasalt_cpu.twa",
-        "sha256_cert_fingerprints": ["5E:8D:50:CD:28:3E:A8:F4:CF:59:6E:8A:3E:6E:29:C5:EA:F0:4A:A1:BC:A6:E1:0A:77:60:E9:D8:F2:09:C5:AF"]
+        "package_name": "ir.cosmiccode",
+        "sha256_cert_fingerprints": ["60:40:68:06:07:7B:F3:4B:45:81:F0:70:40:DB:9D:9F:54:8A:16:29:43:AC:4F:EE:23:66:1F:5D:84:73:1C:FC"]
       }
     }]
