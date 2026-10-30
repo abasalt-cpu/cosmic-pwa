@@ -848,10 +848,12 @@ function showPurchaseLoginGate(){
 // [1.2.18] مقصد مشترک همه‌ی مسیرهای موفق ورود (گوگل/ایمیل/OTP):
 // اگر ورود برای ادامه‌ی خرید بود → صفحه‌ی طلایی با وضعیت تازه باز می‌شود.
 // [1.2.19] authResult.isNew → فعال‌سازی دعوتِ درانتظار؛ __pendingAfterAuth='invite' → برگشت به صفحهٔ دعوت
+// [1.2.22] ورود با حسابِ «موجودی» وقتی لینک دعوت درانتظار داریم → پیام توضیحی (به‌جای سکوتِ مطلق)
 var __pendingAfterAuth=null;
 function handleAuthSuccess(authResult){
   // دعوتِ درانتظار فقط با حسابِ تازه‌ساخت فعال می‌شود (سرور هم مستقلاً چک می‌کند)
   if(authResult && authResult.isNew && typeof claimPendingReferral==='function'){ try{ claimPendingReferral(); }catch(e){} }
+  else if(authResult && !authResult.isNew && typeof notifyRefIgnoredForExistingAccount==='function'){ try{ notifyRefIgnoredForExistingAccount(); }catch(e){} }
   if(__pendingAfterAuth==='invite' && typeof showInvitePage==='function'){ __pendingAfterAuth=null; showInvitePage(); return; }
   const pending=(typeof __pendingIapProduct!=='undefined')?__pendingIapProduct:null;
   __pendingIapProduct=null;
@@ -893,6 +895,18 @@ function captureReferralFromUrl(){
     }catch(_e){}
   }catch(e){}
 }
+// [1.2.22] اگر کسی با لینک دعوت آمد ولی با حسابِ «موجودی» وارد شد، هدیه فعال نمی‌شود؛
+// به‌جای سکوت، یک‌بار برای هر لینکِ درانتظار توضیح می‌دهیم (پرچم notified داخل همان رکورد ذخیره می‌شود؛
+// رکورد حذف نمی‌شود تا اگر بعداً روی همین دستگاه حسابِ نو ساخت، مسیر claim همچنان باز بماند).
+function notifyRefIgnoredForExistingAccount(){
+  try{
+    const raw=localStorage.getItem('cosmicPendingRef'); if(!raw) return;
+    const o=safeJSONParse(raw, null); if(!o || !o.code || o.notified) return;
+    o.notified=true;
+    try{ localStorage.setItem('cosmicPendingRef', JSON.stringify(o)); }catch(_e){}
+    showToastFa('ℹ️ هدیهٔ دعوت فقط با «ساخت حساب جدید» فعال می‌شود؛ با این حسابِ موجود ثبت نشد.');
+  }catch(e){}
+}
 // ثبت دعوت پس از ثبت‌نام موفق (فقط از handleAuthSuccess با isNew صدا زده می‌شود)
 async function claimPendingReferral(){
   if(__refClaimInFlight) return;
@@ -907,8 +921,15 @@ async function claimPendingReferral(){
     if(d && d.accepted){
       if(typeof refreshIapStatus==='function') refreshIapStatus().catch(()=>{});
       showToastFa(d.message || '🎁 دعوت‌ات ثبت شد!');
+    }else if(d && d.message){
+      // [1.2.22] چرا هیچ اتفاقی نیفتاد؟ دلایل رد شدن (دستگاه تکراری، حساب قدیمی، کد نامعتبر و…)
+      // دیگر بی‌صدا نیستند — پیام سرور همان توضیحِ دقیق است و نباید از کاربر پنهان بماند.
+      showToastFa('ℹ️ ' + d.message);
     }
-  }catch(e){ /* دعوت نامعتبر/تکراری نباید مزاحم ثبت‌نام شود — ساکت رد می‌شود */ }
+  }catch(e){
+    // [1.2.22] خطای شبکه/سرور هم دیگر کاملاً بی‌صدا نیست — برای ردیابی به /errors/log می‌رود
+    try{ if(typeof reportError==='function') reportError('invite claim failed: '+((e&&e.message)||e)); }catch(_e){}
+  }
   finally{ __refClaimInFlight=false; }
 }
 // [1.2.21] بنر جمع‌وجور دعوت در صفحه‌های پرترافیک (فال حافظ + نتیجهٔ کد کیهانی) — تعریف در سطح بالای اسکریپت.
