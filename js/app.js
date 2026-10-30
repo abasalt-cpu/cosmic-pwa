@@ -240,6 +240,7 @@ async function showAdminUsersPage(){
     __adminAccessData=(acc&&acc.accounts)||[];
     __adminPendingData=__adminAccessData.filter((a)=>a&&a.pending);
     adminUsersCacheSave(__adminUsersData, __adminAccessData);
+    adminAccessCacheSave(__adminAccessData); // [1.2.26] همگام‌سازی کش دسترسی‌ها از پنل کاربران
     let extra='';
     if(cachedEmails){
       let fresh=0;
@@ -1191,6 +1192,7 @@ function showGoldPage(){
     <div class="card">
       <h3 style="margin:0 0 8px">📋 حساب‌های دارای دسترسی</h3>
       <div id="admin-access-list"><p class="small-note">در حال بارگذاری...</p></div>
+      <p class="small-note" id="admin-access-status" style="margin-top:6px; min-height:0"></p>
       <p class="small-note" style="margin-top:8px">روی ایمیل بزن تا داخل کادر بالا بیاید و تیک‌های فعلی‌اش برای ویرایش بار شود.</p>
     </div>`:'';
   render(`${backBtn('showMoreMenu()')}${pageHead('👑','عضویت طلایی')}
@@ -1246,6 +1248,24 @@ async function adminRevokeIapTest(){
 // [ADMIN-access 1.2.8] پنل مدیریت دسترسی‌ها — تیک‌ها = وضعیت کامل مطلوب کاربر؛
 // «ثبت» روی سرور یعنی تیک‌دارها فعال و بدون‌تیک‌ها لغو می‌شوند (یک endpoint: /admin/access/set)
 var __adminAccessData=[];
+// [1.2.26] کش فهرست «حساب‌های دارای دسترسی» — همان الگوی کش کاربران (1.2.25):
+// ورود به صفحه فوری از کش رندر می‌شود (حتی بدون اینترنت) و در پس‌زمینه از سرور تازه می‌شود؛
+// لیست هرگز خالی نمی‌شود و اسکرول نمی‌پرد.
+var __adminAccessCacheKey='cosmicAdminAccessCache';
+function adminAccessCacheWho(){
+  try{ return (typeof currentUser!=='undefined'&&currentUser)?(currentUser.id||currentUser.email||''):''; }catch(e){ return ''; }
+}
+function adminAccessCacheLoad(){
+  try{
+    const o=safeJSONParse(localStorage.getItem(__adminAccessCacheKey), null);
+    if(!o || !Array.isArray(o.accounts) || !o.at) return null;
+    if(o.who!==adminAccessCacheWho()) return null; // تعویض حساب → کش معتبر نیست
+    return o;
+  }catch(e){ return null; }
+}
+function adminAccessCacheSave(accounts){
+  try{ localStorage.setItem(__adminAccessCacheKey, JSON.stringify({ who:adminAccessCacheWho(), accounts:accounts||[], at:Date.now() })); }catch(e){}
+}
 // [1.2.9] تاریخ انقضا: ms → 'YYYY-MM-DD' بر پایه‌ی تقویم تهران (UTC+3:30)
 function tehranDateStr(ts){
   try{ return new Date(Number(ts)+12600000).toISOString().slice(0,10); }catch(e){ return ''; }
@@ -1367,16 +1387,49 @@ async function adminAccessRevokeAll(){
     await loadAdminAccessList();
   }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
 }
+// [1.2.26] رندر لیست دسترسی‌ها — جداشده تا هم کش و هم پاسخ تازهٔ سرور از یک مسیر رندر کنند
+function renderAdminAccessList(){
+  const box=document.getElementById('admin-access-list'); if(!box) return;
+  box.innerHTML=__adminAccessData.length
+    ?__adminAccessData.map((a,i)=>`<div class="name-item" style="cursor:pointer" onclick="adminAccessPick(${i})"><b style="direction:ltr; unicode-bidi:isolate; display:inline-block">${esc(a.email||a.userId)}</b>${a.pending?'<span class="small-note" style="color:#f0c96a"> — ⏳ ثبت‌نام نشده</span>':''}<br><span class="small-note">${adminAccessSummary(a)}</span></div>`).join('')
+    :'<p class="small-note">هنوز به کسی دسترسی نداده‌ای.</p>';
+}
+function adminAccessStatusFa(extra){
+  const st=document.getElementById('admin-access-status');
+  if(st) st.textContent=extra||'';
+}
 async function loadAdminAccessList(){
   const box=document.getElementById('admin-access-list');
   if(!box) return;
+  // [1.2.26] اول از کش — لیست فوری نمایش داده می‌شود؛ فرم ویرایش بالای صفحه مثل همیشه کار می‌کند
+  const cached=adminAccessCacheLoad();
+  let cachedKeys=null;
+  if(cached && cached.accounts.length){
+    __adminAccessData=cached.accounts;
+    cachedKeys={}; // مجموعهٔ کلیدهای نسخهٔ کش برای شمارش موارد جدید
+    for(const a of __adminAccessData) cachedKeys[String(a.email||a.userId||'').toLowerCase()]=true;
+    renderAdminAccessList();
+    adminAccessStatusFa(`🕰 فهرست ذخیره‌شده (${jalaliDateTimeFa(cached.at)}) — در حال تازه‌سازی...`);
+  }
   try{
     const d=await authFetch('/admin/access/list');
     __adminAccessData=(d&&d.accounts)||[];
-    box.innerHTML=__adminAccessData.length
-      ?__adminAccessData.map((a,i)=>`<div class="name-item" style="cursor:pointer" onclick="adminAccessPick(${i})"><b style="direction:ltr; unicode-bidi:isolate; display:inline-block">${esc(a.email||a.userId)}</b>${a.pending?'<span class="small-note" style="color:#f0c96a"> — ⏳ ثبت‌نام نشده</span>':''}<br><span class="small-note">${adminAccessSummary(a)}</span></div>`).join('')
-      :'<p class="small-note">هنوز به کسی دسترسی نداده‌ای.</p>';
-  }catch(e){ box.innerHTML='<p class="small-note" style="color:#ff8a8a">'+esc(translateAuthError(e))+'</p>'; }
+    adminAccessCacheSave(__adminAccessData);
+    if(cachedKeys){
+      let fresh=0;
+      for(const a of __adminAccessData){ if(!cachedKeys[String(a.email||a.userId||'').toLowerCase()]) fresh++; }
+      adminAccessStatusFa(fresh?`✅ تازه شد — ${toFa(fresh)} مورد جدید`:'✅ تازه شد — بدون تغییر');
+    }
+    renderAdminAccessList();
+  }catch(e){
+    if(cached && cached.accounts.length){
+      // [1.2.26] آفلاین/خطا: لیست ذخیره‌شده سر جایش می‌ماند (خالی یا خطای کامل نمی‌شود)
+      adminAccessStatusFa(`⚠️ تازه‌سازی نشد (اینترنت؟) — فهرست ذخیره‌شده از ${jalaliDateTimeFa(cached.at)}`);
+      renderAdminAccessList();
+    }else{
+      box.innerHTML='<p class="small-note" style="color:#ff8a8a">'+esc(translateAuthError(e))+'</p>';
+    }
+  }
 }
 function adminAccessPick(i){
   const a=__adminAccessData[i]; if(!a) return;
