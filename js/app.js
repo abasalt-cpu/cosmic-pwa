@@ -190,12 +190,46 @@ var __adminUsersData=[];
 var __adminUsersPendingCount=0;
 var __adminAccessPickEmail=null; // ایمیل انتخاب‌شده از این پنل برای ویرایش دسترسی
 var __adminPendingData=[]; // [1.2.24] دسترسی‌های اعطاشده به ایمیل‌های ثبت‌نام‌نشده
+// [1.2.25] کش فهرست کاربران ادمین — صفحه فوری از کش باز می‌شود (حتی بدون اینترنت)
+// و در پس‌زمینه از سرور تازه می‌شود؛ اعضای جدید به لیست نمایش‌داده‌شده اضافه می‌شوند.
+var __adminUsersCacheKey='cosmicAdminUsersCache';
+function adminUsersCacheWho(){
+  try{ return (typeof currentUser!=='undefined'&&currentUser)?(currentUser.id||currentUser.email||''):''; }catch(e){ return ''; }
+}
+function adminUsersCacheLoad(){
+  try{
+    const o=safeJSONParse(localStorage.getItem(__adminUsersCacheKey), null);
+    if(!o || !Array.isArray(o.users) || !Array.isArray(o.accounts) || !o.at) return null;
+    if(o.who!==adminUsersCacheWho()) return null; // تعویض حساب → کش معتبر نیست
+    return o;
+  }catch(e){ return null; }
+}
+function adminUsersCacheSave(users,accounts){
+  try{ localStorage.setItem(__adminUsersCacheKey, JSON.stringify({ who:adminUsersCacheWho(), users:users||[], accounts:accounts||[], at:Date.now() })); }catch(e){}
+}
+function adminUsersStatusFa(n,pendN,extra){
+  return `تعداد حساب‌ها: ${toFa(n)}`+(pendN?` — ⏳ در انتظار ثبت‌نام: ${toFa(pendN)}`:'')+(extra?` — ${extra}`:'');
+}
 async function showAdminUsersPage(){
   render(`${backBtn('showMoreMenu()')}<div class="card"><h2>👥 حساب‌های کاربران</h2>
     <p class="desc" id="admin-status">در حال بارگذاری...</p>
     <input id="admin-users-search" type="search" dir="ltr" placeholder="جستجوی ایمیل یا نام..." style="width:100%; box-sizing:border-box; margin-top:6px" oninput="renderAdminUsersList()">
     <p class="small-note" style="margin:8px 0 0">راهنمای نشان‌ها: ⚡ ادمین — 👑 طلایی (با تاریخ شمسی) — 🔕 بی‌تبلیغ — 🔮♈️🌌🔗👶 دسترسی ویژه — 🛒 خرید واقعی کافه‌بازار — 🛠 اعطای ادمین</p>
   </div><div id="admin-pending-list"></div><div id="admin-list"></div>`);
+  // [1.2.25] اول از کش — لیست فوری نمایش داده می‌شود؛ جستجو و بقیهٔ صفحه مثل همیشه کار می‌کنند
+  const cached=adminUsersCacheLoad();
+  let cachedEmails=null;
+  if(cached && cached.users.length){
+    __adminUsersData=cached.users;
+    __adminAccessData=cached.accounts||[];
+    __adminPendingData=__adminAccessData.filter((a)=>a&&a.pending);
+    cachedEmails={}; // مجموعهٔ ایمیل‌های نسخهٔ کش برای شمارش اعضای جدید
+    for(const u of __adminUsersData) cachedEmails[String(u.email||'').toLowerCase()]=true;
+    const st=document.getElementById('admin-status');
+    if(st) st.textContent=adminUsersStatusFa(__adminUsersData.length, __adminPendingData.length||__adminUsersPendingCount, `🕰 فهرست ذخیره‌شده (${jalaliDateTimeFa(cached.at)}) — در حال تازه‌سازی...`);
+    renderAdminPendingList();
+    renderAdminUsersList();
+  }
   try{
     const [data,acc]=await Promise.all([
       authFetch('/admin/users', { headers:{ Authorization:'Bearer '+authToken } }),
@@ -205,13 +239,27 @@ async function showAdminUsersPage(){
     __adminUsersPendingCount=(data&&typeof data.pendingCount==='number')?data.pendingCount:0;
     __adminAccessData=(acc&&acc.accounts)||[];
     __adminPendingData=__adminAccessData.filter((a)=>a&&a.pending);
-    const pendN=__adminPendingData.length||__adminUsersPendingCount;
-    document.getElementById('admin-status').textContent=`تعداد حساب‌ها: ${toFa(__adminUsersData.length)}`+(pendN?` — ⏳ در انتظار ثبت‌نام: ${toFa(pendN)}`:'');
+    adminUsersCacheSave(__adminUsersData, __adminAccessData);
+    let extra='';
+    if(cachedEmails){
+      let fresh=0;
+      for(const u of __adminUsersData){ if(!cachedEmails[String(u.email||'').toLowerCase()]) fresh++; }
+      extra=fresh?`✅ تازه شد — ${toFa(fresh)} عضو جدید`:'✅ تازه شد — بدون تغییر';
+    }
+    const st=document.getElementById('admin-status');
+    if(st) st.textContent=adminUsersStatusFa(__adminUsersData.length, __adminPendingData.length||__adminUsersPendingCount, extra);
     renderAdminPendingList();
     renderAdminUsersList();
   }catch(e){
-    document.getElementById('admin-status').textContent='';
-    document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
+    const st=document.getElementById('admin-status');
+    if(cached && cached.users.length){
+      // [1.2.25] آفلاین/خطا: لیست ذخیره‌شده سر جایش می‌ماند (خالی یا خطای کامل نمی‌شود)
+      if(st) st.textContent=adminUsersStatusFa(__adminUsersData.length, __adminPendingData.length||__adminUsersPendingCount, `⚠️ تازه‌سازی نشد (اینترنت؟) — فهرست ذخیره‌شده از ${jalaliDateTimeFa(cached.at)}`);
+      renderAdminUsersList();
+    }else{
+      if(st) st.textContent='';
+      document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
+    }
   }
 }
 // [1.2.24] دسترسی‌هایی که ادمین به ایمیل‌های هنوز ثبت‌نام‌نشده داده — کلیک روی هرکدام
