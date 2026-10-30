@@ -947,6 +947,63 @@ function inviteMiniBannerHtml(){
     <button class="btn small" style="flex:none" onclick="showInvitePage()">لینک دعوت</button>
   </div>`;
 }
+// [1.2.23] کش محلی دعوت — کد و لینک هر کاربر هرگز عوض نمی‌شود (سرور همان ردیف را برمی‌گرداند)،
+// پس بار اول از سرور می‌آید و بعد از این صفحهٔ دعوت همیشه «فوراً» از کش رندر می‌شود — حتی بدون اینترنت.
+// فقط آمار (دعوت‌های موفق/جایزه‌ها) در پس‌زمینه از سرور تازه می‌شود و اگر چیزی عوض شده بود صفحه به‌روز می‌شود.
+// (گزارش کاربر: صفحه هر بار لود از سایت می‌خواست و روی شبکهٔ ضعیف گاهی اصلاً باز نمی‌شد.)
+var __inviteFetchSeq=0; // اگر کاربر از صفحه بیرون رفته باشد، به‌روزرسانیِ پس‌زمینه صفحه را نمی‌دزدد
+function inviteCacheLoad(){
+  try{
+    const raw=localStorage.getItem('cosmicInviteCache'); if(!raw) return null;
+    const o=safeJSONParse(raw, null);
+    if(!o || !o.code || !/^[A-Z0-9]{4,16}$/.test(o.code)){ localStorage.removeItem('cosmicInviteCache'); return null; }
+    // کش متعلق به کدام حساب است؟ با عوض‌کردن حساب، کشِ قبلی بی‌اعتبار است
+    const uid=(typeof currentUser!=='undefined' && currentUser && currentUser.id)||'';
+    const em=(typeof currentUser!=='undefined' && currentUser && currentUser.email)||'';
+    if(String(o.userId||'')!==String(uid) || String(o.email||'')!==String(em)){ localStorage.removeItem('cosmicInviteCache'); return null; }
+    return o;
+  }catch(e){ return null; }
+}
+function inviteCacheSave(d){
+  try{
+    const uid=(typeof currentUser!=='undefined' && currentUser && currentUser.id)||'';
+    const em=(typeof currentUser!=='undefined' && currentUser && currentUser.email)||'';
+    if(!uid || !d || !d.code) return;
+    localStorage.setItem('cosmicInviteCache', JSON.stringify({
+      userId:uid, email:em, code:d.code, link:d.link,
+      credits:d.credits, rewards:d.rewards, invitesPerReward:d.invitesPerReward,
+      nextRewardIn:d.nextRewardIn, rewardDays:d.rewardDays, bonusDays:d.bonusDays, at:Date.now(),
+    }));
+  }catch(e){}
+}
+// قالب کامل صفحهٔ دعوت — مشترک بین مسیر کش و مسیر سرور (یک خروجی، دو منبع داده)
+function invitePageHtml(d){
+  const credits=Math.max(0, Number(d.credits)||0), per=Math.max(1, Number(d.invitesPerReward)||3);
+  const inProgress=credits%per, remaining=Number(d.nextRewardIn)||0;
+  let dots='';
+  for(let i=0;i<per;i++) dots+='<span style="font-size:22px; margin:0 3px">'+(i<inProgress?'🟡':'⚪')+'</span>';
+  return `${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان','دعوت کن، طلایی شو — هر ۳ دعوت موفق = ۱ ماه عضویت طلایی')}
+    <div class="card orn">
+      <h3 style="margin:0 0 6px">🔗 لینک دعوت اختصاصی تو</h3>
+      <input readonly dir="ltr" value="${esc(d.link||'')}" onclick="this.select()" style="width:100%; box-sizing:border-box; font-size:13px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2; margin-bottom:10px">
+      <div class="btn-row">
+        <button class="btn small" onclick="inviteShare()">📤 اشتراک‌گذاری</button>
+        <button class="btn small secondary" onclick="inviteCopy()">📋 کپی لینک</button>
+      </div>
+      <p class="small-note" style="margin:8px 0 0">کد دعوت: <span style="direction:ltr; unicode-bidi:isolate; font-weight:800; color:var(--gold-soft)">${esc(d.code||'')}</span></p>
+    </div>
+    <div class="card orn center" id="invite-progress-card">
+      <h3 style="margin:0 0 8px">مسیر جایزهٔ بعدی</h3>
+      <div style="margin:6px 0">${dots}</div>
+      <p class="desc" style="margin:4px 0">${remaining>0?('🟡 '+toFa(inProgress)+' از '+toFa(per)+' دعوت — '+toFa(remaining)+' دعوت دیگر تا 👑 ۱ ماه طلایی'):('🎉 جایزهٔ بعدی با اولین دعوت جدید فعال می‌شود — تاکنون '+toFa(Number(d.rewards)||0)+' ماه هدیه گرفتی')}</p>
+      <p class="small-note" style="margin:6px 0 0">دعوت‌های موفق: <b>${toFa(credits)}</b> — ماه‌های طلاییِ هدیه‌گرفته: <b>${toFa(Number(d.rewards)||0)}</b></p>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 6px">✅ دعوتِ «موفق» چیست؟</h3>
+      <p class="desc" style="line-height:2">دوستی که با لینک تو وارد اپ شود و <b>برای اولین‌بار حساب بسازد</b> (گوگل یا ایمیل)، یک دعوت موفق برایت ثبت می‌کند و خودش هم ۳ روز طلایی هدیه می‌گیرد.</p>
+      <p class="small-note">فقط حساب‌های تازه‌ساخت حساب می‌شوند؛ از هر دستگاه یک دعوت؛ ورود مجدد یا دعوت از خودت جایزه‌ای ندارد.</p>
+    </div>`;
+}
 async function showInvitePage(){
   setNav('more');
   if(typeof authToken==='undefined' || !authToken || !currentUser){
@@ -954,44 +1011,35 @@ async function showInvitePage(){
       <div class="card orn center">
         <div style="font-size:44px; line-height:1.2; margin:8px 0">🎁</div>
         <h2 style="margin:4px 0 8px">دعوت کن، طلایی شو</h2>
-        <p class="desc" style="line-height:2">هر ۳ دوستی که با لینک تو وارد اپ شوند و حساب بسازند، یک ماه عضویت طلایی هدیه می‌گیری.<br>دوستِ دعوت‌شده هم ۳ روز طلایی هدیه می‌گیرد.</p>
+        <p class="desc" style="line-height:2">هر ۳ دوستی که با لینک تو وارد اپ شوند و حساب بسازند، یک ماه عضویت طلایی هدیه می‌گیرد.<br>دوستِ دعوت‌شده هم ۳ روز طلایی هدیه می‌گیرد.</p>
         <p class="small-note">برای دیدن لینک دعوتت، اول وارد حسابت شو.</p>
         <button class="btn" onclick="__pendingAfterAuth='invite'; showMembershipPage()">ورود / عضویت</button>
         <button class="btn secondary" onclick="showMoreMenu()">بازگشت</button>
       </div>`);
     return;
   }
+  // [1.2.23] اول از کش — صفحه فوری و حتی آفلاین باز می‌شود؛ آمار در پس‌زمینه تازه می‌شود
+  const cached=inviteCacheLoad();
+  if(cached){
+    __inviteData=cached;
+    render(invitePageHtml(cached));
+    const seq=++__inviteFetchSeq;
+    try{
+      const d=await authFetch('/invite/me');
+      inviteCacheSave(d); __inviteData=d;
+      // فقط اگر کاربر هنوز روی همین صفحه است و آمار واقعاً عوض شده، دوباره بکش (بدون پرش بی‌مورد)
+      const sig=(x)=>[Number(x.credits)||0,Number(x.rewards)||0,Number(x.nextRewardIn)||0,Number(x.invitesPerReward)||3].join('|');
+      if(seq===__inviteFetchSeq && sig(d)!==sig(cached) && document.getElementById('invite-progress-card')) render(invitePageHtml(d));
+    }catch(e){ /* کش نشان داده شد؛ آمار دفعهٔ بعد تازه می‌شود */ }
+    return;
+  }
   render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان')}<div class="card orn center"><p class="desc">در حال دریافت لینک دعوت...</p></div>`);
   try{
     const d=await authFetch('/invite/me');
-    __inviteData=d;
-    const credits=Math.max(0, Number(d.credits)||0), per=Math.max(1, Number(d.invitesPerReward)||3);
-    const inProgress=credits%per, remaining=Number(d.nextRewardIn)||0;
-    let dots='';
-    for(let i=0;i<per;i++) dots+='<span style="font-size:22px; margin:0 3px">'+(i<inProgress?'🟡':'⚪')+'</span>';
-    render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان','دعوت کن، طلایی شو — هر ۳ دعوت موفق = ۱ ماه عضویت طلایی')}
-      <div class="card orn">
-        <h3 style="margin:0 0 6px">🔗 لینک دعوت اختصاصی تو</h3>
-        <input readonly dir="ltr" value="${esc(d.link||'')}" onclick="this.select()" style="width:100%; box-sizing:border-box; font-size:13px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2; margin-bottom:10px">
-        <div class="btn-row">
-          <button class="btn small" onclick="inviteShare()">📤 اشتراک‌گذاری</button>
-          <button class="btn small secondary" onclick="inviteCopy()">📋 کپی لینک</button>
-        </div>
-        <p class="small-note" style="margin:8px 0 0">کد دعوت: <span style="direction:ltr; unicode-bidi:isolate; font-weight:800; color:var(--gold-soft)">${esc(d.code||'')}</span></p>
-      </div>
-      <div class="card orn center">
-        <h3 style="margin:0 0 8px">مسیر جایزهٔ بعدی</h3>
-        <div style="margin:6px 0">${dots}</div>
-        <p class="desc" style="margin:4px 0">${remaining>0?('🟡 '+toFa(inProgress)+' از '+toFa(per)+' دعوت — '+toFa(remaining)+' دعوت دیگر تا 👑 ۱ ماه طلایی'):('🎉 جایزهٔ بعدی با اولین دعوت جدید فعال می‌شود — تاکنون '+toFa(Number(d.rewards)||0)+' ماه هدیه گرفتی')}</p>
-        <p class="small-note" style="margin:6px 0 0">دعوت‌های موفق: <b>${toFa(credits)}</b> — ماه‌های طلاییِ هدیه‌گرفته: <b>${toFa(Number(d.rewards)||0)}</b></p>
-      </div>
-      <div class="card">
-        <h3 style="margin:0 0 6px">✅ دعوتِ «موفق» چیست؟</h3>
-        <p class="desc" style="line-height:2">دوستی که با لینک تو وارد اپ شود و <b>برای اولین‌بار حساب بسازد</b> (گوگل یا ایمیل)، یک دعوت موفق برایت ثبت می‌کند و خودش هم ۳ روز طلایی هدیه می‌گیرد.</p>
-        <p class="small-note">فقط حساب‌های تازه‌ساخت حساب می‌شوند؛ از هر دستگاه یک دعوت؛ ورود مجدد یا دعوت از خودت جایزه‌ای ندارد.</p>
-      </div>`);
+    inviteCacheSave(d); __inviteData=d;
+    render(invitePageHtml(d));
   }catch(e){
-    render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان')}<div class="card"><p class="desc" style="color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`);
+    render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان')}<div class="card orn center"><p class="desc" style="color:#ff8a8a">${esc(translateAuthError(e))}</p><button class="btn" onclick="showInvitePage()">تلاش دوباره</button><button class="btn secondary" onclick="showMoreMenu()">بازگشت</button></div>`);
   }
 }
 function inviteShareText(){
