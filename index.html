@@ -294,9 +294,10 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
 <script>
 // [1.2.31] ضدهرگزِ اسپلش: تا امروز اگر حتی یکی از ۱۲ فایل JS روی دستگاه درست لود نمی‌شد (اینترنت ناپایدار
 // یا کشِ ناقص)، اجرای app.js وسط راه می‌خورد و «لوگوی شروع برای همیشه گیر می‌کرد». از این نسخه به بعد،
-// ۸ ثانیه بعد از باز شدن اپ: اگر بوت کامل نشده بود (__bootDone) اسپلش به‌اجبار برداشته می‌شود؛ اگر صفحه
-// هم خالی مانده بود، کارت «تلاش مجدد» پایین صفحه ظاهر می‌شود. اگر بوت بعداً کامل شود (شبکهٔ کند)،
-// app.js خودش این کارت را هم برمی‌دارد — هیچ مسیری دیگر به «لوگوی همیشگی» ختم نمی‌شود.
+// ۸ ثانیه بعد از باز شدن اپ: اگر بوت کامل نشده بود (__bootDone) اسپلش به‌اجبار برداشته می‌شود.
+// [1.2.32] خودترمیمی: به‌جای اینکه کاربر خودش دکمهٔ «تلاش مجدد» را بزند، اپ یک‌بار خودکار رفرش می‌شود —
+// در بار دوم فایل‌های جاافتاده معمولاً از کش سرویس‌ورکر می‌آیند و اپ سالم بالا می‌آید. اگر رفرش هم
+// فایده نداشت (پرچم ۱۲۰ ثانیه‌ای)، آن‌وقت کارت «تلاش مجدد» نشان داده می‌شود.
 (function(){
   setTimeout(function(){
     try{
@@ -305,6 +306,14 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
       if(s){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.remove)s.remove(); },500); }
       var app=document.getElementById('app');
       if(app && !String(app.innerHTML).trim()){
+        var last=null;
+        try{ last=Number(sessionStorage.getItem('cosmicBootRetryAt'))||0; }catch(e){}
+        var now=Date.now();
+        if(!last || (now-last)>120000){ // در ۱۲۰ ثانیهٔ گذشته خودترمیمی نکرده‌ایم → یک‌بار خودکار
+          try{ sessionStorage.setItem('cosmicBootRetryAt', String(now)); }catch(e){}
+          location.reload();
+          return;
+        }
         if(document.getElementById('boot-retry-card')) return;
         var d=document.createElement('div'); d.id='boot-retry-card';
         d.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(70px + env(safe-area-inset-bottom, 0px));z-index:9998;background:#1c1640;border:1px solid #f0c96a55;border-radius:18px;padding:14px 16px;text-align:center;box-shadow:0 8px 30px #0008;';
