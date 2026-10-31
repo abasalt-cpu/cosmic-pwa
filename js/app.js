@@ -1681,27 +1681,72 @@ function getHafezModernToday(){
   const st=safeJSONParse(localStorage.getItem('hafezModernState'), null);
   return (st && typeof st==='object' && st.date===todayStr()) ? st : null;
 }
-function loadHafezModernData(){
-  // [1.2.28-فیکس] سه سخت‌سازی برای ریشه‌کن‌کردن «تفسیر با AI نمی‌آید»:
-  // ۱) پارامتر نسخه در آدرس — دستگاه‌هایی که دورهٔ نبودنِ فایل (404) یا نسخهٔ ناقص را کش کرده‌اند
-  //    خودکار از کشِ خراب بیرون می‌آیند (کلید کشِ تازه به ازای هر نسخه)
-  // ۲) چک واقعی بودن داده پس از بارگذاری (نه فقط روشن‌شدن onload)
-  // ۳) یک تلاش دوبارهٔ خودکار روی خطای شبکه
-  if(typeof HAFEZ_MODERN_DATA!=='undefined' && Array.isArray(HAFEZ_MODERN_DATA) && HAFEZ_MODERN_DATA.length) return Promise.resolve();
-  const attempt=(retry)=>new Promise((resolve,reject)=>{
+// [1.2.29-فیکس نهایی] ریشهٔ «گیر کردن روی در حال آماده‌سازی»: لودر قبلی اگر اتصال وسط راه معلق می‌شد
+// (نه onload و نه onerror — حالت رایج شبکهٔ موبایل ایران)، هیچ‌وقت جمع نمی‌شد و دکمه تا ابد می‌ماند.
+// لودر جدید «همیشه جمع می‌شود»:
+//   ۱) fetch با مهلت‌سنج AbortController (اتصال معلق بعد از ۴۰ ثانیه قطع می‌شود)
+//   ۲) تزریق محتوا با اسکریپتِ blob (کش سرویس‌ورکر و پارامتر ?v= نسخه هماهنگ می‌ماند)
+//   ۳) مسیر جایگزین: تگ اسکریپت کلاسیک با مهلت‌سنج ۲۵ ثانیه‌ای
+//   ۴) dedup: پیش‌بارگذاریِ صفحه و کلیکِ دکمه یک دانلود مشترک‌اند (نه دو دانلود)
+var HAFEZ_FETCH_TIMEOUT_MS=40000, HAFEZ_SCRIPT_TIMEOUT_MS=25000, HAFEZ_PROG_HINT_MS=4000, IAP_FRESH_RACE_MS=6000; // مهلت‌ها — تست می‌تواند کوچک کند
+var __hafezModernLoad=null; // دانلودِ در جریان — dedup
+function hafezModernSrcUrl(){ return 'data/hafez_modern.js?v='+(typeof APP_VERSION!=='undefined'?APP_VERSION:'1'); }
+function hafezModernReady(){ return typeof HAFEZ_MODERN_DATA!=='undefined' && Array.isArray(HAFEZ_MODERN_DATA) && HAFEZ_MODERN_DATA.length>0; }
+function hafezModernVerifyError(){ return new Error('دادهٔ تفسیر مدرن ناقص بارگذاری شد.'); }
+function hafezModernBlobInject(txt){
+  return new Promise((resolve,reject)=>{
+    let url='';
+    try{
+      url=URL.createObjectURL(new Blob([txt],{type:'text/javascript'}));
+      const s=document.createElement('script');
+      s.src=url;
+      s.onload=()=>{ try{ URL.revokeObjectURL(url); }catch(e){} resolve(); };
+      s.onerror=()=>{ try{ URL.revokeObjectURL(url); }catch(e){} reject(new Error('اجرای فایل تفسیر ناموفق بود. دوباره تلاش کن.')); };
+      document.head.appendChild(s);
+    }catch(e){ try{ if(url) URL.revokeObjectURL(url); }catch(e2){} reject(e); }
+  });
+}
+function hafezModernFetchLoad(){
+  return new Promise((resolve,reject)=>{
+    let done=false;
+    const finish=(err)=>{ if(done) return; done=true; clearTimeout(timer); if(err) reject(err); else resolve(); };
+    let ctl=null; try{ if(typeof AbortController!=='undefined') ctl=new AbortController(); }catch(e){}
+    const timer=setTimeout(()=>{ try{ if(ctl) ctl.abort(); }catch(e){} finish(new Error('دریافت تفسیر بیش از حد طول کشید — اتصالت را چک کن و دوباره تلاش کن.')); }, HAFEZ_FETCH_TIMEOUT_MS);
+    try{
+      fetch(hafezModernSrcUrl(), ctl?{signal:ctl.signal}:{}).then((res)=>{
+        if(done) return;
+        if(!res || !res.ok){ finish(new Error('دریافت تفسیر ناموفق بود ('+((res&&res.status)||'شبکه')+'). دوباره تلاش کن.')); return; }
+        return Promise.resolve(res.text()).then((txt)=>{
+          if(done) return;
+          // چک واقعیِ محتوا: فایل کامل ~۱.۵ مگ است و نام متغیر را دارد؛ پاسخ 404/HTML کش‌شده اینجا رد می‌شود
+          if(!txt || String(txt).length<50000 || String(txt).indexOf('HAFEZ_MODERN_DATA')<0){ finish(hafezModernVerifyError()); return; }
+          hafezModernBlobInject(String(txt)).then(()=>{ finish(hafezModernReady()?undefined:hafezModernVerifyError()); }, finish);
+        });
+      }).catch(()=>{ finish(new Error('دریافت تفسیر ناموفق بود. اتصال اینترنتت رو چک کن.')); });
+    }catch(e){ finish(new Error('دریافت تفسیر ناموفق بود. اتصال اینترنتت رو چک کن.')); }
+  });
+}
+function hafezModernScriptLoad(){
+  return new Promise((resolve,reject)=>{
+    let done=false;
     const s=document.createElement('script');
-    s.src='data/hafez_modern.js?v='+(typeof APP_VERSION!=='undefined'?APP_VERSION:'1');
-    s.onload=()=>{
-      if(typeof HAFEZ_MODERN_DATA!=='undefined' && Array.isArray(HAFEZ_MODERN_DATA) && HAFEZ_MODERN_DATA.length) resolve();
-      else reject(new Error('دادهٔ تفسیر مدرن ناقص بارگذاری شد.'));
-    };
-    s.onerror=()=>{
-      if(retry) setTimeout(()=>{ attempt(false).then(resolve,reject); }, 600);
-      else reject(new Error('بارگذاری تفسیر مدرن ناموفق بود. اتصال اینترنتت رو چک کن.'));
-    };
+    const finish=(err)=>{ if(done) return; done=true; clearTimeout(timer); try{ if(s.parentNode) s.parentNode.removeChild(s); }catch(e){} if(err) reject(err); else resolve(); };
+    const timer=setTimeout(()=>finish(new Error('دریافت تفسیر بیش از حد طول کشید — اتصالت را چک کن و دوباره تلاش کن.')), HAFEZ_SCRIPT_TIMEOUT_MS);
+    s.src=hafezModernSrcUrl();
+    s.onload=()=>finish(hafezModernReady()?undefined:hafezModernVerifyError());
+    s.onerror=()=>finish(new Error('بارگذاری تفسیر مدرن ناموفق بود. اتصال اینترنتت رو چک کن.'));
     document.head.appendChild(s);
   });
-  return attempt(true);
+}
+function loadHafezModernData(){
+  if(hafezModernReady()) return Promise.resolve();
+  if(__hafezModernLoad) return __hafezModernLoad;
+  let hasFetch=false; try{ hasFetch=(typeof fetch==='function'); }catch(e){}
+  const p=(hasFetch
+    ? hafezModernFetchLoad().catch(()=>hafezModernScriptLoad())
+    : hafezModernScriptLoad());
+  __hafezModernLoad=p.then(()=>{ __hafezModernLoad=null; }, (e)=>{ __hafezModernLoad=null; throw e; });
+  return __hafezModernLoad;
 }
 function renderHafezText(text){
   let html='', list=[], para=[], quote=[];
@@ -1748,6 +1793,8 @@ async function showHafez(mode){
       <p id="fal-push-msg" class="small-note" style="min-height:18px"></p>
       <button class="btn${falOn?' secondary':''}" id="fal-push-btn" onclick="handleDailyFalToggle()">${falOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری روزانه'}</button>
     </div>`);
+  // [1.2.29-فیکس] پیش‌بارگذاری تفسیر AI در لحظهٔ باز شدن صفحهٔ فال — دانلود (~۱.۵ مگ) قبل از کلیک شروع می‌شود
+  if(modern){ try{ loadHafezModernData().catch(()=>{}); }catch(e){} }
   if(modern && modernToday) renderHafezModernResult(modernToday.id);
   if(!modern){ try{ const ld=JSON.parse(localStorage.getItem('hafezLastDraw')||'null'); if(prem&&ld&&ld.date===todayStr()&&ld.g) renderTradResult(ld.g,-1); else if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
   const myView=++__hafezView; // [FAST 1.2.10] تازه‌سازی پس‌زمینه؛ فقط اگر هنوز روی همین صفحه‌ایم و گیت عوض شده
@@ -1756,15 +1803,20 @@ async function showHafez(mode){
 async function revealHafezModern(){
   const btn=document.getElementById('hafez-btn');
   if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; } // [FAST 1.2.10] بازخورد فوری کلیک
-  await ensureIapFresh(); // [GOLD-gate 1.2.7]
+  // [1.2.29-فیکس] هیچ انتظاری بی‌نهایت نمی‌ماند: دانلود تفسیر مهلت‌سنج دارد (لودر جدید)،
+  // تازه‌سازی وضعیت طلایی حداکثر ۶ ثانیه معطل می‌ماند، و بعد از ۴ ثانیه نشان پیشرفت نشان داده می‌شود
+  const progTimer=setTimeout(()=>{ const b=document.getElementById('hafez-btn'); if(b && b.disabled && b.textContent==='در حال آماده‌سازی...') b.textContent='در حال دریافت تفسیر... چند لحظه صبر کن'; }, HAFEZ_PROG_HINT_MS);
+  await Promise.race([ensureIapFresh(), new Promise((r)=>setTimeout(r, IAP_FRESH_RACE_MS))]); // [GOLD-gate 1.2.7]
   const prem=hasFeatureAccess('hafez');
-  if(!prem && getHafezModernToday()){ if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='✅ فال AI امروزت رو گرفتی'; } return; }
+  if(!prem && getHafezModernToday()){ clearTimeout(progTimer); if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='✅ فال AI امروزت رو گرفتی'; } return; }
   try{ await loadHafezModernData(); }
   catch(e){
+    clearTimeout(progTimer);
     if(btn){ btn.disabled=false; btn.textContent=prem?'🌿 فالم رو با AI بگیر (∞)':'🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
-    document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`;
+    document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p><button class="btn small" onclick="revealHafezModern()">🔄 تلاش دوباره</button>`;
     return;
   }
+  clearTimeout(progTimer);
   // [1.2.28-فیکس] هر خطای بعد از بارگذاری هم دکمه را زنده نگه می‌دارد و پیام می‌دهد (نه گیر کردن در «آماده‌سازی»)
   try{
     let seq=0;
