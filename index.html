@@ -291,6 +291,30 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
   <div class="splash-logo">✨</div>
   <div class="splash-title">کد کیهانی</div>
 </div>
+<script>
+// [1.2.31] ضدهرگزِ اسپلش: تا امروز اگر حتی یکی از ۱۲ فایل JS روی دستگاه درست لود نمی‌شد (اینترنت ناپایدار
+// یا کشِ ناقص)، اجرای app.js وسط راه می‌خورد و «لوگوی شروع برای همیشه گیر می‌کرد». از این نسخه به بعد،
+// ۸ ثانیه بعد از باز شدن اپ: اگر بوت کامل نشده بود (__bootDone) اسپلش به‌اجبار برداشته می‌شود؛ اگر صفحه
+// هم خالی مانده بود، کارت «تلاش مجدد» پایین صفحه ظاهر می‌شود. اگر بوت بعداً کامل شود (شبکهٔ کند)،
+// app.js خودش این کارت را هم برمی‌دارد — هیچ مسیری دیگر به «لوگوی همیشگی» ختم نمی‌شود.
+(function(){
+  setTimeout(function(){
+    try{
+      if(window.__bootDone) return;
+      var s=document.getElementById('splash-screen');
+      if(s){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.remove)s.remove(); },500); }
+      var app=document.getElementById('app');
+      if(app && !String(app.innerHTML).trim()){
+        if(document.getElementById('boot-retry-card')) return;
+        var d=document.createElement('div'); d.id='boot-retry-card';
+        d.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(70px + env(safe-area-inset-bottom, 0px));z-index:9998;background:#1c1640;border:1px solid #f0c96a55;border-radius:18px;padding:14px 16px;text-align:center;box-shadow:0 8px 30px #0008;';
+        d.innerHTML='<p style="color:#cfc8ea;font-size:12.5px;line-height:1.9;margin:0 0 10px">اپ کامل لود نشد — احتمالاً اینترنت لحظه‌ای قطع بوده.</p><button onclick="location.reload()" style="background:#f0c96a;color:#1a1030;border:0;border-radius:999px;padding:8px 24px;font-weight:800;font-family:inherit">🔄 تلاش مجدد</button>';
+        document.body.appendChild(d);
+      }
+    }catch(e){}
+  }, 8000);
+})();
+</script>
 <div class="stars"></div>
 <header class="top">
   <div class="top-bar">
