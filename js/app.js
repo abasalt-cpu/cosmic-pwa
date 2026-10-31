@@ -774,9 +774,9 @@ function showFeaturePaywall(title, msg, backFn){
 // در نسخه‌ی وب، وضعیت از سرور خوانده می‌شود و ادمین با کارت آزمایشی تست می‌کند.
 // [S-sec] هیچ داده‌ای از سرور بدون esc() نمایش داده نمی‌شود؛ stateها با var (بدون TDZ)
 const IAP_PRODUCTS=[
-  {id:'gold_month', icon:'👑', title:'عضویت طلایی ماهانه', price:'۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک ماه'},
-  {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۴۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک سال — ارزان‌تر از ماهانه'},
-  {id:'remove_ads', icon:'🔕', title:'حذف دائمی تبلیغات', price:'۱۹۹٬۰۰۰ تومان', desc:'بنرهای تبلیغاتی برای همیشه حذف می‌شوند'},
+  {id:'gold_month', icon:'👑', title:'عضویت طلایی ماهانه', price:'۱ تومان', desc:'همه‌ی مزایای طلایی به مدت یک ماه'},
+  {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۳ تومان', desc:'همه‌ی مزایای طلایی به مدت یک سال — ارزان‌تر از ماهانه'},
+  {id:'remove_ads', icon:'🔕', title:'حذف دائمی تبلیغات', price:'۲ تومان', desc:'بنرهای تبلیغاتی برای همیشه حذف می‌شوند'},
 ];
 var iapStatus={isGold:false, goldUntil:null, adsRemoved:false, features:[]};
 var __adBannerEl=null;
