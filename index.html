@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://*.yektanet.com https://yektanet.com blob: https://*.triboon.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://www.gstatic.com https://*.yektanet.com https://yektanet.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.cosmiccode.ir https://cosmic-code-auth.cosmiccode396.workers.dev https://cosmic.carservbook.ir https://*.yektanet.com https://yektanet.com https://*.triboon.net https://triboon.net https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-src blob: https://accounts.google.com https://*.yektanet.com https://yektanet.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://accounts.google.com https://www.gstatic.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' blob: https://cdn.jsdelivr.net https://raw.githubusercontent.com https://cosmic-code-auth.cosmiccode396.workers.dev https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="description" content="کد کیهانی؛ محاسبه‌ی کد کیهانی، عددشناسی، طالع‌بینی، فال حافظ، مناجات و متون الهام‌بخش فارسی. این نرم‌افزار جنبه‌ی پیش‌گویی قطعی ندارد.">
 <meta name="theme-color" content="#161233">
 <title>کد کیهانی</title>
@@ -24,8 +24,6 @@ html,body{margin:0; padding:0;}
 body{background:radial-gradient(1200px 800px at 15% -10%, #3a2a63 0%, transparent 60%),
 radial-gradient(900px 700px at 100% 0%, #402458 0%, transparent 55%),
 linear-gradient(180deg, var(--bg-top), var(--bg-bottom) 70%); color:var(--text); min-height:100vh; padding-bottom:calc(64px + env(safe-area-inset-bottom)); overflow-x:hidden;}
-/* [1.2.14] وقتی بنر تبلیغ روی خانه فعال است، محتوا بتواند تا بالای بنر اسکرول شود (72px پایین بنر + تا 124px ارتفاع) */
-body.ad-on{padding-bottom:calc(210px + env(safe-area-inset-bottom));}
 .stars{position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.55;
 background-image:radial-gradient(1.5px 1.5px at 20px 30px, #fff, transparent),
 radial-gradient(1px 1px at 90px 120px, #fff, transparent),

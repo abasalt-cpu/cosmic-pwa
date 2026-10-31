@@ -2,8 +2,8 @@ importScripts('./js/version.js');
 const CACHE_NAME = 'cosmic-code-' + APP_VERSION;
 // [1.2.17] هشدار انتشار: مرورگرِ آپدیتِ سرویس‌ورکر را فقط با مقایسهٔ بایت‌به‌بایتِ همین فایل تشخیص می‌دهد.
 // پس با هر انتشار جدید، علاوه بر js/version.js، شمارهٔ خط «build:» پایین را هم دقیقاً همان عدد کنید.
-// build: 1.2.19
-const ASSETS = ['./','./index.html','./offline.html','./manifest.json','./data/data.js','./data/tables.js','./fonts/Sahel-Bold.woff2','./fonts/Sahel-Black.woff2',
+// build: 1.2.30
+const ASSETS = ['./','./index.html','./offline.html','./privacy.html','./manifest.json','./data/data.js','./data/tables.js','./fonts/Sahel-Bold.woff2','./fonts/Sahel-Black.woff2',
 './js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/version.js','./js/baby_name.js','./js/number_info.js','./js/app.js','./js/auth.js','./js/push.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
 './icons/apple-touch-icon.png','./icons/favicon-32.png','./icons/favicon-16.png','./icons/hand-glow.png',
@@ -12,8 +12,24 @@ const ASSETS = ['./','./index.html','./offline.html','./manifest.json','./data/d
 './icons/menu/icon_profiles.png','./icons/menu/icon_zamanbandi.webp','./icons/menu/icon_zodiac.webp'];
 // [1.2.17] hafez_modern.js (۱.۵۵ مگابایت) از precache حذف شد تا نصب اولیهٔ سرویس‌ورکر سبک و کم‌خطا بماند؛
 // این فایل بار اولِ باز کردن «فال حافظ» دانلود و کش می‌شود (شاخهٔ heavy-data پایین همین کار را انجام می‌دهد).
+// [1.2.30-فیکس حیاتی] ریشهٔ «کاربر همیشه نسخهٔ قدیمی می‌بیند»: cache.addAll همه-یا-هیچ است — اگر حتی یکی
+// از ~۳۰ فایل precache روی شبکهٔ ناپایدار (رایج در ایران) دانلود نشود، نصبِ کل سرویس‌ورکر رد می‌شود و
+// دستگاه تا ابد روی نسخهٔ قدیمی می‌ماند (همین بود که فیکس‌های فال به بعضی گوشی‌ها نمی‌رسید). الان هر فایل
+// مستقل کش می‌شود (با یک تلاش دوباره) و شکستِ تک‌فایل فقط یعنی «همان فایل بعداً از شبکه» — فایل جاافتاده
+// در شاخهٔ عمومی fetch به‌صورت کش-به-علاوه-شبکه خودش جبران می‌شود. نصب دیگر هرگز رد نمی‌شود و
+// skipWaiting همیشه اجرا می‌شود تا آپدیت همیشه زنده شود.
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    try{
+      const cache = await caches.open(CACHE_NAME);
+      await Promise.all(ASSETS.map(async (a) => {
+        for(let attempt=0; attempt<2; attempt++){
+          try{ await cache.add(a); return; }catch(e){ /* تلاش دوباره؛ در بدترین حالت همین فایل از شبکه می‌آید */ }
+        }
+      }));
+    }catch(e){ /* حتی بازنشدن کش هم نباید نصب را بکشد */ }
+    try{ await self.skipWaiting(); }catch(e){}
+  })());
 });
 self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
@@ -41,7 +57,7 @@ self.addEventListener('fetch', (event) => {
   // فقط منابع هم‌مبدأ مدیریت می‌شوند؛ پاسخ‌های API و سرویس‌های خارجی هرگز در کش ذخیره نمی‌شوند.
   if(new URL(event.request.url).origin !== self.location.origin) return;
   const isImage = /\.(png|jpg|jpeg|svg|webp|ico)$/i.test(event.request.url);
-  const isHeavyData = /\/data\/(data|tables|hafez_modern)\.js$/i.test(event.request.url);
+  const isHeavyData = /\/data\/(data|tables|hafez_modern)\.js(\?|$)/i.test(event.request.url); // [1.2.28] ?v=نسخه هم جواب می‌دهد — فیکس «تفسیر با AI نمی‌آید» (کلید کش تازه به ازای هر نسخه)
   if(isImage && /\/icons\//i.test(event.request.url)){
     // آیکون‌ها: فقط یک بار دانلود و کش بشن (بدون دانلود دوباره‌ی پس‌زمینه در هر بار باز کردن اپ)
     event.respondWith(
