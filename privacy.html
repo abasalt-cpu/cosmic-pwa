@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="سیاست حریم خصوصی اپلیکیشن «کد کیهانی» — اطلاعاتی که جمع‌آوری می‌شود، نحوهٔ استفاده، امنیت و حقوق شما">
+<meta name="theme-color" content="#161233">
+<title>حریم خصوصی — کد کیهانی</title>
+<style>
+  :root{ --bg-top:#161233; --bg-bottom:#2b1a4a; --panel:rgba(35,26,66,.8); --gold:#e8b84b; --gold-soft:#f0c96a;
+         --ink:#efe6f7; --muted:#b9a8d6; --line:rgba(240,201,106,.25); }
+  *{box-sizing:border-box}
+  html,body{margin:0; padding:0}
+  body{
+    background:radial-gradient(1200px 800px at 15% -10%, #3a2a63 0%, transparent 60%),
+               radial-gradient(1000px 700px at 110% 15%, #241a4e 0%, transparent 55%),
+               linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+    background-attachment:fixed;
+    color:var(--ink);
+    font-family:'Sahel','Vazirmatn','VazirLocal',Tahoma,Arial,sans-serif;
+    font-size:15px; line-height:2;
+    min-height:100vh;
+  }
+  .wrap{max-width:720px; margin:0 auto; padding:24px 16px 64px}
+  header.top{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+  .logo{width:44px; height:44px; border-radius:12px; background:#1a1030; border:2px solid var(--gold);
+        display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 0 8px rgba(232,184,75,.5)}
+  .brand{font-size:19px; font-weight:700; color:var(--gold-soft); text-shadow:0 0 12px rgba(232,184,75,.33)}
+  h1{font-size:22px; color:var(--gold-soft); margin:18px 0 4px; text-align:center}
+  .orn{display:flex; align-items:center; gap:10px; margin:6px auto 18px; max-width:320px}
+  .orn span{flex:1; height:1px; background:linear-gradient(90deg, transparent, var(--gold), transparent); opacity:.55}
+  .orn i{color:var(--gold-soft); font-style:normal}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin:0 0 14px;
+        box-shadow:0 6px 20px rgba(0,0,0,.35); backdrop-filter:blur(6px)}
+  .card h2{margin:0 0 8px; font-size:16px; color:var(--gold-soft)}
+  .card p{margin:0 0 8px}
+  .card p:last-child{margin-bottom:0}
+  ul{margin:4px 0 8px; padding-inline-start:22px}
+  li{margin:2px 0}
+  .muted{color:var(--muted); font-size:13.5px}
+  .ltr{direction:ltr; unicode-bidi:isolate; display:inline-block}
+  a{color:var(--gold-soft); text-decoration:none; font-weight:700}
+  a:hover{text-decoration:underline}
+  .tag{display:inline-block; background:rgba(240,201,106,.13); color:var(--gold-soft); border-radius:8px;
+       padding:1px 10px; font-size:12.5px; font-weight:700; margin-inline-start:6px}
+  footer{margin-top:26px; text-align:center}
+  .btn{display:inline-block; background:linear-gradient(180deg,#f6d581,var(--gold) 55%,#d9a53a); color:#241a08;
+       font-weight:800; font-size:14.5px; padding:10px 22px; border-radius:12px; border:none; cursor:pointer}
+  .meta{margin-top:14px; font-size:13px; color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="logo">✨</div>
+    <div class="brand">کد کیهانی</div>
+    <div style="flex:1"></div>
+    <a href="https://cosmiccode.ir/">بازگشت به اپ</a>
+  </header>
+
+  <h1>🛡 سیاست حریم خصوصی</h1>
+  <div class="orn"><span></span><i>✦</i><span></span></div>
+
+  <div class="card">
+    <h2>خلاصهٔ ساده</h2>
+    <ul>
+      <li>همهٔ امکانات اصلی (محاسبهٔ کد کیهانی، فال حافظ، طالع‌بینی و…) <b>بدون عضویت و به‌صورت محلی</b> روی دستگاه شما کار می‌کنند؛ عضویت اختیاری است.</li>
+      <li>اطلاعات شما <b>به فروش نمی‌رسد</b> و با هیچ شخص ثالثی برای بازاریابی به اشتراک گذاشته نمی‌شود.</li>
+      <li>می‌توانی هر زمان <b>حساب و تمام اطلاعات سرورِ آن را از داخل خود اپ حذف کنی</b>.</li>
+      <li>هیچ دادهٔ شخصی‌ای به هیچ سرویس هوش مصنوعی ارسال نمی‌شود.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>۱) چه اطلاعاتی پردازش می‌کنیم؟</h2>
+    <p><b>الف) حساب کاربری (اختیاری)</b><br>
+    اگر عضو شوی: نشانی ایمیل و رمز عبور ذخیره می‌شود. رمز عبور هرگز به‌صورت متن آشکار نگه داشته نمی‌شود؛ با الگوریتم استاندارد PBKDF2 (به‌همراه مقدار نمک تصادفی) هش می‌شود. اگر با گوگل وارد شوی، تنها ایمیلی که گوگل در اختیار ما می‌گذارد برای شناسایی حساب استفاده می‌شود و مدیریت آن تابع قوانین گوگل است.</p>
+    <p><b>ب) پروفایل‌های محاسبه</b><br>
+    برای هر پروفایل: نام، نام خانوادگی، نام مادر و تاریخ تولد (شمسی) به‌همراه نتایج محاسبات. این اطلاعات روی دستگاه شما ذخیره می‌شود و اگر وارد حسابت شده باشی، برای پشتیبانی از تعویض دستگاه، روی سرور اختصاصی ما هم نگهداری می‌شود. برای کاربر مهمان (بدون ورود)، هم‌گام‌سازی با یک شناسهٔ تصادفی انجام می‌شود.</p>
+    <p><b>ج) شناسهٔ دستگاه</b><br>
+    یک شناسهٔ تصادفیِ رمزنگاری‌شده در حافظهٔ محلی ساخته می‌شود که با نام یا ایمیل تو ارتباط ذاتی ندارد؛ برای جلوگیری از سوءاستفادهٔ سیستم دعوت، انتخاب فال روزانه و ثبت خطاهای فنی به کار می‌رود.</p>
+    <p><b>د) گزارش خطا</b><br>
+    در صورت بروز خطای فنی، متن خطا، آدرس صفحهٔ مربوطه و شناسهٔ دستگاه ثبت می‌شود تا اشکال را رفع کنیم. این گزارش‌ها فقط تیم توسعه می‌بیند.</p>
+    <p><b>هـ) خرید و مزایا</b><br>
+    برای فعال‌سازی خودکار مزایای خریداری‌شده، وضعیت خرید (محصول، زمان و وضعیت فعال بودن) به حساب کاربری گره می‌خورد.</p>
+    <p><b>و) اعلان‌ها (اختیاری)</b><br>
+    اگر یادآوری روزانه را فعال کنی، شناسهٔ فنی اشتراک اعلان دستگاه ذخیره می‌شود تا فقط همان یادآوریِ انتخابی‌ات ارسال شود؛ با غیرفعال‌کردن، اشتراک لغو می‌گردد.</p>
+  </div>
+
+  <div class="card">
+    <h2>۲) چه چیزهایی را اصلاً جمع نمی‌کنیم</h2>
+    <ul>
+      <li>موقعیت مکانی (GPS)، دوربین، میکروفن، مخاطبین، پیامک‌ها یا فایل‌های تو</li>
+      <li>تاریخچهٔ مرور یا رفتار تو در اپ‌های دیگر</li>
+      <li>هیچ دادهٔ شخصی به هیچ سرویس هوش مصنوعی ارسال نمی‌شود؛ تفسیرهای هوش مصنوعی از پیش تولید و داخل خود اپلیکیشن نگهداری می‌شوند و انتخاب آن‌ها روی دستگاه تو انجام می‌گیرد.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>۳) تبلیغات</h2>
+    <p>یک بنر تبلیغاتی (تهیه‌شده از شبکهٔ یکتانت) فقط در صفحهٔ اصلی و فقط برای کاربرانی که عضو طلایی نیستند یا تبلیغات را حذف نکرده‌اند نمایش داده می‌شود. این شبکه ممکن است طبق سیاست خودش کوکی یا شناسه‌های تبلیغاتی مخصوص نمایش تبلیغ را به کار ببرد. کاربران طلایی یا حذف‌کنندهٔ تبلیغات هیچ بنری نمی‌بینند. ما کوکی یا ابزار ردیابی تبلیغاتی خودمان در اپ نداریم.</p>
+  </div>
+
+  <div class="card">
+    <h2>۴) ذخیره‌سازی، امنیت و آمار</h2>
+    <ul>
+      <li>همهٔ ارتباط‌ها روی HTTPS و زیرساخت ابری Cloudflare (بانک اطلاعاتی D1) انجام می‌شود.</li>
+      <li>نشست‌های ورود با توکن امضاشده و انقضادار مدیریت می‌شود و می‌توانی از هر دستگاهی خارج شوی.</li>
+      <li>برای بهبود اپ از آمار بازدید ناشناس و بدون کوکی (Cloudflare Analytics) استفاده می‌شود که اطلاعات شخصی جمع نمی‌کند.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>۵) اشتراک‌گذاری با اشخاص ثالث</h2>
+    <p>اطلاعات تو فقط با این ارائه‌دهندگان فنی و فقط در حد لازم رد و بدل می‌شود: <b>Cloudflare</b> (میزبانی و پایگاه‌داده)، <b>گوگل</b> (فقط در صورت انتخاب ورود با گوگل)، <b>یکتانت</b> (فقط نمایش بنر تبلیغ)، و <b>کافه‌بازار</b> (فقط برای پردازش خریدهای درون‌برنامه‌ای). هیچ‌کدام اجازهٔ استفاده از داده‌های تو برای مقاصد خودشان را در خدمات ما ندارند و ما داده‌ای نمی‌فروشیم.</p>
+  </div>
+
+  <div class="card">
+    <h2>۶) حقوق تو</h2>
+    <ul>
+      <li><b>خروج از حساب:</b> از بخش حساب کاربری؛ با خروج، اطلاعات پروفایل از این دستگاه پاک می‌شود.</li>
+      <li><b>حذف پروفایل:</b> هر پروفایل را می‌توانی جداگانه از داخل اپ پاک کنی.</li>
+      <li><b>حذف کامل حساب:</b> دکمهٔ «حذف حساب» در بخش حساب کاربری، پس از دو مرحله تأیید، حساب و تمام اطلاعات سرور آن را برای همیشه پاک می‌کند.</li>
+      <li><b>پاک‌کردن حافظهٔ محلی:</b> پاک‌کردن داده‌های مرورگر یا حذف و نصب دوبارهٔ اپ.</li>
+      <li>برای هر درخواست دیگری (دریافت خروجی اطلاعات، سوال یا شکایت) می‌توانی به ایمیل پایین بنویسی؛ در کوتاه‌ترین زمان پاسخ می‌دهیم.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>۷) کودکان</h2>
+    <p>محتوای اپ جنبهٔ فرهنگی، سرگرمی و خودشناسی دارد و برای استفادهٔ خانوادگی طراحی شده است؛ با این حال ایجاد حساب کاربری برای کودکان زیر ۱۳ سال تنها با نظارت و رضایت والدین یا سرپرست انجام شود. مسئولیت صحت اطلاعات واردشده (نام و تاریخ تولد) با کاربر است.</p>
+  </div>
+
+  <div class="card">
+    <h2>۸) تغییرات این سیاست</h2>
+    <p>اگر این سیاست تغییر کند، نسخهٔ به‌روز همین صفحه در همین نشانی منتشر می‌شود و تاریخ پایین صفحه به‌روزرسانی می‌گردد. تغییرات مهم (اگر روزی ماهیت داده‌های جمع‌آوری‌شده عوض شود) داخل خود اپ هم اطلاع‌رسانی می‌شود.</p>
+  </div>
+
+  <div class="card center" style="text-align:center">
+    <h2>ارتباط با ما</h2>
+    <p>سوال، پیشنهاد یا درخواست حذف اطلاعات؟</p>
+    <p><a href="mailto:cosmiccode396@gmail.com" class="ltr">cosmiccode396@gmail.com</a></p>
+    <p><a class="btn" href="https://cosmiccode.ir/">باز کردن کد کیهانی</a></p>
+  </div>
+
+  <footer>
+    <div class="orn"><span></span><i>✦</i><span></span></div>
+    <p class="meta">نسخهٔ سند: ۱٫۰ <span class="tag">آخرین به‌روزرسانی: ۸ آبان ۱۴۰۵ (30 Oct 2026)</span></p>
+    <p class="muted">این سند صرفاً برای اپلیکیشن و وب‌سایت «کد کیهانی» در نشانی cosmiccode.ir معتبر است.</p>
+  </footer>
+
+</div>
+</body>
+</html>
