@@ -2,7 +2,7 @@ importScripts('./js/version.js');
 const CACHE_NAME = 'cosmic-code-' + APP_VERSION;
 // [1.2.17] هشدار انتشار: مرورگرِ آپدیتِ سرویس‌ورکر را فقط با مقایسهٔ بایت‌به‌بایتِ همین فایل تشخیص می‌دهد.
 // پس با هر انتشار جدید، علاوه بر js/version.js، شمارهٔ خط «build:» پایین را هم دقیقاً همان عدد کنید.
-// build: 1.2.27
+// build: 1.2.28
 const ASSETS = ['./','./index.html','./offline.html','./privacy.html','./manifest.json','./data/data.js','./data/tables.js','./fonts/Sahel-Bold.woff2','./fonts/Sahel-Black.woff2',
 './js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/version.js','./js/baby_name.js','./js/number_info.js','./js/app.js','./js/auth.js','./js/push.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
@@ -41,7 +41,7 @@ self.addEventListener('fetch', (event) => {
   // فقط منابع هم‌مبدأ مدیریت می‌شوند؛ پاسخ‌های API و سرویس‌های خارجی هرگز در کش ذخیره نمی‌شوند.
   if(new URL(event.request.url).origin !== self.location.origin) return;
   const isImage = /\.(png|jpg|jpeg|svg|webp|ico)$/i.test(event.request.url);
-  const isHeavyData = /\/data\/(data|tables|hafez_modern)\.js$/i.test(event.request.url);
+  const isHeavyData = /\/data\/(data|tables|hafez_modern)\.js(\?|$)/i.test(event.request.url); // [1.2.28] ?v=نسخه هم جواب می‌دهد — فیکس «تفسیر با AI نمی‌آید» (کلید کش تازه به ازای هر نسخه)
   if(isImage && /\/icons\//i.test(event.request.url)){
     // آیکون‌ها: فقط یک بار دانلود و کش بشن (بدون دانلود دوباره‌ی پس‌زمینه در هر بار باز کردن اپ)
     event.respondWith(
