@@ -189,22 +189,88 @@ function showMoreMenu(){
 var __adminUsersData=[];
 var __adminUsersPendingCount=0;
 var __adminAccessPickEmail=null; // ایمیل انتخاب‌شده از این پنل برای ویرایش دسترسی
+var __adminPendingData=[]; // [1.2.24] دسترسی‌های اعطاشده به ایمیل‌های ثبت‌نام‌نشده
+// [1.2.25] کش فهرست کاربران ادمین — صفحه فوری از کش باز می‌شود (حتی بدون اینترنت)
+// و در پس‌زمینه از سرور تازه می‌شود؛ اعضای جدید به لیست نمایش‌داده‌شده اضافه می‌شوند.
+var __adminUsersCacheKey='cosmicAdminUsersCache';
+function adminUsersCacheWho(){
+  try{ return (typeof currentUser!=='undefined'&&currentUser)?(currentUser.id||currentUser.email||''):''; }catch(e){ return ''; }
+}
+function adminUsersCacheLoad(){
+  try{
+    const o=safeJSONParse(localStorage.getItem(__adminUsersCacheKey), null);
+    if(!o || !Array.isArray(o.users) || !Array.isArray(o.accounts) || !o.at) return null;
+    if(o.who!==adminUsersCacheWho()) return null; // تعویض حساب → کش معتبر نیست
+    return o;
+  }catch(e){ return null; }
+}
+function adminUsersCacheSave(users,accounts){
+  try{ localStorage.setItem(__adminUsersCacheKey, JSON.stringify({ who:adminUsersCacheWho(), users:users||[], accounts:accounts||[], at:Date.now() })); }catch(e){}
+}
+function adminUsersStatusFa(n,pendN,extra){
+  return `تعداد حساب‌ها: ${toFa(n)}`+(pendN?` — ⏳ در انتظار ثبت‌نام: ${toFa(pendN)}`:'')+(extra?` — ${extra}`:'');
+}
 async function showAdminUsersPage(){
   render(`${backBtn('showMoreMenu()')}<div class="card"><h2>👥 حساب‌های کاربران</h2>
     <p class="desc" id="admin-status">در حال بارگذاری...</p>
     <input id="admin-users-search" type="search" dir="ltr" placeholder="جستجوی ایمیل یا نام..." style="width:100%; box-sizing:border-box; margin-top:6px" oninput="renderAdminUsersList()">
-    <p class="small-note" style="margin:8px 0 0">راهنمای نشان‌ها: ⚡ ادمین — 👑 طلایی — 🔕 بی‌تبلیغ — 🔮♈️🌌🔗👶 دسترسی ویژه — 🛒 خرید واقعی کافه‌بازار — 🛠 اعطای ادمین</p>
-  </div><div id="admin-list"></div>`);
+    <p class="small-note" style="margin:8px 0 0">راهنمای نشان‌ها: ⚡ ادمین — 👑 طلایی (با تاریخ شمسی) — 🔕 بی‌تبلیغ — 🔮♈️🌌🔗👶 دسترسی ویژه — 🛒 خرید واقعی کافه‌بازار — 🛠 اعطای ادمین</p>
+  </div><div id="admin-pending-list"></div><div id="admin-list"></div>`);
+  // [1.2.25] اول از کش — لیست فوری نمایش داده می‌شود؛ جستجو و بقیهٔ صفحه مثل همیشه کار می‌کنند
+  const cached=adminUsersCacheLoad();
+  let cachedEmails=null;
+  if(cached && cached.users.length){
+    __adminUsersData=cached.users;
+    __adminAccessData=cached.accounts||[];
+    __adminPendingData=__adminAccessData.filter((a)=>a&&a.pending);
+    cachedEmails={}; // مجموعهٔ ایمیل‌های نسخهٔ کش برای شمارش اعضای جدید
+    for(const u of __adminUsersData) cachedEmails[String(u.email||'').toLowerCase()]=true;
+    const st=document.getElementById('admin-status');
+    if(st) st.textContent=adminUsersStatusFa(__adminUsersData.length, __adminPendingData.length||__adminUsersPendingCount, `🕰 فهرست ذخیره‌شده (${jalaliDateTimeFa(cached.at)}) — در حال تازه‌سازی...`);
+    renderAdminPendingList();
+    renderAdminUsersList();
+  }
   try{
-    const data=await authFetch('/admin/users', { headers:{ Authorization:'Bearer '+authToken } });
+    const [data,acc]=await Promise.all([
+      authFetch('/admin/users', { headers:{ Authorization:'Bearer '+authToken } }),
+      authFetch('/admin/access/list').catch(()=>null),
+    ]);
     __adminUsersData=(data&&data.users)||[];
     __adminUsersPendingCount=(data&&typeof data.pendingCount==='number')?data.pendingCount:0;
-    document.getElementById('admin-status').textContent=`تعداد حساب‌ها: ${toFa(__adminUsersData.length)}`+(__adminUsersPendingCount?` — ⏳ در انتظار ثبت‌نام: ${toFa(__adminUsersPendingCount)}`:'');
+    __adminAccessData=(acc&&acc.accounts)||[];
+    __adminPendingData=__adminAccessData.filter((a)=>a&&a.pending);
+    adminUsersCacheSave(__adminUsersData, __adminAccessData);
+    adminAccessCacheSave(__adminAccessData); // [1.2.26] همگام‌سازی کش دسترسی‌ها از پنل کاربران
+    let extra='';
+    if(cachedEmails){
+      let fresh=0;
+      for(const u of __adminUsersData){ if(!cachedEmails[String(u.email||'').toLowerCase()]) fresh++; }
+      extra=fresh?`✅ تازه شد — ${toFa(fresh)} عضو جدید`:'✅ تازه شد — بدون تغییر';
+    }
+    const st=document.getElementById('admin-status');
+    if(st) st.textContent=adminUsersStatusFa(__adminUsersData.length, __adminPendingData.length||__adminUsersPendingCount, extra);
+    renderAdminPendingList();
     renderAdminUsersList();
   }catch(e){
-    document.getElementById('admin-status').textContent='';
-    document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
+    const st=document.getElementById('admin-status');
+    if(cached && cached.users.length){
+      // [1.2.25] آفلاین/خطا: لیست ذخیره‌شده سر جایش می‌ماند (خالی یا خطای کامل نمی‌شود)
+      if(st) st.textContent=adminUsersStatusFa(__adminUsersData.length, __adminPendingData.length||__adminUsersPendingCount, `⚠️ تازه‌سازی نشد (اینترنت؟) — فهرست ذخیره‌شده از ${jalaliDateTimeFa(cached.at)}`);
+      renderAdminUsersList();
+    }else{
+      if(st) st.textContent='';
+      document.getElementById('admin-list').innerHTML=`<div class="card"><p class="desc" style="margin:0; color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`;
+    }
   }
+}
+// [1.2.24] دسترسی‌هایی که ادمین به ایمیل‌های هنوز ثبت‌نام‌نشده داده — کلیک روی هرکدام
+// فرم «مدیریت دسترسی‌ها» را با همان ایمیل و تیک‌ها باز می‌کند.
+function renderAdminPendingList(){
+  const box=document.getElementById('admin-pending-list'); if(!box) return;
+  if(!__adminPendingData.length){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="card"><h3 style="margin:0 0 6px">⏳ دسترسی‌های در انتظار ثبت‌نام</h3>'
+    +__adminPendingData.map((a)=>`<div class="name-item" style="cursor:pointer" onclick="adminUsersPick('${esc(a.email||'')}')"><b style="direction:ltr; unicode-bidi:isolate; display:inline-block">${esc(a.email||'')}</b><br><span class="small-note">${adminAccessSummary(a)}</span></div>`).join('')
+    +'<p class="small-note" style="margin-top:6px">این ایمیل‌ها هنوز عضو نشده‌اند؛ روی هرکدام بزنی فرم دسترسی با همان وضعیت باز می‌شود.</p></div>';
 }
 function adminUserChipsHtml(u){
   const chips=[];
@@ -233,7 +299,7 @@ function renderAdminUsersList(){
     const chipHtml=adminUserChipsHtml(u);
     const created=(u.createdAt||u.created_at);
     let createdFa='';
-    try{ createdFa=new Date(created).toLocaleString('fa-IR'); }catch(e){}
+    try{ createdFa=created?jalaliDateTimeFa(created):''; }catch(e){}
     const pickAttr=u.email?` style="cursor:pointer" onclick="adminUsersPick('${esc(u.email)}')"`:'';
     return `
       <div class="card"${pickAttr}>
@@ -524,7 +590,9 @@ function showPrivacyPage(){
     ${pvCard('اعلان‌ها','در صورت فعال‌سازی یادآوری‌ها، شناسه‌ی فنی اشتراک اعلان دستگاه شما صرفاً برای ارسال یادآوری‌های انتخابی ذخیره می‌شود و با غیرفعال‌سازی یادآوری، این اشتراک لغو می‌گردد.','bell')}
     ${pvCard('استفاده از اطلاعات','اطلاعات شما صرفاً برای ارائه و بهبود خدمات، شخصی‌سازی نتایج و ارسال یادآوری‌های انتخابی به کار می‌رود و بدون رضایت شما در اختیار دیگران قرار نخواهد گرفت.','eye')}
     ${pvCard('آمار و ردیابی','برای بهبود نرم‌افزار از آمار بازدید ناشناس و بدون کوکی (Cloudflare Analytics) استفاده می‌شود که هیچ اطلاعات شخصی یا قابل‌شناسایی گردآوری نمی‌کند. از کوکی یا ابزار ردیابی تبلیغاتی استفاده نمی‌شود.','lock')}
-    ${pvCard('حذف اطلاعات','شما می‌توانید در هر زمان با پاک‌کردن داده‌های مرورگر یا برنامه، اطلاعات ذخیره‌شده بر روی دستگاه را حذف کنید و از حساب کاربری خود خارج شوید.','trash')}`);
+    ${pvCard('حذف حساب','در بخش «حساب کاربری» (پروفایل) دکمه‌ی «حذف حساب» وجود دارد؛ با آن، حساب شما به‌همراه تمام اطلاعات ذخیره‌شده در سرور برای همیشه و پس از دو مرحله تأیید پاک می‌شود. پاک‌کردن یک پروفایل جداگانه هم همیشه از داخل خود نرم‌افزار ممکن است.','trash')}
+    ${pvCard('نسخه‌ی کامل این سند','روایت کامل و به‌روزشده‌ی سیاست حریم خصوصی (از جمله جزئیات فنی امنیت، تبلیغات و لاگ خطاها) در این نشانی در دسترس است:','link')}
+    <div class="card center"><a href="https://cosmiccode.ir/privacy.html" target="_blank" rel="noopener" style="color:#f0c96a; font-weight:700; direction:ltr; unicode-bidi:isolate; display:inline-block">cosmiccode.ir/privacy.html</a></div>`);
 }
 function showTermsPage(){
   render(`${backBtn('showMoreMenu()')}${pageHead('','قوانین و شرایط استفاده','','sm')}
@@ -646,7 +714,7 @@ function showCosmicResult(firstName,familyName,r){
     <div class="btn-row">
       <button class="btn secondary" onclick="showCosmicInputForm()">🔄 محاسبه‌ی جدید</button>
       <button class="btn" onclick='shareText(${attrJson(`🌌 کد کیهانی ${firstName} ${familyName}\nکد کیهانی: ${r.cosmicCode}\nعدد سرنوشت: ${r.destinyNum} | عدد تقدیر: ${r.fateNum}\n\nکد کیهانیِ خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`)})'>📤 اشتراک‌گذاری</button>
-    </div>`);
+    </div>${inviteMiniBannerHtml()}`);
   fitCode(); if(document.fonts){ document.fonts.ready.then(fitCode); document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',fitCode); } setTimeout(fitCode,300); setTimeout(fitCode,1200);
 }
 // [1.2.15] نشانی اشتراک‌گذاری هوشمند: روی میزبان قدیمی (github.io) همان مسیر پروژه؛
@@ -706,9 +774,9 @@ function showFeaturePaywall(title, msg, backFn){
 // در نسخه‌ی وب، وضعیت از سرور خوانده می‌شود و ادمین با کارت آزمایشی تست می‌کند.
 // [S-sec] هیچ داده‌ای از سرور بدون esc() نمایش داده نمی‌شود؛ stateها با var (بدون TDZ)
 const IAP_PRODUCTS=[
-  {id:'gold_month', icon:'👑', title:'عضویت طلایی ماهانه', price:'۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک ماه'},
-  {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۴۹۹٬۰۰۰ تومان', desc:'همه‌ی مزایای طلایی به مدت یک سال — ارزان‌تر از ماهانه'},
-  {id:'remove_ads', icon:'🔕', title:'حذف دائمی تبلیغات', price:'۱۹۹٬۰۰۰ تومان', desc:'بنرهای تبلیغاتی برای همیشه حذف می‌شوند'},
+  {id:'gold_month', icon:'👑', title:'عضویت طلایی ماهانه', price:'۱ تومان', desc:'همه‌ی مزایای طلایی به مدت یک ماه'},
+  {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۳ تومان', desc:'همه‌ی مزایای طلایی به مدت یک سال — ارزان‌تر از ماهانه'},
+  {id:'remove_ads', icon:'🔕', title:'حذف دائمی تبلیغات', price:'۲ تومان', desc:'بنرهای تبلیغاتی برای همیشه حذف می‌شوند'},
 ];
 var iapStatus={isGold:false, goldUntil:null, adsRemoved:false, features:[]};
 var __adBannerEl=null;
@@ -739,7 +807,7 @@ async function ensureIapFresh(){
 }
 function iapGoldUntilFa(){
   if(!iapStatus.goldUntil) return '';
-  try{ return String(new Date(iapStatus.goldUntil).toLocaleDateString('fa-IR')); }catch(e){ return ''; }
+  return jalaliStrFa(iapStatus.goldUntil); // [1.2.24] همیشه شمسی
 }
 // ---------- بنر تبلیغ ۳۲۰×۵۰ (فقط صفحه‌ی خانه، فقط برای غیر طلایی‌ها) ----------
 // منبع تبلیغ: یکتانت (ad.type==='yektanet') یا بنر دستی سرور (ad.type==='image')
@@ -827,12 +895,28 @@ function iapStartPurchase(productId){
     return;
   }
   __pendingIapProduct=null;
-  // پل اندرویدی (TWA/APK): وقتی داخل APK کافه‌بازار اجرا شود، این پل موجود است
+  // پل اندرویدی (Capacitor/APK): وقتی داخل بستهٔ دارای SDK کافه‌بازار اجرا شود، این پل موجود است
   if(window.CosmicBazaar && typeof window.CosmicBazaar.purchase==='function'){
     try{ window.CosmicBazaar.purchase(String(productId)); }catch(e){ alert('خطا در شروع خرید.'); }
     return;
   }
-  alert('خرید درون‌برنامه‌ای از طریق کافه‌بازار انجام می‌شود و فقط در نسخه‌ی اندرویدی فعال است.\nنسخه‌ی اندرویدی به‌زودی منتشر خواهد شد.');
+  // [BAZAAR 1.2.27] نسخهٔ وب/TWA هنوز پل پرداخت ندارد — صفحهٔ شفاف «به‌زودی» به‌جای alert:
+  // دکمهٔ خرید بدون عملکرد رایج‌ترین دلیل رد شدن در بررسی کافه‌بازار است؛ این صفحه
+  // منتظر نمی‌گذارد و مسیر جایگزین (طلایی رایگان با دعوت) را هم پیشنهاد می‌دهد.
+  showBazaarSoonPage();
+}
+// [BAZAAR 1.2.27] صفحهٔ «پرداخت درون‌برنامه‌ای به‌زودی» — تا زمان افزودن پل CosmicBazaar
+// (Capacitor + SDK بازار). وقتی پل اضافه شد، این صفحه فقط در خطای پل استفاده می‌شود.
+function showBazaarSoonPage(){
+  render(`${backBtn('showGoldPage()')}${pageHead('🛒','خرید به‌زودی')}
+    <div class="card orn center">
+      <div style="font-size:44px; line-height:1.2; margin:8px 0">🛒</div>
+      <h2 style="margin:4px 0 8px">پرداخت درون‌برنامه‌ای به‌زودی فعال می‌شود</h2>
+      <p class="desc" style="line-height:2">خرید امن از طریق سامانهٔ پرداخت درون‌برنامه‌ای کافه‌بازار انجام خواهد شد و به‌زودی همین‌جا فعال می‌شود. به همین دلیل فعلاً دکمه‌های خرید خاموش‌اند.</p>
+      <p class="small-note">فعلاً می‌توانی 👑 عضویت طلایی را رایگان بگیری: هر ۳ دوست که با لینک دعوتت وارد شوند و حساب بسازند = ۱ ماه طلایی برای تو (دوستت هم ۳ روز طلایی هدیه می‌گیرد).</p>
+      <button class="btn" onclick="showInvitePage()">🎁 دعوت دوستان — طلایی رایگان</button>
+      <button class="btn secondary" onclick="showGoldPage()">بازگشت به عضویت طلایی</button>
+    </div>`);
 }
 // [1.2.18] گیتِ ورود برای خرید — توضیح شفافِ «چرا» + بازگشت بدون اجبار
 function showPurchaseLoginGate(){
@@ -848,10 +932,16 @@ function showPurchaseLoginGate(){
 // [1.2.18] مقصد مشترک همه‌ی مسیرهای موفق ورود (گوگل/ایمیل/OTP):
 // اگر ورود برای ادامه‌ی خرید بود → صفحه‌ی طلایی با وضعیت تازه باز می‌شود.
 // [1.2.19] authResult.isNew → فعال‌سازی دعوتِ درانتظار؛ __pendingAfterAuth='invite' → برگشت به صفحهٔ دعوت
+// [1.2.22] ورود با حسابِ «موجودی» وقتی لینک دعوت درانتظار داریم → پیام توضیحی (به‌جای سکوتِ مطلق)
 var __pendingAfterAuth=null;
 function handleAuthSuccess(authResult){
   // دعوتِ درانتظار فقط با حسابِ تازه‌ساخت فعال می‌شود (سرور هم مستقلاً چک می‌کند)
-  if(authResult && authResult.isNew && typeof claimPendingReferral==='function'){ try{ claimPendingReferral(); }catch(e){} }
+  if(authResult && authResult.isNew){
+    // [1.2.28] زمانِ ساخت حساب برای پنجرهٔ ۱۵ دقیقه‌ای ورود دستی کد دعوت (سرور مرجع نهایی است)
+    try{ localStorage.setItem('cosmicAccountCreatedAt', JSON.stringify({uid:(authResult.user && authResult.user.id)||'', at:Date.now()})); }catch(_e){}
+    if(typeof claimPendingReferral==='function'){ try{ claimPendingReferral(); }catch(e){} }
+  }
+  else if(authResult && !authResult.isNew && typeof notifyRefIgnoredForExistingAccount==='function'){ try{ notifyRefIgnoredForExistingAccount(); }catch(e){} }
   if(__pendingAfterAuth==='invite' && typeof showInvitePage==='function'){ __pendingAfterAuth=null; showInvitePage(); return; }
   const pending=(typeof __pendingIapProduct!=='undefined')?__pendingIapProduct:null;
   __pendingIapProduct=null;
@@ -860,6 +950,8 @@ function handleAuthSuccess(authResult){
     else showGoldPage();
     return;
   }
+  // [1.2.28] عضوِ تازه بدون کدِ درانتظار → یک‌بار فرصت ورود دستی کد دعوت یادآوری شود (پنجرهٔ ۱۵ دقیقه)
+  if(typeof maybeShowManualInvitePrompt==='function'){ try{ maybeShowManualInvitePrompt(); }catch(e){} }
   showMembershipPage();
 }
 // ================== [1.2.19] دعوت دوستان — هر ۳ دعوت موفق = ۱ ماه طلایی ==================
@@ -893,6 +985,186 @@ function captureReferralFromUrl(){
     }catch(_e){}
   }catch(e){}
 }
+// [1.2.22] اگر کسی با لینک دعوت آمد ولی با حسابِ «موجودی» وارد شد، هدیه فعال نمی‌شود؛
+// به‌جای سکوت، یک‌بار برای هر لینکِ درانتظار توضیح می‌دهیم (پرچم notified داخل همان رکورد ذخیره می‌شود؛
+// رکورد حذف نمی‌شود تا اگر بعداً روی همین دستگاه حسابِ نو ساخت، مسیر claim همچنان باز بماند).
+function notifyRefIgnoredForExistingAccount(){
+  try{
+    const raw=localStorage.getItem('cosmicPendingRef'); if(!raw) return;
+    const o=safeJSONParse(raw, null); if(!o || !o.code || o.notified) return;
+    o.notified=true;
+    try{ localStorage.setItem('cosmicPendingRef', JSON.stringify(o)); }catch(_e){}
+    showToastFa('ℹ️ هدیهٔ دعوت فقط با «ساخت حساب جدید» فعال می‌شود؛ با این حسابِ موجود ثبت نشد.');
+  }catch(e){}
+}
+// ================== [1.2.28] صفحهٔ فرود دعوت برای مهمانِ اندرویدیِ «بدون اپ» ==================
+// دوست با لینک دعوت (?ref=CODE) کلیک می‌کند و اپ را ندارد → به‌جای ریختن مستقیم در نسخهٔ وب،
+// صفحهٔ «نصب از کافه‌بازار» نشان داده می‌شود: آمار دانلودِ بازار بالا می‌رود و بعد از نصب + ثبت‌نام،
+// کد دعوت از همان cosmicPendingRef (مسیر 1.2.19) فعال می‌شود و ۳ روز طلایی هدیه می‌گیرد.
+// کد دعوت دست نمی‌خورد: «ادامه در نسخهٔ وب» فقط صفحه را برمی‌دارد و مسیر claim سالم می‌ماند.
+var __inviteLandingDismissed=false; // پرچم نشست — بعد از بستن، تا ری‌لود دوباره نشان داده نشود
+function isStandaloneApp(){
+  try{
+    if(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+    if(navigator.standalone===true) return true; // iOS «Add to Home Screen»
+    if(typeof document.referrer==='string' && document.referrer.indexOf('android-app://')===0) return true; // TWA/WebAPK
+  }catch(e){}
+  return false;
+}
+function isAndroidDevice(){
+  try{ return /Android/i.test(navigator.userAgent||''); }catch(e){ return false; }
+}
+function inviteLandingHiddenRecently(){
+  // اگر کاربر قبلاً «ادامه در نسخهٔ وب» را زده، ۳۰ روز مزاحم نشو (هم‌مهلت با cosmicPendingRef)
+  try{
+    const t=Number(localStorage.getItem('cosmicInviteLandingHiddenAt'))||0;
+    return t>0 && (Date.now()-t) < 30*24*3600*1000;
+  }catch(e){ return false; }
+}
+function inviteLandingCurrentCode(){
+  try{
+    const o=safeJSONParse(localStorage.getItem('cosmicPendingRef'), null);
+    const c=(o && o.code)?String(o.code).trim().toUpperCase():'';
+    return /^[A-Z0-9]{4,16}$/.test(c)?c:'';
+  }catch(e){ return ''; }
+}
+function inviteLandingHtml(code){
+  return `<div id="invite-landing" role="dialog" aria-modal="true" aria-label="نصب کد کیهانی از کافه‌بازار" style="position:fixed; inset:0; z-index:85; background:linear-gradient(180deg,#161233 0%,#2b1a4a 100%); display:flex; align-items:center; justify-content:center; padding:18px; overflow-y:auto">
+    <div style="width:100%; max-width:400px; text-align:center; margin:auto">
+      <img src="icons/icon-192.png" alt="کد کیهانی" style="width:84px; height:84px; border-radius:20px; border:2px solid #f0c96a; box-shadow:0 0 24px #f0c96a55; background:#1a1030">
+      <h2 style="margin:14px 0 4px; color:var(--gold-soft); font-size:21px">به «کد کیهانی» خوش آمدی 🌌</h2>
+      <p class="desc" style="margin:0 0 14px">یک دوست تو را به این اپ دعوت کرده است. برای فعال‌شدن هدیه، اپ را از کافه‌بازار نصب کن.</p>
+      <div class="card" style="text-align:right; margin:0 0 12px">
+        <p class="desc" style="margin:0 0 6px">🎁 <b>هدیهٔ دعوت: ۳ روز عضویت طلایی</b></p>
+        <p class="small-note" style="margin:0 0 10px">بعد از نصب، اپ را باز کن و حسابت را بساز — هدیه به‌صورت خودکار فعال می‌شود.</p>
+        <p class="small-note" style="margin:0 0 8px">کد دعوت تو: <span dir="ltr" style="unicode-bidi:isolate; font-weight:800; color:var(--gold-soft); font-size:15px">${esc(code)}</span></p>
+        <button class="btn small secondary" onclick="inviteLandingCopyCode()">📋 کپی کد دعوت</button>
+      </div>
+      <a class="btn" href="https://cafebazaar.ir/app/ir.cosmiccode" target="_blank" rel="noopener">⬇️ نصب از کافه‌بازار</a>
+      <button class="btn secondary" onclick="inviteLandingDismiss()" style="margin-top:10px">ادامه در نسخهٔ وب</button>
+      <p class="small-note" style="margin:12px 0 0">اگر اپ را از قبل نصب کرده‌ای، همین لینک را دوباره باز کن یا از آیکون اپ وارد شو.</p>
+      <p class="small-note" style="margin:8px 0 0">لینک باز نمی‌شود؟ اپ را از کافه‌بازار نصب کن و بعد از عضویت، همین کد را در اپ (عضویت طلایی ← کد دعوت داری؟) وارد کن — تا ۱۵ دقیقه بعد از عضویت.</p>
+    </div>
+  </div>`;
+}
+function maybeShowInviteLanding(){
+  try{
+    if(__inviteLandingDismissed || inviteLandingHiddenRecently()) return; // قبلاً بسته
+    const code=inviteLandingCurrentCode(); if(!code) return; // با لینک دعوت نیامده
+    if(isStandaloneApp()) return; // داخل TWA/اپ نصب‌شده — فرود بازار معنا ندارد
+    if(!isAndroidDevice()) return; // کافه‌بازار فقط اندروید — دسکتاپ/iOS همان مسیر وب قبلی
+    if(typeof currentUser!=='undefined' && currentUser) return; // کاربر لاگین — مزاحم نشو
+    if(document.getElementById('invite-landing')) return;
+    const wrap=document.createElement('div'); wrap.innerHTML=inviteLandingHtml(code);
+    const el=wrap.firstElementChild; if(el) document.body.appendChild(el);
+  }catch(e){}
+}
+function inviteLandingDismiss(){
+  try{
+    __inviteLandingDismissed=true;
+    localStorage.setItem('cosmicInviteLandingHiddenAt', String(Date.now()));
+    const el=document.getElementById('invite-landing'); if(el && el.remove) el.remove();
+  }catch(e){}
+}
+function inviteLandingCopyCode(){
+  const code=inviteLandingCurrentCode(); if(!code) return;
+  if(navigator.clipboard && typeof navigator.clipboard.writeText==='function'){
+    navigator.clipboard.writeText(code).then(()=>{ showToastFa('کد دعوت کپی شد ✅'); }).catch(()=>{ inviteLandingCopyFallback(code); });
+    return;
+  }
+  inviteLandingCopyFallback(code);
+}
+function inviteLandingCopyFallback(txt){
+  try{
+    const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    showToastFa('کد دعوت کپی شد ✅');
+  }catch(e){ showToastFa(txt || 'کپی ناموفق بود'); }
+}
+// ——— [1.2.28] ورود دستی کد دعوت — برای دوستی که بدون لینک (مثلاً مستقیم از کافه‌بازار) نصب کرده ———
+// دقیقاً همان مسیر سرورِ لینک دعوت (/invite/claim) استفاده می‌شود و سرور مستقلاً قوانین را اعمال می‌کند:
+// فقط حساب تازه‌ساخت (پنجرهٔ ۱۵ دقیقه‌ای REF_ACCOUNT_MAX_AGE_MS)، هر حساب یک‌بار، هر دستگاه یک‌بار،
+// دعوت از خود ممنوع. ضدهای کلاینت: کدِ خودت، یک ثبت موفق در هر دستگاه.
+function manualInviteWindowOpen(){
+  try{
+    const o=safeJSONParse(localStorage.getItem('cosmicAccountCreatedAt'), null);
+    if(!o || !o.at) return false; // بدون رکورد (حساب‌های قدیمی) → کارت نشان داده نمی‌شود؛ سرور هم رد می‌کند
+    const uid=(typeof currentUser!=='undefined' && currentUser && currentUser.id)||'';
+    if(String(o.uid||'')!==String(uid)) return false; // رکورد مال حساب دیگری است
+    return (Date.now()-Number(o.at)) < 15*60*1000; // هم‌پنجره با REF_ACCOUNT_MAX_AGE_MS سرور
+  }catch(e){ return false; }
+}
+function manualInviteUsedHere(){
+  try{ return !!localStorage.getItem('cosmicManualInviteUsed'); }catch(e){ return false; }
+}
+function myOwnInviteCode(){
+  try{
+    if(typeof __inviteData!=='undefined' && __inviteData && __inviteData.code) return String(__inviteData.code).trim().toUpperCase();
+    const c=(typeof inviteCacheLoad==='function')?inviteCacheLoad():null;
+    return (c && c.code)?String(c.code).trim().toUpperCase():'';
+  }catch(e){ return ''; }
+}
+function manualInviteInputValue(){
+  const el=document.getElementById('manual-invite-code') || document.getElementById('manual-invite-code-modal');
+  return el?String(el.value||''):'';
+}
+async function submitManualInviteCode(){
+  try{
+    if(typeof authToken==='undefined' || !authToken || !currentUser){ showToastFa('برای ثبت کد دعوت، اول وارد حسابت شو.'); return; }
+    const code=manualInviteInputValue().trim().toUpperCase();
+    if(!/^[A-Z0-9]{4,16}$/.test(code)){ showToastFa('فرمت کد دعوت درست نیست (۴ تا ۱۶ حرف/عدد انگلیسی).'); return; }
+    if(code===myOwnInviteCode()){ showToastFa('ℹ️ این کد دعوتِ خودت است — دعوت از خودت جایزه‌ای ندارد.'); return; }
+    if(manualInviteUsedHere()){ showToastFa('ℹ️ روی این دستگاه قبلاً یک کد دعوت ثبت شده است.'); return; }
+    // همان مسیر لینک دعوت: رکورد درانتظار + claim — قبول/رد با پیام خود سرور نشان داده می‌شود
+    localStorage.setItem('cosmicPendingRef', JSON.stringify({code:code, at:Date.now()}));
+    await claimPendingReferral();
+    if(!localStorage.getItem('cosmicPendingRef')){ // سرور جواب قطعی داد (قبول یا رد) → رکورد مصرف شد
+      try{ localStorage.setItem('cosmicManualInviteUsed', String(Date.now())); }catch(_e){}
+      closeManualInvitePrompt();
+      showGoldPage(); // کارت ورود دستی از صفحهٔ طلایی هم برطرف می‌شود
+    }
+  }catch(e){
+    try{ if(typeof reportError==='function') reportError('manual invite failed: '+((e&&e.message)||e)); }catch(_e){}
+  }
+}
+// یادآور یک‌بارهٔ بعد از عضویت: حسابِ نو بدون کدِ درانتظار → فرصت ورود دستی یادآوری شود (پنجرهٔ ۱۵ دقیقه)
+function manualInvitePromptedFor(uid){
+  try{
+    const o=safeJSONParse(localStorage.getItem('cosmicManualInvitePrompted'), null);
+    return !!(o && String(o.uid||'')===String(uid||''));
+  }catch(e){ return false; }
+}
+function manualInvitePromptHtml(){
+  return `<div id="manual-invite-prompt" role="dialog" aria-modal="true" aria-label="ثبت کد دعوت" style="position:fixed; inset:0; z-index:60; background:#000c; display:flex; align-items:center; justify-content:center; padding:20px">
+    <div class="card" style="width:100%; max-width:360px; text-align:center; border:1px solid #f0c96a66">
+      <div style="font-size:40px; line-height:1.2; margin:4px 0">🎁</div>
+      <h3 style="margin:0 0 6px">کد دعوت داری؟</h3>
+      <p class="small-note" style="margin:0 0 10px">اگر دوستت کد دعوت فرستاده و لینکش را باز نکرده‌ای، همین حالا کد را وارد کن — ۳ روز طلایی هدیه می‌گیری و او هم یک قدم به جایزه‌اش نزدیک می‌شود.<br>⏳ فرصت: تا ۱۵ دقیقه بعد از عضویت.</p>
+      <input id="manual-invite-code-modal" dir="ltr" maxlength="16" autocomplete="off" placeholder="مثلاً K7QMD2" style="width:100%; box-sizing:border-box; text-align:center; font-size:15px; font-weight:800; letter-spacing:2px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2; margin-bottom:10px">
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn" onclick="submitManualInviteCode()">ثبت کد</button>
+        <button class="btn secondary" onclick="closeManualInvitePrompt()">بعداً</button>
+      </div>
+    </div>
+  </div>`;
+}
+function maybeShowManualInvitePrompt(){
+  try{
+    if(typeof currentUser==='undefined' || !currentUser || typeof authToken==='undefined' || !authToken) return;
+    if(!manualInviteWindowOpen()) return;                  // خارج از پنجرهٔ ۱۵ دقیقه‌ای
+    if(localStorage.getItem('cosmicPendingRef')) return;   // با لینک آمده — claim خودکار انجام شده/می‌شود
+    if(manualInviteUsedHere()) return;                     // قبلاً یک ثبت موفق داشته
+    const uid=(currentUser && currentUser.id)||'';
+    if(manualInvitePromptedFor(uid)) return;               // یادآور فقط یک‌بار برای هر حساب
+    if(document.getElementById('manual-invite-prompt')) return;
+    try{ localStorage.setItem('cosmicManualInvitePrompted', JSON.stringify({uid:uid, at:Date.now()})); }catch(_e){}
+    const wrap=document.createElement('div'); wrap.innerHTML=manualInvitePromptHtml();
+    const el=wrap.firstElementChild; if(el) document.body.appendChild(el);
+  }catch(e){}
+}
+function closeManualInvitePrompt(){
+  try{ const el=document.getElementById('manual-invite-prompt'); if(el && el.remove) el.remove(); }catch(e){}
+}
 // ثبت دعوت پس از ثبت‌نام موفق (فقط از handleAuthSuccess با isNew صدا زده می‌شود)
 async function claimPendingReferral(){
   if(__refClaimInFlight) return;
@@ -905,11 +1177,91 @@ async function claimPendingReferral(){
     const d=await authFetch('/invite/claim', { method:'POST', body:JSON.stringify({ code:o.code, deviceId:getDeviceId() }) });
     localStorage.removeItem('cosmicPendingRef');
     if(d && d.accepted){
+      try{ localStorage.setItem('cosmicManualInviteUsed', String(Date.now())); }catch(_e){} // [1.2.28] یک ثبت موفق در هر دستگاه — ورود دستی بسته می‌شود
       if(typeof refreshIapStatus==='function') refreshIapStatus().catch(()=>{});
       showToastFa(d.message || '🎁 دعوت‌ات ثبت شد!');
+    }else if(d && d.message){
+      // [1.2.22] چرا هیچ اتفاقی نیفتاد؟ دلایل رد شدن (دستگاه تکراری، حساب قدیمی، کد نامعتبر و…)
+      // دیگر بی‌صدا نیستند — پیام سرور همان توضیحِ دقیق است و نباید از کاربر پنهان بماند.
+      showToastFa('ℹ️ ' + d.message);
     }
-  }catch(e){ /* دعوت نامعتبر/تکراری نباید مزاحم ثبت‌نام شود — ساکت رد می‌شود */ }
+  }catch(e){
+    // [1.2.22] خطای شبکه/سرور هم دیگر کاملاً بی‌صدا نیست — برای ردیابی به /errors/log می‌رود
+    try{ if(typeof reportError==='function') reportError('invite claim failed: '+((e&&e.message)||e)); }catch(_e){}
+  }
   finally{ __refClaimInFlight=false; }
+}
+// [1.2.21] بنر جمع‌وجور دعوت در صفحه‌های پرترافیک (فال حافظ + نتیجهٔ کد کیهانی) — تعریف در سطح بالای اسکریپت.
+// (هات‌فیکس: در 1.2.20 این تابع اشتباهی داخل بدنهٔ showGoldPage بود و از showHafez/showCosmicResult
+//  دیده نمی‌شد → ReferenceError و باز نشدن فال حافظ. هویستینگ تابع فقط در همان تابعِ دربرگیرنده کار می‌کند.)
+// متن برای طلایی‌ها «تمدید» و برای بقیه «طلایی رایگان»؛ مهمان با لمس، به گیت ورود صفحهٔ دعوت می‌رود.
+function inviteMiniBannerHtml(){
+  const gold=(typeof isGoldUser==='function') && isGoldUser();
+  return `<div class="card invite-mini" style="border:1px dashed #f0c96a66; margin-top:12px; padding:10px 12px; display:flex; align-items:center; gap:10px">
+    <span style="font-size:26px; line-height:1; flex:none">🎁</span>
+    <div style="flex:1; min-width:0">
+      <b style="color:var(--gold-soft); font-size:14px">${gold?'یک ماه طلاییِ دیگر می‌خواهی؟':'طلاییِ رایگان می‌خواهی؟'}</b>
+      <div class="small-note" style="margin:2px 0 0">${gold?'هر ۳ دعوت موفق = ۱ ماه تمدید طلایی‌ت 👑':'هر ۳ دعوت موفق = ۱ ماه عضویت طلایی 👑'}</div>
+    </div>
+    <button class="btn small" style="flex:none" onclick="showInvitePage()">لینک دعوت</button>
+  </div>`;
+}
+// [1.2.23] کش محلی دعوت — کد و لینک هر کاربر هرگز عوض نمی‌شود (سرور همان ردیف را برمی‌گرداند)،
+// پس بار اول از سرور می‌آید و بعد از این صفحهٔ دعوت همیشه «فوراً» از کش رندر می‌شود — حتی بدون اینترنت.
+// فقط آمار (دعوت‌های موفق/جایزه‌ها) در پس‌زمینه از سرور تازه می‌شود و اگر چیزی عوض شده بود صفحه به‌روز می‌شود.
+// (گزارش کاربر: صفحه هر بار لود از سایت می‌خواست و روی شبکهٔ ضعیف گاهی اصلاً باز نمی‌شد.)
+var __inviteFetchSeq=0; // اگر کاربر از صفحه بیرون رفته باشد، به‌روزرسانیِ پس‌زمینه صفحه را نمی‌دزدد
+function inviteCacheLoad(){
+  try{
+    const raw=localStorage.getItem('cosmicInviteCache'); if(!raw) return null;
+    const o=safeJSONParse(raw, null);
+    if(!o || !o.code || !/^[A-Z0-9]{4,16}$/.test(o.code)){ localStorage.removeItem('cosmicInviteCache'); return null; }
+    // کش متعلق به کدام حساب است؟ با عوض‌کردن حساب، کشِ قبلی بی‌اعتبار است
+    const uid=(typeof currentUser!=='undefined' && currentUser && currentUser.id)||'';
+    const em=(typeof currentUser!=='undefined' && currentUser && currentUser.email)||'';
+    if(String(o.userId||'')!==String(uid) || String(o.email||'')!==String(em)){ localStorage.removeItem('cosmicInviteCache'); return null; }
+    return o;
+  }catch(e){ return null; }
+}
+function inviteCacheSave(d){
+  try{
+    const uid=(typeof currentUser!=='undefined' && currentUser && currentUser.id)||'';
+    const em=(typeof currentUser!=='undefined' && currentUser && currentUser.email)||'';
+    if(!uid || !d || !d.code) return;
+    localStorage.setItem('cosmicInviteCache', JSON.stringify({
+      userId:uid, email:em, code:d.code, link:d.link,
+      credits:d.credits, rewards:d.rewards, invitesPerReward:d.invitesPerReward,
+      nextRewardIn:d.nextRewardIn, rewardDays:d.rewardDays, bonusDays:d.bonusDays, at:Date.now(),
+    }));
+  }catch(e){}
+}
+// قالب کامل صفحهٔ دعوت — مشترک بین مسیر کش و مسیر سرور (یک خروجی، دو منبع داده)
+function invitePageHtml(d){
+  const credits=Math.max(0, Number(d.credits)||0), per=Math.max(1, Number(d.invitesPerReward)||3);
+  const inProgress=credits%per, remaining=Number(d.nextRewardIn)||0;
+  let dots='';
+  for(let i=0;i<per;i++) dots+='<span style="font-size:22px; margin:0 3px">'+(i<inProgress?'🟡':'⚪')+'</span>';
+  return `${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان','دعوت کن، طلایی شو — هر ۳ دعوت موفق = ۱ ماه عضویت طلایی')}
+    <div class="card orn">
+      <h3 style="margin:0 0 6px">🔗 لینک دعوت اختصاصی تو</h3>
+      <input readonly dir="ltr" value="${esc(d.link||'')}" onclick="this.select()" style="width:100%; box-sizing:border-box; font-size:13px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2; margin-bottom:10px">
+      <div class="btn-row">
+        <button class="btn small" onclick="inviteShare()">📤 اشتراک‌گذاری</button>
+        <button class="btn small secondary" onclick="inviteCopy()">📋 کپی لینک</button>
+      </div>
+      <p class="small-note" style="margin:8px 0 0">کد دعوت: <span style="direction:ltr; unicode-bidi:isolate; font-weight:800; color:var(--gold-soft)">${esc(d.code||'')}</span></p>
+    </div>
+    <div class="card orn center" id="invite-progress-card">
+      <h3 style="margin:0 0 8px">مسیر جایزهٔ بعدی</h3>
+      <div style="margin:6px 0">${dots}</div>
+      <p class="desc" style="margin:4px 0">${remaining>0?('🟡 '+toFa(inProgress)+' از '+toFa(per)+' دعوت — '+toFa(remaining)+' دعوت دیگر تا 👑 ۱ ماه طلایی'):('🎉 جایزهٔ بعدی با اولین دعوت جدید فعال می‌شود — تاکنون '+toFa(Number(d.rewards)||0)+' ماه هدیه گرفتی')}</p>
+      <p class="small-note" style="margin:6px 0 0">دعوت‌های موفق: <b>${toFa(credits)}</b> — ماه‌های طلاییِ هدیه‌گرفته: <b>${toFa(Number(d.rewards)||0)}</b></p>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 6px">✅ دعوتِ «موفق» چیست؟</h3>
+      <p class="desc" style="line-height:2">دوستی که با لینک تو وارد اپ شود و <b>برای اولین‌بار حساب بسازد</b> (گوگل یا ایمیل)، یک دعوت موفق برایت ثبت می‌کند و خودش هم ۳ روز طلایی هدیه می‌گیرد.</p>
+      <p class="small-note">فقط حساب‌های تازه‌ساخت حساب می‌شوند؛ از هر دستگاه یک دعوت؛ ورود مجدد یا دعوت از خودت جایزه‌ای ندارد.</p>
+    </div>`;
 }
 async function showInvitePage(){
   setNav('more');
@@ -918,49 +1270,42 @@ async function showInvitePage(){
       <div class="card orn center">
         <div style="font-size:44px; line-height:1.2; margin:8px 0">🎁</div>
         <h2 style="margin:4px 0 8px">دعوت کن، طلایی شو</h2>
-        <p class="desc" style="line-height:2">هر ۳ دوستی که با لینک تو وارد اپ شوند و حساب بسازند، یک ماه عضویت طلایی هدیه می‌گیری.<br>دوستِ دعوت‌شده هم ۳ روز طلایی هدیه می‌گیرد.</p>
+        <p class="desc" style="line-height:2">هر ۳ دوستی که با لینک تو وارد اپ شوند و حساب بسازند، یک ماه عضویت طلایی هدیه می‌گیرد.<br>دوستِ دعوت‌شده هم ۳ روز طلایی هدیه می‌گیرد.</p>
         <p class="small-note">برای دیدن لینک دعوتت، اول وارد حسابت شو.</p>
         <button class="btn" onclick="__pendingAfterAuth='invite'; showMembershipPage()">ورود / عضویت</button>
         <button class="btn secondary" onclick="showMoreMenu()">بازگشت</button>
       </div>`);
     return;
   }
+  // [1.2.23] اول از کش — صفحه فوری و حتی آفلاین باز می‌شود؛ آمار در پس‌زمینه تازه می‌شود
+  const cached=inviteCacheLoad();
+  if(cached){
+    __inviteData=cached;
+    render(invitePageHtml(cached));
+    const seq=++__inviteFetchSeq;
+    try{
+      const d=await authFetch('/invite/me');
+      inviteCacheSave(d); __inviteData=d;
+      // فقط اگر کاربر هنوز روی همین صفحه است و آمار واقعاً عوض شده، دوباره بکش (بدون پرش بی‌مورد)
+      const sig=(x)=>[Number(x.credits)||0,Number(x.rewards)||0,Number(x.nextRewardIn)||0,Number(x.invitesPerReward)||3].join('|');
+      if(seq===__inviteFetchSeq && sig(d)!==sig(cached) && document.getElementById('invite-progress-card')) render(invitePageHtml(d));
+    }catch(e){ /* کش نشان داده شد؛ آمار دفعهٔ بعد تازه می‌شود */ }
+    return;
+  }
   render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان')}<div class="card orn center"><p class="desc">در حال دریافت لینک دعوت...</p></div>`);
   try{
     const d=await authFetch('/invite/me');
-    __inviteData=d;
-    const credits=Math.max(0, Number(d.credits)||0), per=Math.max(1, Number(d.invitesPerReward)||3);
-    const inProgress=credits%per, remaining=Number(d.nextRewardIn)||0;
-    let dots='';
-    for(let i=0;i<per;i++) dots+='<span style="font-size:22px; margin:0 3px">'+(i<inProgress?'🟡':'⚪')+'</span>';
-    render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان','دعوت کن، طلایی شو — هر ۳ دعوت موفق = ۱ ماه عضویت طلایی')}
-      <div class="card orn">
-        <h3 style="margin:0 0 6px">🔗 لینک دعوت اختصاصی تو</h3>
-        <input readonly dir="ltr" value="${esc(d.link||'')}" onclick="this.select()" style="width:100%; box-sizing:border-box; font-size:13px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2; margin-bottom:10px">
-        <div class="btn-row">
-          <button class="btn small" onclick="inviteShare()">📤 اشتراک‌گذاری</button>
-          <button class="btn small secondary" onclick="inviteCopy()">📋 کپی لینک</button>
-        </div>
-        <p class="small-note" style="margin:8px 0 0">کد دعوت: <span style="direction:ltr; unicode-bidi:isolate; font-weight:800; color:var(--gold-soft)">${esc(d.code||'')}</span></p>
-      </div>
-      <div class="card orn center">
-        <h3 style="margin:0 0 8px">مسیر جایزهٔ بعدی</h3>
-        <div style="margin:6px 0">${dots}</div>
-        <p class="desc" style="margin:4px 0">${remaining>0?('🟡 '+toFa(inProgress)+' از '+toFa(per)+' دعوت — '+toFa(remaining)+' دعوت دیگر تا 👑 ۱ ماه طلایی'):('🎉 جایزهٔ بعدی با اولین دعوت جدید فعال می‌شود — تاکنون '+toFa(Number(d.rewards)||0)+' ماه هدیه گرفتی')}</p>
-        <p class="small-note" style="margin:6px 0 0">دعوت‌های موفق: <b>${toFa(credits)}</b> — ماه‌های طلاییِ هدیه‌گرفته: <b>${toFa(Number(d.rewards)||0)}</b></p>
-      </div>
-      <div class="card">
-        <h3 style="margin:0 0 6px">✅ دعوتِ «موفق» چیست؟</h3>
-        <p class="desc" style="line-height:2">دوستی که با لینک تو وارد اپ شود و <b>برای اولین‌بار حساب بسازد</b> (گوگل یا ایمیل)، یک دعوت موفق برایت ثبت می‌کند و خودش هم ۳ روز طلایی هدیه می‌گیرد.</p>
-        <p class="small-note">فقط حساب‌های تازه‌ساخت حساب می‌شوند؛ از هر دستگاه یک دعوت؛ ورود مجدد یا دعوت از خودت جایزه‌ای ندارد.</p>
-      </div>`);
+    inviteCacheSave(d); __inviteData=d;
+    render(invitePageHtml(d));
   }catch(e){
-    render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان')}<div class="card"><p class="desc" style="color:#ff8a8a">${esc(translateAuthError(e))}</p></div>`);
+    render(`${backBtn('showMoreMenu()')}${pageHead('🎁','دعوت دوستان')}<div class="card orn center"><p class="desc" style="color:#ff8a8a">${esc(translateAuthError(e))}</p><button class="btn" onclick="showInvitePage()">تلاش دوباره</button><button class="btn secondary" onclick="showMoreMenu()">بازگشت</button></div>`);
   }
 }
 function inviteShareText(){
   const d=__inviteData||{};
-  return '✨ «کد کیهانی» — خودشناسی با عددشناسی، طالع‌بینی و فال حافظ\nبا لینک زیر وارد شو و حسابت را بساز؛ هر دومان هدیه می‌گیریم 👇\n'+(d.link||'');
+  const code=(d.code||'').toString().trim().toUpperCase();
+  return '✨ «کد کیهانی» — خودشناسی با عددشناسی، طالع‌بینی و فال حافظ\nبا لینک زیر وارد شو و حسابت را بساز؛ هر دومان هدیه می‌گیریم 👇\n'+(d.link||'')
+    +(code?('\nاگر لینک باز نشد: اپ را از کافه‌بازار نصب کن و تا ۱۵ دقیقه بعد از عضویت، کد '+code+' را در اپ (عضویت طلایی ← کد دعوت داری؟) وارد کن 🎁'):'');
 }
 function inviteShare(){
   const t=inviteShareText();
@@ -1001,6 +1346,18 @@ function showGoldPage(){
       <p class="small-note">هر ۳ دوست که با لینک دعوتت وارد شوند و حساب بسازند = ۱ ماه عضویت طلایی برای تو (دوستت هم ۳ روز طلایی هدیه می‌گیرد).</p>
       <div class="btn-row"><button class="btn small" onclick="showInvitePage()">🎁 دریافت لینک دعوت</button></div>
     </div>`;
+  // [1.2.28] کارت ورود دستی کد دعوت — فقط در پنجرهٔ ۱۵ دقیقه‌ای تازه‌ساخت و تا یک ثبت موفق در هر دستگاه
+  let manualInviteHtml='';
+  if(typeof currentUser!=='undefined' && currentUser && !isGoldUser() && manualInviteWindowOpen() && !manualInviteUsedHere()){
+    manualInviteHtml=`<div class="card" style="border:1px dashed #f0c96a66">
+      <h3 style="margin:0 0 6px">🎁 کد دعوت داری؟</h3>
+      <p class="small-note" style="margin:0 0 8px">اگر دوستت کد دعوت فرستاده و لینکش را باز نکرده‌ای، کد را همین‌جا وارد کن؛ ۳ روز طلایی هدیه می‌گیری و او هم یک قدم به جایزه‌اش نزدیک می‌شود. ⏳ تا ۱۵ دقیقه بعد از عضویت.</p>
+      <div class="btn-row" style="gap:8px; margin-top:0">
+        <input id="manual-invite-code" dir="ltr" maxlength="16" autocomplete="off" placeholder="مثلاً K7QMD2" style="flex:1; min-width:0; text-align:center; font-size:14px; font-weight:800; letter-spacing:2px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2">
+        <button class="btn small" style="margin-top:0" onclick="submitManualInviteCode()">ثبت کد</button>
+      </div>
+    </div>`;
+  }
   const adminHtml=isCosmicAdmin()?`
     <div class="card">
       <h3 style="margin:0 0 8px">⚡ تست سریع روی خودم</h3>
@@ -1015,6 +1372,12 @@ function showGoldPage(){
       <p class="small-note">ایمیل را وارد کن، دسترسی‌ها را تیک بزن و «ثبت» کن — تیک‌دار = دسترسی باز، بدون تیک = لغو. اگر ایمیل هنوز ثبت‌نام نکرده باشد، دسترسی‌ها ذخیره می‌شوند و با اولین ورودِ صاحب ایمیل خودکار فعال می‌شوند.</p>
       <label style="margin-top:8px">ایمیل حساب هدف</label>
       <input id="admin-target-email" type="email" dir="ltr" placeholder="example@email.com" style="width:100%; box-sizing:border-box; margin-bottom:10px">
+      <p class="small-note" style="margin:2px 0 4px">⚡ دسترسی سریع طلایی (تیک طلایی و تاریخ انقضا را خودکار پر می‌کند):</p>
+      <div class="btn-row" style="flex-wrap:wrap">
+        <button class="btn small" onclick="adminAccessPreset(3,'۳ روز طلایی')">👑 ۳ روز طلایی</button>
+        <button class="btn small" onclick="adminAccessPreset(31,'۱ ماه طلایی')">👑 ۱ ماه طلایی</button>
+        <button class="btn small" onclick="adminAccessPreset(365,'۱ سال طلایی')">👑 ۱ سال طلایی</button>
+      </div>
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-gold"> 👑 طلایی کامل — همه‌چیز بی‌نهایت (بدون تاریخ: ۳۱ روز از ثبت؛ با تاریخ: تا همان روز)</label></div>
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-ads"> 🔕 حذف تبلیغات (دائمی)</label></div>
       <p class="small-note" style="margin:10px 0 2px">بخش‌های محدود اپ (تیک = بدون محدودیت برای این حساب):</p>
@@ -1023,7 +1386,7 @@ function showGoldPage(){
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-natal"> 🌌 زایچه‌ی تقریبی</label></div>
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-compare"> 🔗 مقایسه‌ی دو نفر</label></div>
       <div style="margin:6px 0"><label style="cursor:pointer; display:block; line-height:1.9"><input type="checkbox" id="acc-babyname"> 👶 ادامه‌ی اسم فرزند</label></div>
-      <label style="margin-top:10px; display:block">تاریخ انقضا (اختیاری — خالی = دائمی، میلادی)</label>
+      <label style="margin-top:10px; display:block">تاریخ انقضا (اختیاری — خالی = دائمی؛ زیرش شمسی نمایش داده می‌شود)</label>
       <input id="acc-expiry" type="date" dir="ltr" onchange="adminAccessExpiryFa()" style="width:100%; box-sizing:border-box; margin-bottom:4px">
       <p class="small-note" id="acc-expiry-fa" style="min-height:16px">بدون تاریخ = دسترسی‌های ویژه دائمی و طلایی ۳۱ روزه.</p>
       <p class="small-note">اگر تاریخ بگذاری، دسترسی‌های تیک‌دار (و طلایی) تا آخرِ همان روز به‌وقت تهران اعتبار دارند و بعدش خودکار بسته می‌شوند.</p>
@@ -1036,6 +1399,7 @@ function showGoldPage(){
     <div class="card">
       <h3 style="margin:0 0 8px">📋 حساب‌های دارای دسترسی</h3>
       <div id="admin-access-list"><p class="small-note">در حال بارگذاری...</p></div>
+      <p class="small-note" id="admin-access-status" style="margin-top:6px; min-height:0"></p>
       <p class="small-note" style="margin-top:8px">روی ایمیل بزن تا داخل کادر بالا بیاید و تیک‌های فعلی‌اش برای ویرایش بار شود.</p>
     </div>`:'';
   render(`${backBtn('showMoreMenu()')}${pageHead('👑','عضویت طلایی')}
@@ -1045,6 +1409,7 @@ function showGoldPage(){
     </div>
     <div class="card">${buyGateNoteHtml}${productHtml}</div>
     ${invitePromoHtml}
+    ${manualInviteHtml}
     ${adminHtml}`);
   if(isCosmicAdmin()){
     try{ loadAdminAccessList(); }catch(e){}
@@ -1058,6 +1423,10 @@ function showGoldPage(){
         const u=(typeof __adminUsersData!=='undefined')?__adminUsersData.find((x)=>String(x.email||'').toLowerCase()===pickEmail.toLowerCase()):null;
         if(u && typeof adminAccessSetChecks==='function'){
           adminAccessSetChecks({ gold:!!u.isGold, goldUntil:u.goldUntil||null, adsRemoved:!!u.adsRemoved, features:(u.features||[]).map((f)=>({ f:(typeof f==='string')?f:(f&&f.f), until:(f&&typeof f==='object')?f.until:null })) });
+        }else{
+          // [1.2.24] اگر حساب هنوز ثبت‌نام نکرده، وضعیت pending را از لیست دسترسی‌ها بار کن
+          const pa=(typeof __adminAccessData!=='undefined')?__adminAccessData.find((x)=>x&&x.pending&&String(x.email||'').toLowerCase()===pickEmail.toLowerCase()):null;
+          if(pa && typeof adminAccessSetChecks==='function') adminAccessSetChecks(pa);
         }
         const msg=document.getElementById('iap-admin-msg');
         if(msg) msg.textContent='وضعیت «'+pickEmail+'» بارگذاری شد — تغییر بده و «ثبت» کن.';
@@ -1087,6 +1456,24 @@ async function adminRevokeIapTest(){
 // [ADMIN-access 1.2.8] پنل مدیریت دسترسی‌ها — تیک‌ها = وضعیت کامل مطلوب کاربر؛
 // «ثبت» روی سرور یعنی تیک‌دارها فعال و بدون‌تیک‌ها لغو می‌شوند (یک endpoint: /admin/access/set)
 var __adminAccessData=[];
+// [1.2.26] کش فهرست «حساب‌های دارای دسترسی» — همان الگوی کش کاربران (1.2.25):
+// ورود به صفحه فوری از کش رندر می‌شود (حتی بدون اینترنت) و در پس‌زمینه از سرور تازه می‌شود؛
+// لیست هرگز خالی نمی‌شود و اسکرول نمی‌پرد.
+var __adminAccessCacheKey='cosmicAdminAccessCache';
+function adminAccessCacheWho(){
+  try{ return (typeof currentUser!=='undefined'&&currentUser)?(currentUser.id||currentUser.email||''):''; }catch(e){ return ''; }
+}
+function adminAccessCacheLoad(){
+  try{
+    const o=safeJSONParse(localStorage.getItem(__adminAccessCacheKey), null);
+    if(!o || !Array.isArray(o.accounts) || !o.at) return null;
+    if(o.who!==adminAccessCacheWho()) return null; // تعویض حساب → کش معتبر نیست
+    return o;
+  }catch(e){ return null; }
+}
+function adminAccessCacheSave(accounts){
+  try{ localStorage.setItem(__adminAccessCacheKey, JSON.stringify({ who:adminAccessCacheWho(), accounts:accounts||[], at:Date.now() })); }catch(e){}
+}
 // [1.2.9] تاریخ انقضا: ms → 'YYYY-MM-DD' بر پایه‌ی تقویم تهران (UTC+3:30)
 function tehranDateStr(ts){
   try{ return new Date(Number(ts)+12600000).toISOString().slice(0,10); }catch(e){ return ''; }
@@ -1100,8 +1487,19 @@ function adminAccessExpiryFa(){
   try{
     const p=v.split('-');
     const end=Date.UTC(Number(p[0]),Number(p[1])-1,Number(p[2])+1,0,0,0)-12600000-1000;
-    out.textContent='اعتبار تا: '+new Date(end).toLocaleDateString('fa-IR')+' — میلادی: '+v;
+    out.textContent='اعتبار تا: '+jalaliStrFa(end)+' (میلادی: '+v+')';
   }catch(e){ out.textContent=''; }
+}
+// [1.2.24] دسترسی سریع طلایی — ۳ روز / ۱ ماه / ۱ سال:
+// تیک «طلایی» را می‌زند و تاریخ انقضا را پایانِ روزِ (امروز + days) به‌وقت تهران می‌گذارد.
+// ثبت نهایی همچنان با دکمهٔ «ثبت دسترسی‌ها» است تا اشتباهی دسترسی ثبت نشود.
+function adminAccessPreset(days,label){
+  const gold=document.getElementById('acc-gold'); if(gold) gold.checked=true;
+  const ex=document.getElementById('acc-expiry');
+  if(ex) ex.value=tehranDateStr(Date.now()+Number(days||0)*86400000);
+  adminAccessExpiryFa();
+  const msg=document.getElementById('iap-admin-msg');
+  if(msg) msg.textContent='⚡ پیش‌تنظیم «'+(label||('طلایی '+faDigits(days)+' روزه'))+'» انجام شد — ایمیل هدف را وارد/انتخاب کن و «ثبت دسترسی‌ها» را بزن.';
 }
 function adminAccessReadChecks(){
   const gv=(id)=>{ const el=document.getElementById(id); return !!(el&&el.checked); };
@@ -1127,7 +1525,30 @@ function adminAccessSetChecks(a){
   }
   adminAccessExpiryFa();
 }
-function iapDateFa(ts){ try{ return new Date(ts).toLocaleDateString('fa-IR'); }catch(e){ return ''; } }
+// [1.2.24] تاریخ شمسی مطمئن — بدون وابستگی به ICU مرورگر.
+// در بعضی WebViewهای اندروید toLocaleDateString('fa-IR') میلادی برمی‌گرداند؛
+// پس تبدیل را خودمان با gregorianToJalali (از cosmic_logic.js) انجام می‌دهیم.
+var JAL_MONTHS_FA=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+function jalaliStrFa(ts){
+  try{
+    const n=Number(ts); if(!isFinite(n)) return '';
+    const d=new Date(n+12600000); // تقویم تهران (UTC+3:30)
+    if(typeof gregorianToJalali==='function'){
+      const p=gregorianToJalali(d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate());
+      const mm=JAL_MONTHS_FA[(Number(p[1])||1)-1]||'';
+      return faDigits(p[2])+' '+mm+' '+faDigits(p[0]);
+    }
+    return new Date(n).toLocaleDateString('fa-IR'); // فالبک
+  }catch(e){ try{ return new Date(Number(ts)).toLocaleDateString('fa-IR'); }catch(e2){ return ''; } }
+}
+function jalaliDateTimeFa(ts){
+  try{
+    const d=new Date(Number(ts)+12600000);
+    const hh=String(d.getUTCHours()).padStart(2,'0'), mi=String(d.getUTCMinutes()).padStart(2,'0');
+    return jalaliStrFa(ts)+' — '+faDigits(hh)+':'+faDigits(mi);
+  }catch(e){ return jalaliStrFa(ts); }
+}
+function iapDateFa(ts){ return jalaliStrFa(ts); }
 // خلاصه‌ی یکخطی دسترسی‌ها (هم برای رندر لیست، هم برای پیامِ بعد از ثبت)
 function adminAccessSummary(a){
   const chips=[];
@@ -1174,16 +1595,49 @@ async function adminAccessRevokeAll(){
     await loadAdminAccessList();
   }catch(e){ if(msg) msg.textContent=translateAuthError(e); }
 }
+// [1.2.26] رندر لیست دسترسی‌ها — جداشده تا هم کش و هم پاسخ تازهٔ سرور از یک مسیر رندر کنند
+function renderAdminAccessList(){
+  const box=document.getElementById('admin-access-list'); if(!box) return;
+  box.innerHTML=__adminAccessData.length
+    ?__adminAccessData.map((a,i)=>`<div class="name-item" style="cursor:pointer" onclick="adminAccessPick(${i})"><b style="direction:ltr; unicode-bidi:isolate; display:inline-block">${esc(a.email||a.userId)}</b>${a.pending?'<span class="small-note" style="color:#f0c96a"> — ⏳ ثبت‌نام نشده</span>':''}<br><span class="small-note">${adminAccessSummary(a)}</span></div>`).join('')
+    :'<p class="small-note">هنوز به کسی دسترسی نداده‌ای.</p>';
+}
+function adminAccessStatusFa(extra){
+  const st=document.getElementById('admin-access-status');
+  if(st) st.textContent=extra||'';
+}
 async function loadAdminAccessList(){
   const box=document.getElementById('admin-access-list');
   if(!box) return;
+  // [1.2.26] اول از کش — لیست فوری نمایش داده می‌شود؛ فرم ویرایش بالای صفحه مثل همیشه کار می‌کند
+  const cached=adminAccessCacheLoad();
+  let cachedKeys=null;
+  if(cached && cached.accounts.length){
+    __adminAccessData=cached.accounts;
+    cachedKeys={}; // مجموعهٔ کلیدهای نسخهٔ کش برای شمارش موارد جدید
+    for(const a of __adminAccessData) cachedKeys[String(a.email||a.userId||'').toLowerCase()]=true;
+    renderAdminAccessList();
+    adminAccessStatusFa(`🕰 فهرست ذخیره‌شده (${jalaliDateTimeFa(cached.at)}) — در حال تازه‌سازی...`);
+  }
   try{
     const d=await authFetch('/admin/access/list');
     __adminAccessData=(d&&d.accounts)||[];
-    box.innerHTML=__adminAccessData.length
-      ?__adminAccessData.map((a,i)=>`<div class="name-item" style="cursor:pointer" onclick="adminAccessPick(${i})"><b style="direction:ltr; unicode-bidi:isolate; display:inline-block">${esc(a.email||a.userId)}</b>${a.pending?'<span class="small-note" style="color:#f0c96a"> — ⏳ ثبت‌نام نشده</span>':''}<br><span class="small-note">${adminAccessSummary(a)}</span></div>`).join('')
-      :'<p class="small-note">هنوز به کسی دسترسی نداده‌ای.</p>';
-  }catch(e){ box.innerHTML='<p class="small-note" style="color:#ff8a8a">'+esc(translateAuthError(e))+'</p>'; }
+    adminAccessCacheSave(__adminAccessData);
+    if(cachedKeys){
+      let fresh=0;
+      for(const a of __adminAccessData){ if(!cachedKeys[String(a.email||a.userId||'').toLowerCase()]) fresh++; }
+      adminAccessStatusFa(fresh?`✅ تازه شد — ${toFa(fresh)} مورد جدید`:'✅ تازه شد — بدون تغییر');
+    }
+    renderAdminAccessList();
+  }catch(e){
+    if(cached && cached.accounts.length){
+      // [1.2.26] آفلاین/خطا: لیست ذخیره‌شده سر جایش می‌ماند (خالی یا خطای کامل نمی‌شود)
+      adminAccessStatusFa(`⚠️ تازه‌سازی نشد (اینترنت؟) — فهرست ذخیره‌شده از ${jalaliDateTimeFa(cached.at)}`);
+      renderAdminAccessList();
+    }else{
+      box.innerHTML='<p class="small-note" style="color:#ff8a8a">'+esc(translateAuthError(e))+'</p>';
+    }
+  }
 }
 function adminAccessPick(i){
   const a=__adminAccessData[i]; if(!a) return;
@@ -1195,15 +1649,17 @@ function adminAccessPick(i){
   try{ if(inp) inp.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){}
 }
 async function showAdminIapPage(){
-  render(`${backBtn('showMoreMenu()')}<div class="card"><h2>💳 خریدهای درون‌برنامه‌ای</h2><p class="desc" id="iap-admin-status">در حال بارگذاری...</p></div><div id="iap-admin-list"></div>`);
+  render(`${backBtn('showMoreMenu()')}<div class="card"><h2>💳 خریدهای درون‌برنامه‌ای</h2><p class="desc" id="iap-admin-status">در حال بارگذاری...</p><p class="small-note">خریدهای واقعی کافه‌بازار خودکار همین‌جا ثبت می‌شوند؛ نیازی به کار ادمین نیست.</p></div><div id="iap-admin-list"></div>`);
   try{
     const data=await authFetch('/admin/iap/purchases');
+    const PR_FA={gold_month:'👑 طلایی ۱ ماهه', gold_year:'👑 طلایی ۱ ساله', remove_ads:'🔕 بی‌تبلیغ', feat_hafez:'🔮 فال حافظ', feat_zodiac:'♈️ طالع‌بینی', feat_natal:'🌌 زایچه', feat_compare:'🔗 مقایسه دو نفر', feat_babyname:'👶 اسم فرزند'};
+    const SRC_FA={bazaar:'🛒 خرید کافه‌بازار', manual:'🛠 اعطای ادمین', referral:'🎁 جایزه دعوت'};
     document.getElementById('iap-admin-status').textContent=`تعداد: ${data.purchases.length} (آخرین ۲۰۰ مورد)`;
     document.getElementById('iap-admin-list').innerHTML=data.purchases.length?data.purchases.map(p=>`
       <div class="card"><p style="margin:0; line-height:1.9">
-        <b>${esc(p.email||p.user_id)}</b> — ${esc(p.product_id)}<br>
-        وضعیت: ${esc(p.status)} (${esc(p.source)})<br>
-        ${p.expires_at?`انقضا: ${esc(new Date(p.expires_at).toLocaleDateString('fa-IR'))}`:'دائمی'}
+        <b>${esc(p.email||p.user_id)}</b> — ${PR_FA[p.product_id]||esc(p.product_id)}<br>
+        وضعیت: ${p.status==='active'?'✅ فعال':'🚫 '+esc(p.status)} (${SRC_FA[p.source]||esc(p.source)})<br>
+        ${p.expires_at?`انقضا: ${esc(iapDateFa(p.expires_at))}`:'دائمی'}${p.purchase_time?`<br><span class="small-note">ثبت: ${esc(jalaliDateTimeFa(p.purchase_time))}</span>`:''}
       </p></div>`).join(''):'<div class="card"><p class="desc">هنوز خریدی ثبت نشده است.</p></div>';
   }catch(e){
     const el=document.getElementById('iap-admin-status'); if(el) el.textContent=translateAuthError(e);
@@ -1225,15 +1681,98 @@ function getHafezModernToday(){
   const st=safeJSONParse(localStorage.getItem('hafezModernState'), null);
   return (st && typeof st==='object' && st.date===todayStr()) ? st : null;
 }
-function loadHafezModernData(){
-  if(typeof HAFEZ_MODERN_DATA!=='undefined') return Promise.resolve();
+// [1.2.29-فیکس نهایی] ریشهٔ «گیر کردن روی در حال آماده‌سازی»: لودر قبلی اگر اتصال وسط راه معلق می‌شد
+// (نه onload و نه onerror — حالت رایج شبکهٔ موبایل ایران)، هیچ‌وقت جمع نمی‌شد و دکمه تا ابد می‌ماند.
+// لودر جدید «همیشه جمع می‌شود»:
+//   ۱) fetch با مهلت‌سنج AbortController (اتصال معلق بعد از ۴۰ ثانیه قطع می‌شود)
+//   ۲) تزریق محتوا با اسکریپتِ blob (کش سرویس‌ورکر و پارامتر ?v= نسخه هماهنگ می‌ماند)
+//   ۳) مسیر جایگزین: تگ اسکریپت کلاسیک با مهلت‌سنج ۲۵ ثانیه‌ای
+//   ۴) [1.2.30] مسیر سوم و کاملاً مستقل: همان فایل از CDN جی‌اس‌دلیور (mirror مخزن گیت‌هاب،
+//      CDN متفاوت از گیت‌هاب‌پیجز) با fetch+CORS — وقتی گیت‌هاب‌پیجز روی شبکهٔ کاربر قطع/کند است
+//   ۵) dedup: پیش‌بارگذاریِ صفحه و کلیکِ دکمه یک دانلود مشترک‌اند (نه دو دانلود)
+var HAFEZ_FETCH_TIMEOUT_MS=40000, HAFEZ_SCRIPT_TIMEOUT_MS=25000, HAFEZ_PROG_HINT_MS=4000, IAP_FRESH_RACE_MS=6000; // مهلت‌ها — تست می‌تواند کوچک کند
+var __hafezModernLoad=null; // دانلودِ در جریان — dedup
+function hafezModernSrcUrl(){ return 'data/hafez_modern.js?v='+(typeof APP_VERSION!=='undefined'?APP_VERSION:'1'); }
+function hafezModernReady(){ return typeof HAFEZ_MODERN_DATA!=='undefined' && Array.isArray(HAFEZ_MODERN_DATA) && HAFEZ_MODERN_DATA.length>0; }
+function hafezModernVerifyError(){ return new Error('دادهٔ تفسیر مدرن ناقص بارگذاری شد.'); }
+function hafezModernBlobInject(txt){
   return new Promise((resolve,reject)=>{
+    let url='';
+    try{
+      url=URL.createObjectURL(new Blob([txt],{type:'text/javascript'}));
+      const s=document.createElement('script');
+      s.src=url;
+      s.onload=()=>{ try{ URL.revokeObjectURL(url); }catch(e){} resolve(); };
+      s.onerror=()=>{ try{ URL.revokeObjectURL(url); }catch(e){} reject(new Error('اجرای فایل تفسیر ناموفق بود. دوباره تلاش کن.')); };
+      document.head.appendChild(s);
+    }catch(e){ try{ if(url) URL.revokeObjectURL(url); }catch(e2){} reject(e); }
+  });
+}
+function hafezModernFetchLoad(){
+  return new Promise((resolve,reject)=>{
+    let done=false;
+    const finish=(err)=>{ if(done) return; done=true; clearTimeout(timer); if(err) reject(err); else resolve(); };
+    let ctl=null; try{ if(typeof AbortController!=='undefined') ctl=new AbortController(); }catch(e){}
+    const timer=setTimeout(()=>{ try{ if(ctl) ctl.abort(); }catch(e){} finish(new Error('دریافت تفسیر بیش از حد طول کشید — اتصالت را چک کن و دوباره تلاش کن.')); }, HAFEZ_FETCH_TIMEOUT_MS);
+    try{
+      fetch(hafezModernSrcUrl(), ctl?{signal:ctl.signal}:{}).then((res)=>{
+        if(done) return;
+        if(!res || !res.ok){ finish(new Error('دریافت تفسیر ناموفق بود ('+((res&&res.status)||'شبکه')+'). دوباره تلاش کن.')); return; }
+        return Promise.resolve(res.text()).then((txt)=>{
+          if(done) return;
+          // چک واقعیِ محتوا: فایل کامل ~۱.۵ مگ است و نام متغیر را دارد؛ پاسخ 404/HTML کش‌شده اینجا رد می‌شود
+          if(!txt || String(txt).length<50000 || String(txt).indexOf('HAFEZ_MODERN_DATA')<0){ finish(hafezModernVerifyError()); return; }
+          hafezModernBlobInject(String(txt)).then(()=>{ finish(hafezModernReady()?undefined:hafezModernVerifyError()); }, finish);
+        });
+      }).catch(()=>{ finish(new Error('دریافت تفسیر ناموفق بود. اتصال اینترنتت رو چک کن.')); });
+    }catch(e){ finish(new Error('دریافت تفسیر ناموفق بود. اتصال اینترنتت رو چک کن.')); }
+  });
+}
+function hafezModernScriptLoad(){
+  return new Promise((resolve,reject)=>{
+    let done=false;
     const s=document.createElement('script');
-    s.src='data/hafez_modern.js';
-    s.onload=()=>resolve();
-    s.onerror=()=>reject(new Error('بارگذاری تفسیر مدرن ناموفق بود. اتصال اینترنتت رو چک کن.'));
+    const finish=(err)=>{ if(done) return; done=true; clearTimeout(timer); try{ if(s.parentNode) s.parentNode.removeChild(s); }catch(e){} if(err) reject(err); else resolve(); };
+    const timer=setTimeout(()=>finish(new Error('دریافت تفسیر بیش از حد طول کشید — اتصالت را چک کن و دوباره تلاش کن.')), HAFEZ_SCRIPT_TIMEOUT_MS);
+    s.src=hafezModernSrcUrl();
+    s.onload=()=>finish(hafezModernReady()?undefined:hafezModernVerifyError());
+    s.onerror=()=>finish(new Error('بارگذاری تفسیر مدرن ناموفق بود. اتصال اینترنتت رو چک کن.'));
     document.head.appendChild(s);
   });
+}
+// [1.2.30] مسیر سوم و چهارم: mirrorهای کاملاً مستقل از گیت‌هاب‌پیجز — جی‌اس‌دلیور و raw.githubusercontent
+// (هر دو ACAO:* دارند پس متن‌شان با fetch+CORS قابل خواندن است؛ دو CDN/زیرساخت متفاوت برای قطعی‌های محلی)
+function hafezModernRemoteUrls(){ return ['https://cdn.jsdelivr.net/gh/abasalt-cpu/cosmic-pwa@main/data/hafez_modern.js','https://raw.githubusercontent.com/abasalt-cpu/cosmic-pwa/main/data/hafez_modern.js']; }
+function hafezModernRemoteLoad(url){
+  return new Promise((resolve,reject)=>{
+    let done=false;
+    const finish=(err)=>{ if(done) return; done=true; clearTimeout(timer); if(err) reject(err); else resolve(); };
+    let ctl=null; try{ if(typeof AbortController!=='undefined') ctl=new AbortController(); }catch(e){}
+    const timer=setTimeout(()=>{ try{ if(ctl) ctl.abort(); }catch(e){} finish(new Error('دریافت تفسیر از مسیر جایگزین بیش از حد طول کشید.')); }, HAFEZ_FETCH_TIMEOUT_MS);
+    try{
+      fetch(url, {mode:'cors', cache:'no-store', signal: ctl?ctl.signal:undefined}).then((res)=>{
+        if(done) return;
+        if(!res || !res.ok){ finish(new Error('دریافت تفسیر از مسیر جایگزین ناموفق بود.')); return; }
+        return Promise.resolve(res.text()).then((txt)=>{
+          if(done) return;
+          if(!txt || String(txt).length<50000 || String(txt).indexOf('HAFEZ_MODERN_DATA')<0){ finish(hafezModernVerifyError()); return; }
+          hafezModernBlobInject(String(txt)).then(()=>{ finish(hafezModernReady()?undefined:hafezModernVerifyError()); }, finish);
+        });
+      }).catch(()=>{ finish(new Error('دریافت تفسیر از مسیر جایگزین ناموفق بود.')); });
+    }catch(e){ finish(e); }
+  });
+}
+function loadHafezModernData(){
+  if(hafezModernReady()) return Promise.resolve();
+  if(__hafezModernLoad) return __hafezModernLoad;
+  let hasFetch=false; try{ hasFetch=(typeof fetch==='function'); }catch(e){}
+  // [1.2.30] زنجیرهٔ چهارمسیره: گیت‌هاب‌پیجز (fetch) ← تگ اسکریپت ← جی‌اس‌دلیور ← raw.githubusercontent
+  const remotes=hafezModernRemoteUrls();
+  const p=(hasFetch
+    ? hafezModernFetchLoad().catch(()=>hafezModernScriptLoad()).catch(()=>hafezModernRemoteLoad(remotes[0])).catch(()=>hafezModernRemoteLoad(remotes[1]))
+    : hafezModernScriptLoad().catch(()=>hafezModernRemoteLoad(remotes[0])).catch(()=>hafezModernRemoteLoad(remotes[1])));
+  __hafezModernLoad=p.then(()=>{ __hafezModernLoad=null; }, (e)=>{ __hafezModernLoad=null; throw e; });
+  return __hafezModernLoad;
 }
 function renderHafezText(text){
   let html='', list=[], para=[], quote=[];
@@ -1273,13 +1812,15 @@ async function showHafez(mode){
       <div class="hafez-mode">${opt('modern','تفسیر با AI')}${opt('traditional','تفسیر سنتی')}</div>
       <p class="small-note" style="margin-top:0">${modern?'برداشتی امروزی از غزل، همراه با چالش‌ها و گام‌های عملی — روزی یک بار.':'معنی کلاسیک غزل — تا ۳ بار در روز.'}${prem?` <span style="color:#4ade80;font-weight:700">${premBadgeFa()}: بدون محدودیت</span>`:''}</p>
       ${mainBtn}
-      <div id="hafez-result">${resultInit}</div></div>
+      <div id="hafez-result">${resultInit}</div>${inviteMiniBannerHtml()}</div>
     <div class="card">
       <h3 style="margin-bottom:8px">🔔 یادآوری فال روزانه</h3>
       <p class="desc">هر روز صبح یه اعلان بهت می‌رسه که یادت بندازه فالت رو بگیری.</p>
       <p id="fal-push-msg" class="small-note" style="min-height:18px"></p>
       <button class="btn${falOn?' secondary':''}" id="fal-push-btn" onclick="handleDailyFalToggle()">${falOn?'🔕 غیرفعال‌کردن یادآوری':'🔔 فعال‌کردن یادآوری روزانه'}</button>
     </div>`);
+  // [1.2.29-فیکس] پیش‌بارگذاری تفسیر AI در لحظهٔ باز شدن صفحهٔ فال — دانلود (~۱.۵ مگ) قبل از کلیک شروع می‌شود
+  if(modern){ try{ loadHafezModernData().catch(()=>{}); }catch(e){} }
   if(modern && modernToday) renderHafezModernResult(modernToday.id);
   if(!modern){ try{ const ld=JSON.parse(localStorage.getItem('hafezLastDraw')||'null'); if(prem&&ld&&ld.date===todayStr()&&ld.g) renderTradResult(ld.g,-1); else if(ld&&ld.date===todayStr()&&ld.g&&(3-st.count)===ld.remaining) renderTradResult(ld.g,ld.remaining); }catch(e){} }
   const myView=++__hafezView; // [FAST 1.2.10] تازه‌سازی پس‌زمینه؛ فقط اگر هنوز روی همین صفحه‌ایم و گیت عوض شده
@@ -1288,29 +1829,52 @@ async function showHafez(mode){
 async function revealHafezModern(){
   const btn=document.getElementById('hafez-btn');
   if(btn){ btn.disabled=true; btn.textContent='در حال آماده‌سازی...'; } // [FAST 1.2.10] بازخورد فوری کلیک
-  await ensureIapFresh(); // [GOLD-gate 1.2.7]
+  // [1.2.29-فیکس] هیچ انتظاری بی‌نهایت نمی‌ماند: دانلود تفسیر مهلت‌سنج دارد (لودر جدید)،
+  // تازه‌سازی وضعیت طلایی حداکثر ۶ ثانیه معطل می‌ماند، و بعد از ۴ ثانیه نشان پیشرفت نشان داده می‌شود
+  const progTimer=setTimeout(()=>{ const b=document.getElementById('hafez-btn'); if(b && b.disabled && b.textContent==='در حال آماده‌سازی...') b.textContent='در حال دریافت تفسیر... چند لحظه صبر کن'; }, HAFEZ_PROG_HINT_MS);
+  await Promise.race([ensureIapFresh(), new Promise((r)=>setTimeout(r, IAP_FRESH_RACE_MS))]); // [GOLD-gate 1.2.7]
   const prem=hasFeatureAccess('hafez');
-  if(!prem && getHafezModernToday()){ if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='✅ فال AI امروزت رو گرفتی'; } return; }
+  if(!prem && getHafezModernToday()){ clearTimeout(progTimer); if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; btn.textContent='✅ فال AI امروزت رو گرفتی'; } return; }
   try{ await loadHafezModernData(); }
   catch(e){
+    clearTimeout(progTimer);
     if(btn){ btn.disabled=false; btn.textContent=prem?'🌿 فالم رو با AI بگیر (∞)':'🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
-    document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`;
+    document.getElementById('hafez-result').innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p><button class="btn small" onclick="revealHafezModern()">🔄 تلاش دوباره</button>`;
     return;
   }
-  let seq=0;
-  if(prem){ try{ const s=safeJSONParse(localStorage.getItem('hafezModernAdminSeq'),null); seq=((s&&Number.isInteger(s.n))?s.n:0)+1; }catch(e){ seq=1; } localStorage.setItem('hafezModernAdminSeq', JSON.stringify({n:seq})); }
-  const id=(simpleHash(getDeviceId()+'-modern-'+todayStr()+(seq?'-a'+seq:''))%HAFEZ_MODERN_DATA.length)+1;
-  localStorage.setItem('hafezModernState', JSON.stringify({date:todayStr(), id}));
-  showHafez();
+  clearTimeout(progTimer);
+  // [1.2.28-فیکس] هر خطای بعد از بارگذاری هم دکمه را زنده نگه می‌دارد و پیام می‌دهد (نه گیر کردن در «آماده‌سازی»)
+  try{
+    let seq=0;
+    if(prem){ try{ const s=safeJSONParse(localStorage.getItem('hafezModernAdminSeq'),null); seq=((s&&Number.isInteger(s.n))?s.n:0)+1; }catch(e){ seq=1; } localStorage.setItem('hafezModernAdminSeq', JSON.stringify({n:seq})); }
+    const id=(simpleHash(getDeviceId()+'-modern-'+todayStr()+(seq?'-a'+seq:''))%HAFEZ_MODERN_DATA.length)+1;
+    localStorage.setItem('hafezModernState', JSON.stringify({date:todayStr(), id}));
+    showHafez();
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent=prem?'🌿 فالم رو با AI بگیر (∞)':'🌿 فالم رو با AI بگیر (۱ بار در روز)'; }
+    const rb=document.getElementById('hafez-result');
+    if(rb) rb.innerHTML=`<p class="small-note" style="color:#ff8a8a">ثبت فال انجام نشد — دوباره تلاش کن.</p>`;
+    try{ if(typeof reportError==='function') reportError('hafez modern reveal: '+((e&&e.message)||e)); }catch(_e){}
+  }
 }
 async function renderHafezModernResult(id){
   const box=document.getElementById('hafez-result');
   if(!box) return;
   box.innerHTML='<p class="small-note">در حال بارگذاری...</p>';
   try{ await loadHafezModernData(); }
-  catch(e){ box.innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p>`; return; }
-  const g=HAFEZ_MODERN_DATA[id-1];
-  if(!g){ box.innerHTML=''; return; }
+  catch(e){ box.innerHTML=`<p class="small-note" style="color:#ff8a8a">${esc(e.message)}</p><button class="btn small" onclick="renderHafezModernResult()">🔄 تلاش دوباره</button>`; return; }
+  // [1.2.28-فیکس] خوددرمانیِ شناسهٔ از رده خارج (state قدیمی/خراب از نسخه‌های قبل) — به‌جای جعبهٔ خالیِ بی‌صدا، فال تازه انتخاب و ذخیره می‌شود
+  let g=HAFEZ_MODERN_DATA[(Number(id)||0)-1];
+  if(!g){
+    try{
+      let seq=0;
+      if(hasFeatureAccess('hafez')){ try{ const s=safeJSONParse(localStorage.getItem('hafezModernAdminSeq'),null); seq=(s&&Number.isInteger(s.n))?s.n:0; }catch(_e){} }
+      id=(simpleHash(getDeviceId()+'-modern-'+todayStr()+(seq?'-a'+seq:''))%HAFEZ_MODERN_DATA.length)+1;
+      localStorage.setItem('hafezModernState', JSON.stringify({date:todayStr(), id}));
+      g=HAFEZ_MODERN_DATA[id-1];
+    }catch(_e){}
+  }
+  if(!g){ box.innerHTML='<p class="small-note" style="color:#ff8a8a">تفسیر در دسترس نیست؛ صفحه را ببند و دوباره باز کن.</p>'; return; }
   const shareTxt=`🔮 فال حافظِ من (تفسیر با AI):\n\n${g.p.join('\n')}\n\n${g.f.replace(/\s+/g,' ')}\n\nفال خودتم اینجا بگیر 👇\n${APP_SHARE_URL}`;
   box.innerHTML=`<div class="result-block">
     <div class="verse">${g.p.map(esc).join('<br>')}</div>
@@ -1765,6 +2329,8 @@ function handlePushToggle(){
 function showSavedProfile(i){const p=state.savedProfiles[i]; showCosmicResult(p.firstName,p.familyName,p.report);}
 // [1.2.19] گرفتن کد دعوت از لینک (؟ref=) در شروع اپ — قبل از اولین رندر
 captureReferralFromUrl();
+// [1.2.28] مهمانِ اندرویدیِ بدون اپ که با لینک دعوت آمده → صفحهٔ فرود «نصب از کافه‌بازار»
+maybeShowInviteLanding();
 showHome();
 (function hideSplash(){
   const splash=document.getElementById('splash-screen');
