@@ -2328,13 +2328,20 @@ function handlePushToggle(){
 }
 function showSavedProfile(i){const p=state.savedProfiles[i]; showCosmicResult(p.firstName,p.familyName,p.report);}
 // [1.2.19] گرفتن کد دعوت از لینک (؟ref=) در شروع اپ — قبل از اولین رندر
-captureReferralFromUrl();
+// [1.2.31] هر فراخوانِ بوت در try/catch مستقل: خطای یکی نباید بقیهٔ بوت (مخصوصاً برداشتن اسپلش) را بکشد.
+try{ captureReferralFromUrl(); }catch(e){}
 // [1.2.28] مهمانِ اندرویدیِ بدون اپ که با لینک دعوت آمده → صفحهٔ فرود «نصب از کافه‌بازار»
-maybeShowInviteLanding();
-showHome();
+try{ maybeShowInviteLanding(); }catch(e){}
+try{ showHome(); }catch(e){}
 (function hideSplash(){
-  const splash=document.getElementById('splash-screen');
-  if(!splash) return;
-  splash.classList.add('hide');
-  setTimeout(()=>splash.remove(), 500);
+  try{
+    window.__bootDone=true; // [1.2.31] به ضدهرگزِ index.html می‌گوید بوت سالم کامل شده
+    const rc=document.getElementById('boot-retry-card'); if(rc && rc.remove) rc.remove(); // بوت دیر ولی سالم انجام شد → کارت «تلاش مجدد» برداشته شود
+  }catch(e){}
+  try{
+    const splash=document.getElementById('splash-screen');
+    if(!splash) return;
+    splash.classList.add('hide');
+    setTimeout(()=>splash.remove(), 500);
+  }catch(e){}
 })();
