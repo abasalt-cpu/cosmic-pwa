@@ -1,8 +1,17 @@
 // ===== تنظیمات بک‌اند عضویت =====
-// ⚠️ دامنه‌ی workers.dev در ایران فیلتر است (خطای «Failed to fetch» در اپ).
-// راه‌حل: دامنه‌ی شخصی را در Cloudflare به همین Worker وصل کن (Custom Domain) و
-// فقط همین یک خط را با دامنه‌ی جدید عوض کن. بقیه‌ی کد نیازی به تغییر ندارد.
-const AUTH_API_BASE = "https://cosmic-code-auth.cosmiccode396.workers.dev";
+// [1.2.32] فیکس مهم: دامنه‌ی workers.dev در ایران فیلتر است (خطای «Failed to fetch» در اپ)
+// و تمام عمرِ این کامنت، آدرس واقعی همان دامنه‌ی فیلترشده بود! از این نسخه آدرس اصلی
+// «api.cosmiccode.ir» است (همان Worker با Custom Domain — CORS هم تأیید شده) و اگر
+// هر دلیلی در دسترس نبود، authFetch خودکار یک‌بار با دامنه‌ی پشتیبان (workers.dev) تلاش می‌کند.
+const AUTH_API_BASES = [
+  "https://api.cosmiccode.ir",
+  "https://cosmic-code-auth.cosmiccode396.workers.dev"
+];
+let __authBaseIdx = 0;
+function authBase(){ return AUTH_API_BASES[__authBaseIdx]; }
+function authBaseFailover(){ __authBaseIdx = (__authBaseIdx + 1) % AUTH_API_BASES.length; return authBase(); }
+// سازگاری با کدهای قدیمی که به AUTH_API_BASE چک typeof می‌کنند:
+const AUTH_API_BASE = AUTH_API_BASES[0];
 // Client ID که از Google Cloud Console گرفتی (مرحله‌ی ۹ راهنما) رو اینجا جایگزین کن:
 const GOOGLE_CLIENT_ID = "948644041400-q6k9d730s9ml847t6us27ufumkijfetc.apps.googleusercontent.com";
 
@@ -39,18 +48,30 @@ async function authFetch(path, options = {}) {
   const ctl = ('AbortController' in window) ? new AbortController() : null;
   const timer = ctl ? setTimeout(() => ctl.abort(), 20000) : null;
   try {
-    res = await fetch(AUTH_API_BASE + path, {
+    res = await fetch(authBase() + path, {
       ...options,
       headers,
       signal: ctl ? ctl.signal : undefined,
     });
   } catch (networkErr) {
-    // خطای سطح شبکه (فیلترینگ، قطعی اینترنت، DNS، تایم‌اوت و...) — پیام خام مرورگر («Failed to fetch»)
-    // برای کاربر بی‌معنی است؛ پیام قابل‌فهم جایگزین می‌کنیم.
-    if (networkErr && networkErr.name === 'AbortError') {
-      throw new Error('پاسخی از سرور دریافت نشد (مهلت ۲۰ ثانیه تمام شد). اتصال اینترنت را بررسی کنید؛ اگر نشد، با فیلترشکن امتحان کنید.');
+    if (timer) clearTimeout(timer); // تایمر پایه‌ی فعلی را متوقف کن تا تلاش دوم تایم تازه داشته باشد
+    // [1.2.32] خطای سطح شبکه (فیلترینگ/قطعی/DNS) → یک‌بار خودکار با دامنه‌ی پشتیبان تلاش کن
+    try {
+      const ctl2 = ('AbortController' in window) ? new AbortController() : null;
+      const timer2 = ctl2 ? setTimeout(() => ctl2.abort(), 20000) : null;
+      try {
+        res = await fetch(authBaseFailover() + path, {
+          ...options,
+          headers,
+          signal: ctl2 ? ctl2.signal : undefined,
+        });
+      } finally { if (timer2) clearTimeout(timer2); }
+    } catch (retryErr) {
+      if (retryErr && retryErr.name === 'AbortError') {
+        throw new Error('پاسخی از سرور دریافت نشد (مهلت ۲۰ ثانیه تمام شد). اتصال اینترنت را بررسی کنید؛ اگر نشد، با فیلترشکن امتحان کنید.');
+      }
+      throw new Error('ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید؛ اگر نشد، با فیلترشکن امتحان کنید.');
     }
-    throw new Error('ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید؛ اگر نشد، با فیلترشکن امتحان کنید.');
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -106,10 +127,13 @@ async function refreshCurrentUser() {
   if (!authToken) return null;
   let res;
   try {
-    res = await fetch(AUTH_API_BASE + '/me', { headers: { Authorization: 'Bearer ' + authToken } });
+    res = await fetch(authBase() + '/me', { headers: { Authorization: 'Bearer ' + authToken } });
   } catch (networkErr) {
     // مشکل شبکه بود (قطعی موقت، آفلاین و...)، نه اینکه توکن نامعتبر باشه — نشست رو دست‌نخورده نگه دار.
-    return currentUser;
+    // [1.2.32] یک‌بار هم با دامنه‌ی پشتیبان تلاش می‌کنیم (بدون خراب‌کردن نشست):
+    try {
+      res = await fetch(authBaseFailover() + '/me', { headers: { Authorization: 'Bearer ' + authToken } });
+    } catch (e2) { return currentUser; }
   }
   if (res.status === 401) {
     // این‌جا سرور صراحتاً گفته توکن نامعتبر/منقضی‌شده — واقعاً خارج کن.

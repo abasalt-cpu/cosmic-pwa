@@ -1918,7 +1918,7 @@ function getDeviceId(){
 function reportError(message, stack){
   if(typeof AUTH_API_BASE==='undefined' || AUTH_API_BASE.includes('YOUR-WORKER')) return;
   try{
-    fetch(AUTH_API_BASE+'/errors/log', {
+    fetch((typeof authBase==='function'?authBase():AUTH_API_BASE)+'/errors/log', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ message:String(message).slice(0,500), stack:stack?String(stack).slice(0,2000):null, url:location.href, deviceId:getDeviceId() }),
     }).catch(()=>{});
@@ -2336,6 +2336,7 @@ try{ showHome(); }catch(e){}
 (function hideSplash(){
   try{
     window.__bootDone=true; // [1.2.31] به ضدهرگزِ index.html می‌گوید بوت سالم کامل شده
+    try{ sessionStorage.removeItem('cosmicBootRetryAt'); }catch(_e){} // [1.2.32] بوت سالم شد → فرصت خودترمیمی بعدی باز شود
     const rc=document.getElementById('boot-retry-card'); if(rc && rc.remove) rc.remove(); // بوت دیر ولی سالم انجام شد → کارت «تلاش مجدد» برداشته شود
   }catch(e){}
   try{
