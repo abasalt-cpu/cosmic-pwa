@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preload" as="script" href="data/data.js" fetchpriority="high">
+<link rel="preload" as="script" href="js/app.js" fetchpriority="high">
+<link rel="preload" as="script" href="data/tables.js">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://accounts.google.com https://www.gstatic.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' blob: https://api.cosmiccode.ir https://cdn.jsdelivr.net https://raw.githubusercontent.com https://cosmic-code-auth.cosmiccode396.workers.dev https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="description" content="کد کیهانی؛ محاسبه‌ی کد کیهانی، عددشناسی، طالع‌بینی، فال حافظ، مناجات و متون الهام‌بخش فارسی. این نرم‌افزار جنبه‌ی پیش‌گویی قطعی ندارد.">
 <meta name="theme-color" content="#161233">
@@ -293,20 +296,33 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
 </div>
 <script>
 // [1.2.31] ضدهرگزِ اسپلش: اگر حتی یکی از ۱۲ فایل JS روی دستگاه درست لود نمی‌شد، اجرای app.js وسط راه می‌خورد
-// و «لوگوی شروع برای همیشه گیر می‌کرد». ۸ ثانیه بعد از باز شدن اپ: اگر بوت کامل نشده بود (__bootDone)
-// اسپلش به‌اجبار برداشته می‌شود.
-// [1.2.32] خودترمیمیِ رفرشی: یک‌بار location.reload خودکار (پنجرهٔ ۱۲۰ ثانیه)، بعد کارت «تلاش مجدد».
-// [1.2.33] ضدهرگزِ نسل‌۳ — چرا هنوز کارت «تلاش مجدد» دیده می‌شد؟ چون data.js حدود ۱٫۲ مگابایت است و همهٔ
-// اسکریپت‌های defer پشت‌سرهم اجرا می‌شوند؛ اگر همین یک فایل روی اینترنت ضعیف کند شود، اجرای app.js هم
-// عقب می‌افتد و رفرشِ مجدد هم دانلود را از صفر شروع می‌کرد. از این نسخه:
-//   ۱) هر فایل یک «امضای گلوبال» دارد → دقیقاً تشخیص می‌دهیم کدام فایل نرسیده.
-//   ۲) همان فایل‌ها با یک اتصال تازه (fetch → Blob → script) ترمیم می‌شوند — بدون رفرش و بدون از دست رفتن بوت.
-//   ۳) اگر ترمیم ممکن نشد → همان خودترمیمیِ رفرشیِ 1.2.32 و در نهایت کارت «تلاش مجدد».
-// [1.2.34] چرا در بعضی محیط‌ها (مثل پنل پیش‌نمایش داخل iframe) لوپِ ریلود بی‌پایان دیده می‌شد؟
-//   گِیتِ «هزار بار تکرار نشود» روی sessionStorage بود؛ در iframeهای محدودشده sessionStorage
-//   کار نمی‌کند و گِیت همیشه «بار اول» می‌دید → ریلود پشت‌سرهم. فیکس: علاوه بر sessionStorage،
-//   یک فلگ ?bootRetry=1 هم به آدرس اضافه می‌شود؛ اگر فلگ در آدرس بود → دیگر ریلود خودکار نداریم.
+// و «لوگوی شروع برای همیشه گیر می‌کرد».
+// [1.2.32] خودترمیمیِ رفرشی: یک‌بار location.reload خودکار، بعد کارت «تلاش مجدد».
+// [1.2.33] امضای گلوبال هر فایل + ترمیم Blob فقط همان فایل‌های جاافتاده.
+// [1.2.34] گیت ضدلوپ: فلگ ?bootRetry=1 در آدرس + sessionStorage برای محیط‌های محدود (iframe).
+// [1.2.35] ضدهرگزِ نسل ۴ — چرا روی اینترنت مستقیم ایران گیر می‌کرد؟
+//   وچ‌داگ قبلی ۸ ثانیه بعد از شروع بوت، درست «وسطِ دانلودهایِ در جریان»، یک دانلودِ موازیٔ دوم (?boot=)
+//   می‌انداخت؛ پهنای‌باند بین دو دانلود تقسیم می‌شد و روی خطِ کندترِ ایران هر دو کشته می‌شدند →
+//   «ترمیم خودکار» → رفرش → از اول → تکرار بی‌پایان. (تست میدانی: همان data.js در تبِ جدا کامل می‌آمد!)
+//   نسل ۴ دقیقاً برای همین رفتار طراحی شده:
+//   ۱) تا دانلودِ اصلی در جریان است (Performance API + رویداد load/error تگ‌ها) هیچ دانلودِ موازی‌ای
+//      انداخته نمی‌شود؛ فقط وضعیتِ صادقانه با ثانیه‌شمار: «در حال دریافت فایل‌های برنامه… N ثانیه»
+//   ۲) مهلت‌های واقعی: سقف صبرِ بوت ۷۵ ثانیه، مهلت هر ترمیم ۴۵ ثانیه (قبلاً ۸ و ۲۰ ثانیه بود!)
+//   ۳) سه فایلِ بزرگ از همان لحظهٔ باز شدن صفحه preload می‌شوند (data.js با اولویتِ بالا)
+//   ۴) بعد از هر ترمیمِ موفق → بازگشت به پایش (نه رفرش!) تا فایل‌های هنوز-در-جریان فرصت برسند؛
+//      حداکثر ۲ دورِ ترمیم → لوپ ناممکن است
+//   ۵) healCache: بعد از هر ترمیمِ موفق، همان فایل با ?__fresh=1 گرفته می‌شود و پاسخِ تازه زیر
+//      «کلیدِ پایه» در کشِ سرویس‌ورکر نوشته می‌شود → ترمیم دائمی است؛ هر جلسه تکرار نمی‌شود
+//   ۶) کارتِ پایانی دیگر به‌دروغ نمی‌گوید «اینترنت قطع است»؛ متنِ واقعی + دکمهٔ «تلاش مجدد»
 (function(){
+  var T = window.__BOOT_TEST || {};
+  var BOOT_WAIT_CAP_MS  = T.BOOT_WAIT_CAP_MS  || 75000; // سقف صبرِ کل بوت
+  var BLOB_TIMEOUT_MS   = T.BLOB_TIMEOUT_MS   || 45000; // مهلت هر ترمیم
+  var FIRST_TICK_MS     = T.FIRST_TICK_MS     || 6000;  // اولین پایش
+  var CHECK_EVERY_MS    = T.CHECK_EVERY_MS    || 2000;  // فواصل پایش
+  var EXEC_GRACE_MS     = T.EXEC_GRACE_MS     || 3000;  // مهلتِ سخاوت‌منظانه بعد از اجرای بی‌ثمر (کشِ مسموم)
+  var REPAIR_MAX_CYCLES = T.REPAIR_MAX_CYCLES || 2;     // حداکثر دورهای ترمیم
+
   var BOOT_FILES=[
     ['js/auth.js',            function(){return typeof authFetch==='function';}],
     ['js/push.js',            function(){return typeof ensurePushSubscribed==='function';}],
@@ -344,11 +360,50 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
   function hideBootStatus(){
     try{ var el=document.getElementById('boot-status-line'); if(el&&el.remove)el.remove(); }catch(e){}
   }
-  // دانلود متن فایل با اتصال تازه + اجرای آن به‌صورت Blob (CSP برای script از blob: اجازه دارد)
+  // --- [1.2.35] رهگیری وضعیتِ هر فایل: در جریان / تمام‌شده / خطاخورده ---
+  var st={};
+  BOOT_FILES.forEach(function(f){ st[f[0]]={done:0, err:0}; });
+  function baseName(src){ return String(src||'').split('?')[0].split('#')[0]; }
+  function matchBootUrl(src){
+    var s=baseName(src);
+    for(var i=0;i<BOOT_FILES.length;i++){
+      var u=BOOT_FILES[i][0];
+      if(s===u || s.slice(-(u.length+1))==='/'+u) return u;
+    }
+    return null;
+  }
+  // رویدادهای load/error تگ‌های script حباب نمی‌کنند ولی در فاز capture به document می‌رسند؛
+  // این گوش‌دهنده‌ها پیش از ساخته‌شدن خودِ تگ‌ها ثبت می‌شوند → هیچ رویدادی از دست نمی‌رود.
+  document.addEventListener('load',  function(e){ var t=e.target; if(!t||t.tagName!=='SCRIPT')return; var u=matchBootUrl(t.getAttribute('src')); if(u) st[u].done=Date.now(); }, true);
+  document.addEventListener('error', function(e){ var t=e.target; if(!t||t.tagName!=='SCRIPT')return; var u=matchBootUrl(t.getAttribute('src')); if(u) st[u].err=Date.now(); }, true);
+  function perfDone(u){
+    try{
+      var list=performance.getEntriesByType('resource');
+      for(var i=list.length-1;i>=0;i--){
+        var n=baseName(list[i].name);
+        if(n===u || n.slice(-(u.length+1))==='/'+u) return true;
+      }
+    }catch(e){}
+    return false;
+  }
+  // طبقه‌بندی فایلِ جاافتاده: فقط دو حالت «قطعاً شکست» ترمیم می‌خواهد؛ بقیه = در جریان → فقط صبر
+  function classify(u){
+    var s=st[u];
+    if(s.err) return 'failed'; // خطای شبکهٔ تگ → ترمیمِ فقط همان فایل
+    if(s.done) return (Date.now()-s.done>EXEC_GRACE_MS)?'failed':'inflight'; // اجرا شد ولی گلوبال نیامد → کشِ مسموم
+    return 'inflight'; // HTTP هنوز در جریان است (حتی اگر بند آمده باشد تا سقف صبر می‌کنیم — دانلود موازی ممنوع)
+  }
+  function splashOff(){
+    try{
+      var s=document.getElementById('splash-screen');
+      if(s){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.remove)s.remove(); },500); }
+    }catch(e){}
+  }
+  // ترمیم: دانلودِ متن با اتصالِ تازه + اجرای Blob (CSP برای script از blob: اجازه دارد)
   function loadViaBlob(url){
     return new Promise(function(resolve,reject){
       var ctl=('AbortController' in window)?new AbortController():null;
-      var timer=setTimeout(function(){ if(ctl){try{ctl.abort();}catch(e){}} reject(new Error('timeout')); }, 20000);
+      var timer=setTimeout(function(){ if(ctl){try{ctl.abort();}catch(e){}} reject(new Error('timeout')); }, BLOB_TIMEOUT_MS);
       fetch(url+((url.indexOf('?')>-1)?'&':'?')+'boot='+Date.now(), {cache:'no-store', signal:ctl?ctl.signal:undefined})
         .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.text(); })
         .then(function(txt){
@@ -364,62 +419,74 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
         .catch(function(err){ clearTimeout(timer); reject(err); });
     });
   }
-  function repairBoot(){
-    var miss=missingBootFiles();
-    if(!miss.length) return Promise.resolve(true);
-    var chain=Promise.resolve();
-    miss.forEach(function(u){
-      chain=chain.then(function(){
-        showBootStatus('ترمیم خودکار: دریافت '+u+' …');
-        return loadViaBlob(u);
-      });
-    });
-    return chain.then(function(){
-      var still=missingBootFiles();
-      if(still.length) throw new Error('still missing: '+still.join(','));
-      return true;
-    });
+  // ترمیمِ دائمی: نسخهٔ تازهٔ سالم زیر «کلیدِ پایه» در کشِ سرویس‌ورکر نوشته می‌شود (شاخهٔ ?__fresh=1)
+  function healCache(url){
+    try{ fetch(url+((url.indexOf('?')>-1)?'&':'?')+'__fresh=1', {cache:'no-store'}).catch(function(){}); }catch(e){}
   }
-  setTimeout(function(){
+  function repairFiles(list){
+    var chain=Promise.resolve();
+    list.forEach(function(u){
+      chain=chain.then(function(){ return loadViaBlob(u).then(function(){ healCache(u); }); });
+    });
+    return chain;
+  }
+  var t0=Date.now(), cycles=0, busy=false, stopped=false;
+  function cleanup(){
+    stopped=true;
+    hideBootStatus();
+    try{ var c=document.getElementById('boot-retry-card'); if(c&&c.remove)c.remove(); }catch(e){}
+    // بوت سالم شد؛ اگر فلگ ترمیم قبلی در آدرس مانده، تمیزش کن
+    if((location.search||'').indexOf('bootRetry=1')>-1){
+      try{ history.replaceState(null,'',location.pathname+(location.hash||'')); }catch(e){}
+    }
+  }
+  function showRetryCard(){
+    if(document.getElementById('boot-retry-card')) return;
+    var d=document.createElement('div'); d.id='boot-retry-card';
+    d.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(70px + env(safe-area-inset-bottom, 0px));z-index:9998;background:#1c1640;border:1px solid #f0c96a55;border-radius:18px;padding:14px 16px;text-align:center;box-shadow:0 8px 30px #0008;';
+    // [1.2.35] متنِ صادقانه — دیگر «اینترنت قطع است» دروغ نمی‌گوییم
+    d.innerHTML='<p style="color:#cfc8ea;font-size:12.5px;line-height:1.9;margin:0 0 10px">دانلود کامل نشد — دوباره تلاش کن؛ بار دوم فایل‌ها از کش سریع‌تر می‌آیند.</p><button onclick="location.reload()" style="background:#f0c96a;color:#1a1030;border:0;border-radius:999px;padding:8px 24px;font-weight:800;font-family:inherit">🔄 تلاش مجدد</button>';
+    document.body.appendChild(d);
+  }
+  function failFlow(){
+    stopped=true; hideBootStatus();
+    // گیتِ ضدلوپ (1.2.34): حداکثر یک ریلود خودکار؛ فلگ در آدرس + sessionStorage (هر کدام که کار کند)
+    var qsRetry=(location.search||'').indexOf('bootRetry=1')>-1;
+    var last=0; try{ last=Number(sessionStorage.getItem('cosmicBootRetryAt'))||0; }catch(e){}
+    var now=Date.now();
+    if(!qsRetry && (now-last)>120000){
+      try{ sessionStorage.setItem('cosmicBootRetryAt', String(now)); }catch(e){}
+      try{ location.replace(location.pathname+'?bootRetry=1'+(location.hash||'')); }
+      catch(e){ location.reload(); }
+      return;
+    }
+    showRetryCard();
+  }
+  function tick(){
+    if(stopped) return;
     try{
-      if(window.__bootDone){
-        // [1.2.34] بوت سالم شد؛ اگر فلگ ترمیم قبلی در آدرس مانده، تمیزش کن
-        if((location.search||'').indexOf('bootRetry=1')>-1){
-          try{ history.replaceState(null,'',location.pathname+(location.hash||'')); }catch(e){}
+      if(window.__bootDone){ cleanup(); return; }
+      var el=Date.now()-t0;
+      var miss=missingBootFiles();
+      if(miss.length){
+        splashOff();
+        // وضعیتِ صادقانه با ثانیه‌شمار — کاربر می‌داند اپ زنده است و کار می‌کند
+        showBootStatus('در حال دریافت فایل‌های برنامه… '+Math.floor(el/1000)+' ثانیه');
+        var failed=miss.filter(function(u){ return classify(u)==='failed'; });
+        if(failed.length && !busy && cycles<REPAIR_MAX_CYCLES){
+          cycles++; busy=true;
+          showBootStatus('ترمیم خودکار: دریافت '+failed.join('، ')+' …');
+          repairFiles(failed).then(function(){ busy=false; }).catch(function(){ busy=false; });
+          // بعد از ترمیم → بازگشت به پایش (نه failFlow!) تا فایل‌های هنوز-در-جریان فرصت برسند
         }
-        return;
-      }
-      var s=document.getElementById('splash-screen');
-      if(s){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.remove)s.remove(); },500); }
-      var app=document.getElementById('app');
-      if(app && !String(app.innerHTML).trim()){
-        // ۱) بازیابی بدون رفرش: فقط فایل‌های جاافتاده، با اتصال تازه
-        repairBoot().then(function(){
-          hideBootStatus(); // بوت ترمیم شد؛ اگر app.js دیر ولی سالم اجرا شده باشد، خودش اسپلش را هم برمی‌دارد
-        }).catch(function(){
-          hideBootStatus();
-          // ۲) خودترمیمیِ رفرشی (نسخهٔ 1.2.32)
-          // [1.2.34] گِیتِ ضدلوپِ مقاوم: فلگ در آدرس + sessionStorage (هر کدام که کار کند)
-          var qsRetry=(location.search||'').indexOf('bootRetry=1')>-1;
-          var last=null;
-          try{ last=Number(sessionStorage.getItem('cosmicBootRetryAt'))||0; }catch(e){}
-          var now=Date.now();
-          if(!qsRetry && (!last || (now-last)>120000)){ // در ۱۲۰ ثانیهٔ گذشته خودترمیمی نکرده‌ایم → یک‌بار خودکار
-            try{ sessionStorage.setItem('cosmicBootRetryAt', String(now)); }catch(e){}
-            try{ location.replace(location.pathname+'?bootRetry=1'+(location.hash||'')); }
-            catch(e){ location.reload(); }
-            return;
-          }
-          if(document.getElementById('boot-retry-card')) return;
-          var d=document.createElement('div'); d.id='boot-retry-card';
-          d.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(70px + env(safe-area-inset-bottom, 0px));z-index:9998;background:#1c1640;border:1px solid #f0c96a55;border-radius:18px;padding:14px 16px;text-align:center;box-shadow:0 8px 30px #0008;';
-          d.innerHTML='<p style="color:#cfc8ea;font-size:12.5px;line-height:1.9;margin:0 0 10px">اپ کامل لود نشد — احتمالاً اینترنت لحظه‌ای قطع بوده.</p><button onclick="location.reload()" style="background:#f0c96a;color:#1a1030;border:0;border-radius:999px;padding:8px 24px;font-weight:800;font-family:inherit">🔄 تلاش مجدد</button>';
-          document.body.appendChild(d);
-        });
+        if(el>BOOT_WAIT_CAP_MS && !busy){ failFlow(); return; }
       }
     }catch(e){}
-  }, 8000);
+    setTimeout(tick, CHECK_EVERY_MS);
+  }
+  setTimeout(tick, FIRST_TICK_MS);
 })();
+
 </script>
 <div class="stars"></div>
 <header class="top">
