@@ -2338,6 +2338,7 @@ try{ showHome(); }catch(e){}
     window.__bootDone=true; // [1.2.31] به ضدهرگزِ index.html می‌گوید بوت سالم کامل شده
     try{ sessionStorage.removeItem('cosmicBootRetryAt'); }catch(_e){} // [1.2.32] بوت سالم شد → فرصت خودترمیمی بعدی باز شود
     const rc=document.getElementById('boot-retry-card'); if(rc && rc.remove) rc.remove(); // بوت دیر ولی سالم انجام شد → کارت «تلاش مجدد» برداشته شود
+    const bsl=document.getElementById('boot-status-line'); if(bsl && bsl.remove) bsl.remove(); // [1.2.33] خط وضعیت «ترمیم خودکار» هم پنهان شود
   }catch(e){}
   try{
     const splash=document.getElementById('splash-screen');
