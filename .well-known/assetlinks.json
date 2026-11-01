@@ -1,16 +1,17 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "ir.cosmiccode.app",
-        "sha256_cert_fingerprints": ["60:40:68:06:07:7B:F3:4B:45:81:F0:70:40:DB:9D:9F:54:8A:16:29:43:AC:4F:EE:23:66:1F:5D:84:73:1C:FC"]
-      }
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ir.cosmiccode.app",
+      "sha256_cert_fingerprints": ["60:40:68:06:07:7B:F3:4B:45:81:F0:70:40:DB:9D:9F:54:8A:16:29:43:AC:4F:EE:23:66:1F:5D:84:73:1C:FC"]
     }
-{
+  },
+  {
     "relation": ["check_validation"],
     "target": {
       "namespace": "cafebazaar_twa",
       "package_name": "ir.cosmiccode.app"
     }
-}
+  }
 ]
