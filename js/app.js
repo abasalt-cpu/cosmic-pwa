@@ -1235,20 +1235,24 @@ function inviteCacheSave(d){
     }));
   }catch(e){}
 }
-// [1.2.38] کارت ورود دستی کد دعوت در صفحهٔ «دعوت دوستان» — همان قوانین کارت صفحهٔ طلایی:
-// لاگین، غیرطلایی، داخل پنجرهٔ ۳ روزهٔ تازه‌ساخت، بدون ثبت موفق قبلی روی این دستگاه.
-// همان مسیر سرور (submitManualInviteCode → /invite/claim) و سرور مرجع نهایی است.
+// [1.2.39] کارت ورود دستی کد دعوت در صفحهٔ «دعوت دوستان» — برای هر عضوِ لاگین‌شدهٔ غیرطلاییِ
+// بدون ثبتِ قبلی «همیشه» دیده می‌شود تا جای ورود کد گم نشود؛ فقط داخل پنجرهٔ ۳ روزهٔ تازه‌ساخت
+// کادر فعال دارد و بیرون پنجره توضیح صادقانهٔ قانون را می‌دهد (سرور auth-1.2.38 مرجع نهایی است).
 function inviteManualEntryCardHtml(){
   try{
     if(typeof currentUser==='undefined' || !currentUser) return '';
-    if(isGoldUser() || manualInviteUsedHere() || !manualInviteWindowOpen()) return '';
+    if(isGoldUser() || manualInviteUsedHere()) return '';
+    const open=manualInviteWindowOpen();
+    const body=open
+      ?'<div class="btn-row" style="gap:8px; margin-top:0">'
+        +'<input id="manual-invite-code" dir="ltr" maxlength="16" autocomplete="off" placeholder="مثلاً K7QMD2" style="flex:1; min-width:0; text-align:center; font-size:14px; font-weight:800; letter-spacing:2px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2">'
+        +'<button class="btn small" style="margin-top:0" onclick="submitManualInviteCode()">ثبت کد</button>'
+        +'</div>'
+      :'<p class="small-note" style="margin:6px 0 0; color:#f0c96a; font-weight:700">⏳ ثبت کد دعوت فقط تا ۳ روز بعد از ساخت حساب ممکن است — برای حساب‌های قدیمی‌تر فعال نیست (ضد سوءاستفاده).</p>';
     return '<div class="card" style="border:1px dashed #f0c96a66">'
       +'<h3 style="margin:0 0 6px">🎁 کد دعوت دستی داری؟</h3>'
-      +'<p class="small-note" style="margin:0 0 8px">اگر دوستت کد دعوت فرستاده و لینکش برایت باز نشده (مثلاً اپ را مستقیم از کافه‌بازار نصب کرده‌ای)، کد را همین‌جا وارد کن — ۳ روز طلایی هدیه می‌گیری و او هم یک قدم به جایزه‌اش نزدیک می‌شود. ⏳ تا ۳ روز بعد از عضویت.</p>'
-      +'<div class="btn-row" style="gap:8px; margin-top:0">'
-      +'<input id="manual-invite-code" dir="ltr" maxlength="16" autocomplete="off" placeholder="مثلاً K7QMD2" style="flex:1; min-width:0; text-align:center; font-size:14px; font-weight:800; letter-spacing:2px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2">'
-      +'<button class="btn small" style="margin-top:0" onclick="submitManualInviteCode()">ثبت کد</button>'
-      +'</div>'
+      +'<p class="small-note" style="margin:0 0 8px">اگر دوستت کد دعوت فرستاده و لینکش برایت باز نشده (مثلاً اپ را مستقیم از کافه‌بازار نصب کرده‌ای)، کد را همین‌جا وارد کن — ۳ روز طلایی هدیه می‌گیری و او هم یک قدم به جایزه‌اش نزدیک می‌شود.</p>'
+      +body
       +'</div>';
   }catch(e){ return ''; }
 }
@@ -1268,6 +1272,7 @@ function invitePageHtml(d){
       </div>
       <p class="small-note" style="margin:8px 0 0">کد دعوت: <span style="direction:ltr; unicode-bidi:isolate; font-weight:800; color:var(--gold-soft)">${esc(d.code||'')}</span></p>
     </div>
+    ${inviteManualEntryCardHtml()}
     <div class="card orn center" id="invite-progress-card">
       <h3 style="margin:0 0 8px">مسیر جایزهٔ بعدی</h3>
       <div style="margin:6px 0">${dots}</div>
@@ -1279,7 +1284,7 @@ function invitePageHtml(d){
       <p class="desc" style="line-height:2">دوستی که با لینک تو وارد اپ شود و <b>برای اولین‌بار حساب بسازد</b> (گوگل یا ایمیل)، یک دعوت موفق برایت ثبت می‌کند و خودش هم ۳ روز طلایی هدیه می‌گیرد.</p>
       <p class="small-note">فقط حساب‌های تازه‌ساخت حساب می‌شوند؛ از هر دستگاه یک دعوت؛ ورود مجدد یا دعوت از خودت جایزه‌ای ندارد.</p>
     </div>
-    ${inviteManualEntryCardHtml()}`;
+    </div>`;
 }
 async function showInvitePage(){
   setNav('more');
