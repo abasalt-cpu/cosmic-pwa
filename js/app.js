@@ -774,8 +774,8 @@ function showFeaturePaywall(title, msg, backFn){
 // در نسخه‌ی وب، وضعیت از سرور خوانده می‌شود و ادمین با کارت آزمایشی تست می‌کند.
 // [S-sec] هیچ داده‌ای از سرور بدون esc() نمایش داده نمی‌شود؛ stateها با var (بدون TDZ)
 const IAP_PRODUCTS=[
-  {id:'gold_month', icon:'👑', title:'عضویت طلایی ماهانه', price:'۱ تومان', desc:'همه‌ی مزایای طلایی به مدت یک ماه'},
-  {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۳ تومان', desc:'همه‌ی مزایای طلایی به مدت یک سال — ارزان‌تر از ماهانه'},
+  {id:'gold_month', icon:'👑', title:'عضویت طلایی ماهانه', price:'۱ تومان', desc:'همه‌ی دسترسی‌های ویژه به مدت یک ماه'},
+  {id:'gold_year',  icon:'👑', title:'عضویت طلایی سالانه', price:'۳ تومان', desc:'همه‌ی دسترسی‌های ویژه به مدت یک سال + حذف بنر تبلیغ — ارزان‌تر از ماهانه'},
   {id:'remove_ads', icon:'🔕', title:'حذف دائمی تبلیغات', price:'۲ تومان', desc:'بنرهای تبلیغاتی برای همیشه حذف می‌شوند'},
 ];
 var iapStatus={isGold:false, goldUntil:null, adsRemoved:false, features:[]};
@@ -784,7 +784,7 @@ var __adCache={data:null, t:0};
 var __iapFetchedAt=0; // [GOLD-gate 1.2.7] برای تشخیص کهنگیِ وضعیت طلایی
 function isGoldUser(){ return !!iapStatus.isGold; }
 function adsRemovedUser(){ return !!iapStatus.adsRemoved; }
-function isAdFreeViewer(){ return isGoldUser() || adsRemovedUser() || isCosmicAdmin(); }
+function isAdFreeViewer(){ return adsRemovedUser() || isCosmicAdmin(); } // [1.2.38] بنر فقط با «حذف دائمی تبلیغات» یا طلایی یک‌ساله حذف می‌شود — سرور auth-1.2.38 برای طلاییِ یک‌ساله adsRemoved=true برمی‌گرداند؛ طلایی ۳روزه (هدیهٔ دعوت) و ماهانه دیگر تبلیغ را حذف نمی‌کند
 async function refreshIapStatus(){
   if(typeof authToken==='undefined' || !authToken){ iapStatus={isGold:false, goldUntil:null, adsRemoved:false, features:[]}; __iapFetchedAt=Date.now(); return iapStatus; }
   try{
@@ -809,7 +809,7 @@ function iapGoldUntilFa(){
   if(!iapStatus.goldUntil) return '';
   return jalaliStrFa(iapStatus.goldUntil); // [1.2.24] همیشه شمسی
 }
-// ---------- بنر تبلیغ ۳۲۰×۵۰ (فقط صفحه‌ی خانه، فقط برای غیر طلایی‌ها) ----------
+// ---------- بنر تبلیغ ۳۲۰×۵۰ (فقط صفحه‌ی خانه؛ بدون تبلیغ: خرید حذف دائمی، طلایی یک‌ساله، ادمین) ----------
 // منبع تبلیغ: یکتانت (ad.type==='yektanet') یا بنر دستی سرور (ad.type==='image')
 function unmountAdBanner(){ if(__adBannerEl){ __adBannerEl.remove(); __adBannerEl=null; document.body.classList.remove('ad-on'); } }
 // [1.2.16] مخفی‌کردن بدون حذف: اسکریپت یکتانت (yn_pub) در هر بارگذاری صفحه فقط یک بار
@@ -937,7 +937,7 @@ var __pendingAfterAuth=null;
 function handleAuthSuccess(authResult){
   // دعوتِ درانتظار فقط با حسابِ تازه‌ساخت فعال می‌شود (سرور هم مستقلاً چک می‌کند)
   if(authResult && authResult.isNew){
-    // [1.2.28] زمانِ ساخت حساب برای پنجرهٔ ۱۵ دقیقه‌ای ورود دستی کد دعوت (سرور مرجع نهایی است)
+    // [1.2.28] زمانِ ساخت حساب برای پنجرهٔ ۳ روزهٔ ورود دستی کد دعوت (سرور مرجع نهایی است؛ [1.2.38] ۱۵ دقیقه ← ۳ روز)
     try{ localStorage.setItem('cosmicAccountCreatedAt', JSON.stringify({uid:(authResult.user && authResult.user.id)||'', at:Date.now()})); }catch(_e){}
     if(typeof claimPendingReferral==='function'){ try{ claimPendingReferral(); }catch(e){} }
   }
@@ -950,7 +950,7 @@ function handleAuthSuccess(authResult){
     else showGoldPage();
     return;
   }
-  // [1.2.28] عضوِ تازه بدون کدِ درانتظار → یک‌بار فرصت ورود دستی کد دعوت یادآوری شود (پنجرهٔ ۱۵ دقیقه)
+  // [1.2.28] عضوِ تازه بدون کدِ درانتظار → یک‌بار فرصت ورود دستی کد دعوت یادآوری شود (پنجرهٔ ۳ روزه)
   if(typeof maybeShowManualInvitePrompt==='function'){ try{ maybeShowManualInvitePrompt(); }catch(e){} }
   showMembershipPage();
 }
@@ -1043,7 +1043,7 @@ function inviteLandingHtml(code){
       <a class="btn" href="https://cafebazaar.ir/app/ir.cosmiccode" target="_blank" rel="noopener">⬇️ نصب از کافه‌بازار</a>
       <button class="btn secondary" onclick="inviteLandingDismiss()" style="margin-top:10px">ادامه در نسخهٔ وب</button>
       <p class="small-note" style="margin:12px 0 0">اگر اپ را از قبل نصب کرده‌ای، همین لینک را دوباره باز کن یا از آیکون اپ وارد شو.</p>
-      <p class="small-note" style="margin:8px 0 0">لینک باز نمی‌شود؟ اپ را از کافه‌بازار نصب کن و بعد از عضویت، همین کد را در اپ (عضویت طلایی ← کد دعوت داری؟) وارد کن — تا ۱۵ دقیقه بعد از عضویت.</p>
+      <p class="small-note" style="margin:8px 0 0">لینک باز نمی‌شود؟ اپ را از کافه‌بازار نصب کن و بعد از عضویت، همین کد را در اپ (بخش «دعوت دوستان») وارد کن — تا ۳ روز بعد از عضویت.</p>
     </div>
   </div>`;
 }
@@ -1083,7 +1083,7 @@ function inviteLandingCopyFallback(txt){
 }
 // ——— [1.2.28] ورود دستی کد دعوت — برای دوستی که بدون لینک (مثلاً مستقیم از کافه‌بازار) نصب کرده ———
 // دقیقاً همان مسیر سرورِ لینک دعوت (/invite/claim) استفاده می‌شود و سرور مستقلاً قوانین را اعمال می‌کند:
-// فقط حساب تازه‌ساخت (پنجرهٔ ۱۵ دقیقه‌ای REF_ACCOUNT_MAX_AGE_MS)، هر حساب یک‌بار، هر دستگاه یک‌بار،
+// فقط حساب تازه‌ساخت (پنجرهٔ ۳ روزهٔ REF_ACCOUNT_MAX_AGE_MS — [1.2.38] از ۱۵ دقیقه به ۳ روز)، هر حساب یک‌بار، هر دستگاه یک‌بار،
 // دعوت از خود ممنوع. ضدهای کلاینت: کدِ خودت، یک ثبت موفق در هر دستگاه.
 function manualInviteWindowOpen(){
   try{
@@ -1091,7 +1091,7 @@ function manualInviteWindowOpen(){
     if(!o || !o.at) return false; // بدون رکورد (حساب‌های قدیمی) → کارت نشان داده نمی‌شود؛ سرور هم رد می‌کند
     const uid=(typeof currentUser!=='undefined' && currentUser && currentUser.id)||'';
     if(String(o.uid||'')!==String(uid)) return false; // رکورد مال حساب دیگری است
-    return (Date.now()-Number(o.at)) < 15*60*1000; // هم‌پنجره با REF_ACCOUNT_MAX_AGE_MS سرور
+    return (Date.now()-Number(o.at)) < 72*3600*1000; // [1.2.38] هم‌پنجره با REF_ACCOUNT_MAX_AGE_MS سرور (۱۵ دقیقه ← ۳ روز)
   }catch(e){ return false; }
 }
 function manualInviteUsedHere(){
@@ -1127,7 +1127,7 @@ async function submitManualInviteCode(){
     try{ if(typeof reportError==='function') reportError('manual invite failed: '+((e&&e.message)||e)); }catch(_e){}
   }
 }
-// یادآور یک‌بارهٔ بعد از عضویت: حسابِ نو بدون کدِ درانتظار → فرصت ورود دستی یادآوری شود (پنجرهٔ ۱۵ دقیقه)
+// یادآور یک‌بارهٔ بعد از عضویت: حسابِ نو بدون کدِ درانتظار → فرصت ورود دستی یادآوری شود (پنجرهٔ ۳ روزه)
 function manualInvitePromptedFor(uid){
   try{
     const o=safeJSONParse(localStorage.getItem('cosmicManualInvitePrompted'), null);
@@ -1139,7 +1139,7 @@ function manualInvitePromptHtml(){
     <div class="card" style="width:100%; max-width:360px; text-align:center; border:1px solid #f0c96a66">
       <div style="font-size:40px; line-height:1.2; margin:4px 0">🎁</div>
       <h3 style="margin:0 0 6px">کد دعوت داری؟</h3>
-      <p class="small-note" style="margin:0 0 10px">اگر دوستت کد دعوت فرستاده و لینکش را باز نکرده‌ای، همین حالا کد را وارد کن — ۳ روز طلایی هدیه می‌گیری و او هم یک قدم به جایزه‌اش نزدیک می‌شود.<br>⏳ فرصت: تا ۱۵ دقیقه بعد از عضویت.</p>
+      <p class="small-note" style="margin:0 0 10px">اگر دوستت کد دعوت فرستاده و لینکش را باز نکرده‌ای، همین حالا کد را وارد کن — ۳ روز طلایی هدیه می‌گیری و او هم یک قدم به جایزه‌اش نزدیک می‌شود.<br>⏳ فرصت: تا ۳ روز بعد از عضویت.</p>
       <input id="manual-invite-code-modal" dir="ltr" maxlength="16" autocomplete="off" placeholder="مثلاً K7QMD2" style="width:100%; box-sizing:border-box; text-align:center; font-size:15px; font-weight:800; letter-spacing:2px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2; margin-bottom:10px">
       <div class="btn-row" style="margin-top:0">
         <button class="btn" onclick="submitManualInviteCode()">ثبت کد</button>
@@ -1151,7 +1151,7 @@ function manualInvitePromptHtml(){
 function maybeShowManualInvitePrompt(){
   try{
     if(typeof currentUser==='undefined' || !currentUser || typeof authToken==='undefined' || !authToken) return;
-    if(!manualInviteWindowOpen()) return;                  // خارج از پنجرهٔ ۱۵ دقیقه‌ای
+    if(!manualInviteWindowOpen()) return;                  // خارج از پنجرهٔ ۳ روزهٔ تازه‌ساخت
     if(localStorage.getItem('cosmicPendingRef')) return;   // با لینک آمده — claim خودکار انجام شده/می‌شود
     if(manualInviteUsedHere()) return;                     // قبلاً یک ثبت موفق داشته
     const uid=(currentUser && currentUser.id)||'';
@@ -1235,6 +1235,23 @@ function inviteCacheSave(d){
     }));
   }catch(e){}
 }
+// [1.2.38] کارت ورود دستی کد دعوت در صفحهٔ «دعوت دوستان» — همان قوانین کارت صفحهٔ طلایی:
+// لاگین، غیرطلایی، داخل پنجرهٔ ۳ روزهٔ تازه‌ساخت، بدون ثبت موفق قبلی روی این دستگاه.
+// همان مسیر سرور (submitManualInviteCode → /invite/claim) و سرور مرجع نهایی است.
+function inviteManualEntryCardHtml(){
+  try{
+    if(typeof currentUser==='undefined' || !currentUser) return '';
+    if(isGoldUser() || manualInviteUsedHere() || !manualInviteWindowOpen()) return '';
+    return '<div class="card" style="border:1px dashed #f0c96a66">'
+      +'<h3 style="margin:0 0 6px">🎁 کد دعوت دستی داری؟</h3>'
+      +'<p class="small-note" style="margin:0 0 8px">اگر دوستت کد دعوت فرستاده و لینکش برایت باز نشده (مثلاً اپ را مستقیم از کافه‌بازار نصب کرده‌ای)، کد را همین‌جا وارد کن — ۳ روز طلایی هدیه می‌گیری و او هم یک قدم به جایزه‌اش نزدیک می‌شود. ⏳ تا ۳ روز بعد از عضویت.</p>'
+      +'<div class="btn-row" style="gap:8px; margin-top:0">'
+      +'<input id="manual-invite-code" dir="ltr" maxlength="16" autocomplete="off" placeholder="مثلاً K7QMD2" style="flex:1; min-width:0; text-align:center; font-size:14px; font-weight:800; letter-spacing:2px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2">'
+      +'<button class="btn small" style="margin-top:0" onclick="submitManualInviteCode()">ثبت کد</button>'
+      +'</div>'
+      +'</div>';
+  }catch(e){ return ''; }
+}
 // قالب کامل صفحهٔ دعوت — مشترک بین مسیر کش و مسیر سرور (یک خروجی، دو منبع داده)
 function invitePageHtml(d){
   const credits=Math.max(0, Number(d.credits)||0), per=Math.max(1, Number(d.invitesPerReward)||3);
@@ -1261,7 +1278,8 @@ function invitePageHtml(d){
       <h3 style="margin:0 0 6px">✅ دعوتِ «موفق» چیست؟</h3>
       <p class="desc" style="line-height:2">دوستی که با لینک تو وارد اپ شود و <b>برای اولین‌بار حساب بسازد</b> (گوگل یا ایمیل)، یک دعوت موفق برایت ثبت می‌کند و خودش هم ۳ روز طلایی هدیه می‌گیرد.</p>
       <p class="small-note">فقط حساب‌های تازه‌ساخت حساب می‌شوند؛ از هر دستگاه یک دعوت؛ ورود مجدد یا دعوت از خودت جایزه‌ای ندارد.</p>
-    </div>`;
+    </div>
+    ${inviteManualEntryCardHtml()}`;
 }
 async function showInvitePage(){
   setNav('more');
@@ -1305,7 +1323,7 @@ function inviteShareText(){
   const d=__inviteData||{};
   const code=(d.code||'').toString().trim().toUpperCase();
   return '✨ «کد کیهانی» — خودشناسی با عددشناسی، طالع‌بینی و فال حافظ\nبا لینک زیر وارد شو و حسابت را بساز؛ هر دومان هدیه می‌گیریم 👇\n'+(d.link||'')
-    +(code?('\nاگر لینک باز نشد: اپ را از کافه‌بازار نصب کن و تا ۱۵ دقیقه بعد از عضویت، کد '+code+' را در اپ (عضویت طلایی ← کد دعوت داری؟) وارد کن 🎁'):'');
+    +(code?('\nاگر لینک باز نشد: اپ را از کافه‌بازار نصب کن و تا ۳ روز بعد از عضویت، کد '+code+' را در اپ (بخش «دعوت دوستان») وارد کن 🎁'):'');
 }
 function inviteShare(){
   const t=inviteShareText();
@@ -1330,9 +1348,10 @@ function inviteCopyFallback(txt){
 }
 function showGoldPage(){
   setNav('more');
+  const goldAdNote=(isGoldUser() && !adsRemovedUser() && !isCosmicAdmin())?'<p class="small-note" style="margin:2px 0 0">🔕 بنر تبلیغ فقط با عضویت یک‌ساله یا خرید «حذف دائمی تبلیغات» حذف می‌شود.</p>':'';
   const statusHtml = isGoldUser()
-    ? `<p style="margin:4px 0; color:#f0c96a; font-weight:800">👑 عضویت طلایی فعال${iapGoldUntilFa()?` — تا ${iapGoldUntilFa()}`:''}</p>`
-    : (adsRemovedUser()?'<p style="margin:4px 0; color:#4ade80; font-weight:700">🔕 تبلیغات برای حساب شما حذف شده است.</p>':'<p class="desc">در حال حاضر عضویت طلایی نداری. با عضویت طلایی: فال حافظ بی‌نهایت، طالع‌بینی و زایچه‌ی تقریبی و مقایسه‌ی دو نفر بدون محدودیت روزانه، ادامه‌ی کامل پیشنهاد اسم فرزند، و حذف بنرهای تبلیغاتی.</p>');
+    ? `<p style="margin:4px 0; color:#f0c96a; font-weight:800">👑 عضویت طلایی فعال${iapGoldUntilFa()?` — تا ${iapGoldUntilFa()}`:''}</p>${goldAdNote}`
+    : (adsRemovedUser()?'<p style="margin:4px 0; color:#4ade80; font-weight:700">🔕 تبلیغات برای حساب شما حذف شده است.</p>':'<p class="desc">در حال حاضر عضویت طلایی نداری. با عضویت طلایی: فال حافظ بی‌نهایت، طالع‌بینی و زایچه‌ی تقریبی و مقایسه‌ی دو نفر بدون محدودیت روزانه، و ادامه‌ی کامل پیشنهاد اسم فرزند.</p>');
   // [1.2.18] یادآوری ورود برای خرید (خرید بدون ورود اصلاً شروع نمی‌شود)
   const buyGateNoteHtml=(typeof currentUser!=='undefined'&&currentUser)?'':'<p class="small-note" style="margin:0 0 10px">💡 برای خرید، اول وارد حسابت شو تا پرداخت دقیقاً به حسابت وصل شود — دکمهٔ خرید خودت راهنمایی‌ات می‌کند.</p>';
   const productHtml=IAP_PRODUCTS.map(p=>`
@@ -1346,12 +1365,12 @@ function showGoldPage(){
       <p class="small-note">هر ۳ دوست که با لینک دعوتت وارد شوند و حساب بسازند = ۱ ماه عضویت طلایی برای تو (دوستت هم ۳ روز طلایی هدیه می‌گیرد).</p>
       <div class="btn-row"><button class="btn small" onclick="showInvitePage()">🎁 دریافت لینک دعوت</button></div>
     </div>`;
-  // [1.2.28] کارت ورود دستی کد دعوت — فقط در پنجرهٔ ۱۵ دقیقه‌ای تازه‌ساخت و تا یک ثبت موفق در هر دستگاه
+  // [1.2.28] کارت ورود دستی کد دعوت — فقط در پنجرهٔ ۳ روزهٔ تازه‌ساخت و تا یک ثبت موفق در هر دستگاه
   let manualInviteHtml='';
   if(typeof currentUser!=='undefined' && currentUser && !isGoldUser() && manualInviteWindowOpen() && !manualInviteUsedHere()){
     manualInviteHtml=`<div class="card" style="border:1px dashed #f0c96a66">
       <h3 style="margin:0 0 6px">🎁 کد دعوت داری؟</h3>
-      <p class="small-note" style="margin:0 0 8px">اگر دوستت کد دعوت فرستاده و لینکش را باز نکرده‌ای، کد را همین‌جا وارد کن؛ ۳ روز طلایی هدیه می‌گیری و او هم یک قدم به جایزه‌اش نزدیک می‌شود. ⏳ تا ۱۵ دقیقه بعد از عضویت.</p>
+      <p class="small-note" style="margin:0 0 8px">اگر دوستت کد دعوت فرستاده و لینکش را باز نکرده‌ای، کد را همین‌جا وارد کن؛ ۳ روز طلایی هدیه می‌گیری و او هم یک قدم به جایزه‌اش نزدیک می‌شود. ⏳ تا ۳ روز بعد از عضویت.</p>
       <div class="btn-row" style="gap:8px; margin-top:0">
         <input id="manual-invite-code" dir="ltr" maxlength="16" autocomplete="off" placeholder="مثلاً K7QMD2" style="flex:1; min-width:0; text-align:center; font-size:14px; font-weight:800; letter-spacing:2px; padding:10px; border-radius:10px; border:1px solid #f0c96a55; background:#1d1338; color:#f5ead2">
         <button class="btn small" style="margin-top:0" onclick="submitManualInviteCode()">ثبت کد</button>
