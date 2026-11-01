@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://accounts.google.com https://www.gstatic.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' blob: https://cdn.jsdelivr.net https://raw.githubusercontent.com https://cosmic-code-auth.cosmiccode396.workers.dev https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://accounts.google.com https://www.gstatic.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' blob: https://api.cosmiccode.ir https://cdn.jsdelivr.net https://raw.githubusercontent.com https://cosmic-code-auth.cosmiccode396.workers.dev https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="description" content="کد کیهانی؛ محاسبه‌ی کد کیهانی، عددشناسی، طالع‌بینی، فال حافظ، مناجات و متون الهام‌بخش فارسی. این نرم‌افزار جنبه‌ی پیش‌گویی قطعی ندارد.">
 <meta name="theme-color" content="#161233">
 <title>کد کیهانی</title>
@@ -292,33 +292,130 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
   <div class="splash-title">کد کیهانی</div>
 </div>
 <script>
-// [1.2.31] ضدهرگزِ اسپلش: تا امروز اگر حتی یکی از ۱۲ فایل JS روی دستگاه درست لود نمی‌شد (اینترنت ناپایدار
-// یا کشِ ناقص)، اجرای app.js وسط راه می‌خورد و «لوگوی شروع برای همیشه گیر می‌کرد». از این نسخه به بعد،
-// ۸ ثانیه بعد از باز شدن اپ: اگر بوت کامل نشده بود (__bootDone) اسپلش به‌اجبار برداشته می‌شود.
-// [1.2.32] خودترمیمی: به‌جای اینکه کاربر خودش دکمهٔ «تلاش مجدد» را بزند، اپ یک‌بار خودکار رفرش می‌شود —
-// در بار دوم فایل‌های جاافتاده معمولاً از کش سرویس‌ورکر می‌آیند و اپ سالم بالا می‌آید. اگر رفرش هم
-// فایده نداشت (پرچم ۱۲۰ ثانیه‌ای)، آن‌وقت کارت «تلاش مجدد» نشان داده می‌شود.
+// [1.2.31] ضدهرگزِ اسپلش: اگر حتی یکی از ۱۲ فایل JS روی دستگاه درست لود نمی‌شد، اجرای app.js وسط راه می‌خورد
+// و «لوگوی شروع برای همیشه گیر می‌کرد». ۸ ثانیه بعد از باز شدن اپ: اگر بوت کامل نشده بود (__bootDone)
+// اسپلش به‌اجبار برداشته می‌شود.
+// [1.2.32] خودترمیمیِ رفرشی: یک‌بار location.reload خودکار (پنجرهٔ ۱۲۰ ثانیه)، بعد کارت «تلاش مجدد».
+// [1.2.33] ضدهرگزِ نسل‌۳ — چرا هنوز کارت «تلاش مجدد» دیده می‌شد؟ چون data.js حدود ۱٫۲ مگابایت است و همهٔ
+// اسکریپت‌های defer پشت‌سرهم اجرا می‌شوند؛ اگر همین یک فایل روی اینترنت ضعیف کند شود، اجرای app.js هم
+// عقب می‌افتد و رفرشِ مجدد هم دانلود را از صفر شروع می‌کرد. از این نسخه:
+//   ۱) هر فایل یک «امضای گلوبال» دارد → دقیقاً تشخیص می‌دهیم کدام فایل نرسیده.
+//   ۲) همان فایل‌ها با یک اتصال تازه (fetch → Blob → script) ترمیم می‌شوند — بدون رفرش و بدون از دست رفتن بوت.
+//   ۳) اگر ترمیم ممکن نشد → همان خودترمیمیِ رفرشیِ 1.2.32 و در نهایت کارت «تلاش مجدد».
+// [1.2.34] چرا در بعضی محیط‌ها (مثل پنل پیش‌نمایش داخل iframe) لوپِ ریلود بی‌پایان دیده می‌شد؟
+//   گِیتِ «هزار بار تکرار نشود» روی sessionStorage بود؛ در iframeهای محدودشده sessionStorage
+//   کار نمی‌کند و گِیت همیشه «بار اول» می‌دید → ریلود پشت‌سرهم. فیکس: علاوه بر sessionStorage،
+//   یک فلگ ?bootRetry=1 هم به آدرس اضافه می‌شود؛ اگر فلگ در آدرس بود → دیگر ریلود خودکار نداریم.
 (function(){
+  var BOOT_FILES=[
+    ['js/auth.js',            function(){return typeof authFetch==='function';}],
+    ['js/push.js',            function(){return typeof ensurePushSubscribed==='function';}],
+    ['data/data.js',          function(){return typeof HAFEZ_DATA!=='undefined';}],
+    ['data/tables.js',        function(){return typeof SARNEVESHT_TABLE!=='undefined';}],
+    ['js/cosmic_logic.js',    function(){return typeof ABJAD!=='undefined';}],
+    ['js/natal_chart.js',     function(){return typeof SIGN_NAMES!=='undefined';}],
+    ['js/zodiac.js',          function(){return typeof simpleHash==='function';}],
+    ['js/content_modules.js', function(){return typeof getDailyFal==='function';}],
+    ['js/version.js',         function(){return typeof APP_VERSION!=='undefined';}],
+    ['js/baby_name.js',       function(){return typeof harmonyScore==='function';}],
+    ['js/number_info.js',     function(){return typeof NUM_INFO!=='undefined';}],
+    ['js/app.js',             function(){return !!window.__bootDone;}]
+  ];
+  function missingBootFiles(){
+    var out=[];
+    for(var i=0;i<BOOT_FILES.length;i++){
+      var ok=false;
+      try{ ok=!!BOOT_FILES[i][1](); }catch(e){ ok=false; }
+      if(!ok) out.push(BOOT_FILES[i][0]);
+    }
+    return out;
+  }
+  function showBootStatus(msg){
+    try{
+      var el=document.getElementById('boot-status-line');
+      if(!el){
+        el=document.createElement('div'); el.id='boot-status-line';
+        el.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(70px + env(safe-area-inset-bottom, 0px));z-index:9998;background:#1c1640;border:1px solid #f0c96a55;border-radius:18px;padding:12px 16px;text-align:center;color:#cfc8ea;font-size:12.5px;line-height:1.9;box-shadow:0 8px 30px #0008;';
+        document.body.appendChild(el);
+      }
+      el.textContent=msg;
+    }catch(e){}
+  }
+  function hideBootStatus(){
+    try{ var el=document.getElementById('boot-status-line'); if(el&&el.remove)el.remove(); }catch(e){}
+  }
+  // دانلود متن فایل با اتصال تازه + اجرای آن به‌صورت Blob (CSP برای script از blob: اجازه دارد)
+  function loadViaBlob(url){
+    return new Promise(function(resolve,reject){
+      var ctl=('AbortController' in window)?new AbortController():null;
+      var timer=setTimeout(function(){ if(ctl){try{ctl.abort();}catch(e){}} reject(new Error('timeout')); }, 20000);
+      fetch(url+((url.indexOf('?')>-1)?'&':'?')+'boot='+Date.now(), {cache:'no-store', signal:ctl?ctl.signal:undefined})
+        .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.text(); })
+        .then(function(txt){
+          try{
+            var u=URL.createObjectURL(new Blob([txt],{type:'text/javascript'}));
+            var sc=document.createElement('script');
+            sc.onload=function(){ clearTimeout(timer); URL.revokeObjectURL(u); resolve(); };
+            sc.onerror=function(){ clearTimeout(timer); URL.revokeObjectURL(u); reject(new Error('blob exec failed')); };
+            sc.src=u;
+            document.head.appendChild(sc);
+          }catch(e){ clearTimeout(timer); reject(e); }
+        })
+        .catch(function(err){ clearTimeout(timer); reject(err); });
+    });
+  }
+  function repairBoot(){
+    var miss=missingBootFiles();
+    if(!miss.length) return Promise.resolve(true);
+    var chain=Promise.resolve();
+    miss.forEach(function(u){
+      chain=chain.then(function(){
+        showBootStatus('ترمیم خودکار: دریافت '+u+' …');
+        return loadViaBlob(u);
+      });
+    });
+    return chain.then(function(){
+      var still=missingBootFiles();
+      if(still.length) throw new Error('still missing: '+still.join(','));
+      return true;
+    });
+  }
   setTimeout(function(){
     try{
-      if(window.__bootDone) return;
+      if(window.__bootDone){
+        // [1.2.34] بوت سالم شد؛ اگر فلگ ترمیم قبلی در آدرس مانده، تمیزش کن
+        if((location.search||'').indexOf('bootRetry=1')>-1){
+          try{ history.replaceState(null,'',location.pathname+(location.hash||'')); }catch(e){}
+        }
+        return;
+      }
       var s=document.getElementById('splash-screen');
       if(s){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.remove)s.remove(); },500); }
       var app=document.getElementById('app');
       if(app && !String(app.innerHTML).trim()){
-        var last=null;
-        try{ last=Number(sessionStorage.getItem('cosmicBootRetryAt'))||0; }catch(e){}
-        var now=Date.now();
-        if(!last || (now-last)>120000){ // در ۱۲۰ ثانیهٔ گذشته خودترمیمی نکرده‌ایم → یک‌بار خودکار
-          try{ sessionStorage.setItem('cosmicBootRetryAt', String(now)); }catch(e){}
-          location.reload();
-          return;
-        }
-        if(document.getElementById('boot-retry-card')) return;
-        var d=document.createElement('div'); d.id='boot-retry-card';
-        d.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(70px + env(safe-area-inset-bottom, 0px));z-index:9998;background:#1c1640;border:1px solid #f0c96a55;border-radius:18px;padding:14px 16px;text-align:center;box-shadow:0 8px 30px #0008;';
-        d.innerHTML='<p style="color:#cfc8ea;font-size:12.5px;line-height:1.9;margin:0 0 10px">اپ کامل لود نشد — احتمالاً اینترنت لحظه‌ای قطع بوده.</p><button onclick="location.reload()" style="background:#f0c96a;color:#1a1030;border:0;border-radius:999px;padding:8px 24px;font-weight:800;font-family:inherit">🔄 تلاش مجدد</button>';
-        document.body.appendChild(d);
+        // ۱) بازیابی بدون رفرش: فقط فایل‌های جاافتاده، با اتصال تازه
+        repairBoot().then(function(){
+          hideBootStatus(); // بوت ترمیم شد؛ اگر app.js دیر ولی سالم اجرا شده باشد، خودش اسپلش را هم برمی‌دارد
+        }).catch(function(){
+          hideBootStatus();
+          // ۲) خودترمیمیِ رفرشی (نسخهٔ 1.2.32)
+          // [1.2.34] گِیتِ ضدلوپِ مقاوم: فلگ در آدرس + sessionStorage (هر کدام که کار کند)
+          var qsRetry=(location.search||'').indexOf('bootRetry=1')>-1;
+          var last=null;
+          try{ last=Number(sessionStorage.getItem('cosmicBootRetryAt'))||0; }catch(e){}
+          var now=Date.now();
+          if(!qsRetry && (!last || (now-last)>120000)){ // در ۱۲۰ ثانیهٔ گذشته خودترمیمی نکرده‌ایم → یک‌بار خودکار
+            try{ sessionStorage.setItem('cosmicBootRetryAt', String(now)); }catch(e){}
+            try{ location.replace(location.pathname+'?bootRetry=1'+(location.hash||'')); }
+            catch(e){ location.reload(); }
+            return;
+          }
+          if(document.getElementById('boot-retry-card')) return;
+          var d=document.createElement('div'); d.id='boot-retry-card';
+          d.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(70px + env(safe-area-inset-bottom, 0px));z-index:9998;background:#1c1640;border:1px solid #f0c96a55;border-radius:18px;padding:14px 16px;text-align:center;box-shadow:0 8px 30px #0008;';
+          d.innerHTML='<p style="color:#cfc8ea;font-size:12.5px;line-height:1.9;margin:0 0 10px">اپ کامل لود نشد — احتمالاً اینترنت لحظه‌ای قطع بوده.</p><button onclick="location.reload()" style="background:#f0c96a;color:#1a1030;border:0;border-radius:999px;padding:8px 24px;font-weight:800;font-family:inherit">🔄 تلاش مجدد</button>';
+          document.body.appendChild(d);
+        });
       }
     }catch(e){}
   }, 8000);
