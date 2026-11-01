@@ -6,7 +6,7 @@
 <link rel="preload" as="script" href="data/data.js" fetchpriority="high">
 <link rel="preload" as="script" href="js/app.js" fetchpriority="high">
 <link rel="preload" as="script" href="data/tables.js">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://accounts.google.com https://www.gstatic.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' blob: https://api.cosmiccode.ir https://cdn.jsdelivr.net https://raw.githubusercontent.com https://cosmic-code-auth.cosmiccode396.workers.dev https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://accounts.google.com https://www.gstatic.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' blob: https://abasalt-cpu.github.io https://api.cosmiccode.ir https://cdn.jsdelivr.net https://raw.githubusercontent.com https://cosmic-code-auth.cosmiccode396.workers.dev https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="description" content="کد کیهانی؛ محاسبه‌ی کد کیهانی، عددشناسی، طالع‌بینی، فال حافظ، مناجات و متون الهام‌بخش فارسی. این نرم‌افزار جنبه‌ی پیش‌گویی قطعی ندارد.">
 <meta name="theme-color" content="#161233">
 <title>کد کیهانی</title>
@@ -304,24 +304,35 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
 //   وچ‌داگ قبلی ۸ ثانیه بعد از شروع بوت، درست «وسطِ دانلودهایِ در جریان»، یک دانلودِ موازیٔ دوم (?boot=)
 //   می‌انداخت؛ پهنای‌باند بین دو دانلود تقسیم می‌شد و روی خطِ کندترِ ایران هر دو کشته می‌شدند →
 //   «ترمیم خودکار» → رفرش → از اول → تکرار بی‌پایان. (تست میدانی: همان data.js در تبِ جدا کامل می‌آمد!)
-//   نسل ۴ دقیقاً برای همین رفتار طراحی شده:
-//   ۱) تا دانلودِ اصلی در جریان است (Performance API + رویداد load/error تگ‌ها) هیچ دانلودِ موازی‌ای
-//      انداخته نمی‌شود؛ فقط وضعیتِ صادقانه با ثانیه‌شمار: «در حال دریافت فایل‌های برنامه… N ثانیه»
+//   ۱) تا دانلودِ اصلی در جریان است هیچ دانلودِ موازی‌ای انداخته نمی‌شود؛ فقط وضعیتِ صادقانه با ثانیه‌شمار
 //   ۲) مهلت‌های واقعی: سقف صبرِ بوت ۷۵ ثانیه، مهلت هر ترمیم ۴۵ ثانیه (قبلاً ۸ و ۲۰ ثانیه بود!)
-//   ۳) سه فایلِ بزرگ از همان لحظهٔ باز شدن صفحه preload می‌شوند (data.js با اولویتِ بالا)
-//   ۴) بعد از هر ترمیمِ موفق → بازگشت به پایش (نه رفرش!) تا فایل‌های هنوز-در-جریان فرصت برسند؛
-//      حداکثر ۲ دورِ ترمیم → لوپ ناممکن است
-//   ۵) healCache: بعد از هر ترمیمِ موفق، همان فایل با ?__fresh=1 گرفته می‌شود و پاسخِ تازه زیر
-//      «کلیدِ پایه» در کشِ سرویس‌ورکر نوشته می‌شود → ترمیم دائمی است؛ هر جلسه تکرار نمی‌شود
-//   ۶) کارتِ پایانی دیگر به‌دروغ نمی‌گوید «اینترنت قطع است»؛ متنِ واقعی + دکمهٔ «تلاش مجدد»
+//   ۳) preload سه فایلِ بزرگ از همان لحظهٔ باز شدن صفحه (data.js با اولویتِ بالا)
+//   ۴) بعد از هر ترمیمِ موفق → بازگشت به پایش (نه رفرش!)؛ حداکثر ۲ دورِ ترمیم → لوپ ناممکن
+//   ۵) healCache: بعد از هر ترمیمِ موفق، پاسخِ تازه زیر «کلیدِ پایه» در کشِ سرویس‌ورکر نوشته می‌شود
+//   ۶) کارتِ پایانی دیگر به‌دروغ نمی‌گوید «اینترنت قطع است»
+// [1.2.36] نسل ۴٫۱ — مسیر جایگزین برای TWA و اولین اجرا روی شبکهٔ ایران:
+//   TWA (اپ کافه‌بازار) با کشِ کاملاً خالی باز می‌شود؛ روی دامنه‌ای که شبکه‌های ایران تضعیفش می‌کنند،
+//   اولین بوت باید همهٔ فایل‌ها را از همان مسیر بندبیاید بگیرد → گیر. آزمایش میدانی خودت ثابت کرد
+//   آدرس گیتهاب روی همان شبکه‌ها فوری باز می‌شود. پس از این نسخه:
+//   ۱) اگر دانلودِ اصلی بیش از ۴۵ ثانیه نتیجه نداد، همان فایل‌ها از آینهٔ گیتهاب (SNI سالم، ACAO:*)
+//      گرفته و با Blob اجرا می‌شوند — بدون رفرش، بدون دست زدن به دانلودهای موفق
+//   ۲) بعد از موفقیت، healCache همان فایل‌ها را در کشِ سرویس‌ورکر می‌نویسد → از باز شدنِ بعدی،
+//      بوتِ آنی از کش، حتی بدون اینترنت پایدار
+//   ۳) حداکثر «یک» دور آینه در هر نشست → لوپ ناممکن؛ رفرشِ خودکار فقط وقتی که حتی آینه هم جواب نداد
+//   ۴) ترمیمِ فایل‌های خطاخورده هم حالا دومسیره است: اول مسیر اصلی، بعد آینه
 (function(){
   var T = window.__BOOT_TEST || {};
   var BOOT_WAIT_CAP_MS  = T.BOOT_WAIT_CAP_MS  || 75000; // سقف صبرِ کل بوت
-  var BLOB_TIMEOUT_MS   = T.BLOB_TIMEOUT_MS   || 45000; // مهلت هر ترمیم
+  var BLOB_TIMEOUT_MS   = T.BLOB_TIMEOUT_MS   || 45000; // مهلت هر ترمیم (اصلی یا آینه)
   var FIRST_TICK_MS     = T.FIRST_TICK_MS     || 6000;  // اولین پایش
   var CHECK_EVERY_MS    = T.CHECK_EVERY_MS    || 2000;  // فواصل پایش
   var EXEC_GRACE_MS     = T.EXEC_GRACE_MS     || 3000;  // مهلتِ سخاوت‌منظانه بعد از اجرای بی‌ثمر (کشِ مسموم)
   var REPAIR_MAX_CYCLES = T.REPAIR_MAX_CYCLES || 2;     // حداکثر دورهای ترمیم
+  var MIRROR_AFTER_MS   = T.MIRROR_AFTER_MS   || 45000; // بعد از این مدتِ بی‌نتیجه، آینه فعال می‌شود
+  var QMIRROR_AFTER_MS  = T.QMIRROR_AFTER_MS  || 8000;  // آستانهٔ آینه در صفحهٔ ?bootRetry=1 (مسیر اصلی یک‌بار شکست خورده)
+  var MIRROR_ON         = T.MIRROR_ON !== false;        // امکان خاموش‌کردن آینه در تست
+  // آینه: همان فایل‌ها روی گیتهاب (آزمایش میدانی ۱ نوامبر: این مسیر روی شبکهٔ ایران سالم باز می‌شود)
+  var MIRROR_BASE = 'https://abasalt-cpu.github.io/cosmic-pwa/';
 
   var BOOT_FILES=[
     ['js/auth.js',            function(){return typeof authFetch==='function';}],
@@ -360,7 +371,7 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
   function hideBootStatus(){
     try{ var el=document.getElementById('boot-status-line'); if(el&&el.remove)el.remove(); }catch(e){}
   }
-  // --- [1.2.35] رهگیری وضعیتِ هر فایل: در جریان / تمام‌شده / خطاخورده ---
+  // --- رهگیری وضعیتِ هر فایل: در جریان / تمام‌شده / خطاخورده ---
   var st={};
   BOOT_FILES.forEach(function(f){ st[f[0]]={done:0, err:0}; });
   function baseName(src){ return String(src||'').split('?')[0].split('#')[0]; }
@@ -386,12 +397,12 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
     }catch(e){}
     return false;
   }
-  // طبقه‌بندی فایلِ جاافتاده: فقط دو حالت «قطعاً شکست» ترمیم می‌خواهد؛ بقیه = در جریان → فقط صبر
+  // طبقه‌بندی فایلِ جاافتاده: فقط دو حالت «قطعاً شکست» ترمیم مستقیم می‌خواهد؛ بقیه = در جریان → صبر
   function classify(u){
     var s=st[u];
     if(s.err) return 'failed'; // خطای شبکهٔ تگ → ترمیمِ فقط همان فایل
     if(s.done) return (Date.now()-s.done>EXEC_GRACE_MS)?'failed':'inflight'; // اجرا شد ولی گلوبال نیامد → کشِ مسموم
-    return 'inflight'; // HTTP هنوز در جریان است (حتی اگر بند آمده باشد تا سقف صبر می‌کنیم — دانلود موازی ممنوع)
+    return 'inflight'; // HTTP هنوز در جریان است (تا آستانهٔ آینه فقط صبر — دانلود موازی ممنوع)
   }
   function splashOff(){
     try{
@@ -399,12 +410,15 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
       if(s){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.remove)s.remove(); },500); }
     }catch(e){}
   }
-  // ترمیم: دانلودِ متن با اتصالِ تازه + اجرای Blob (CSP برای script از blob: اجازه دارد)
-  function loadViaBlob(url){
+  // دانلودِ متن + اجرای Blob (CSP برای script از blob: اجازه دارد)؛ useMirror=true یعنی از آینهٔ گیتهاب
+  function loadViaBlob(url, useMirror){
     return new Promise(function(resolve,reject){
+      var target = useMirror
+        ? (MIRROR_BASE+url)
+        : (url+((url.indexOf('?')>-1)?'&':'?')+'boot='+Date.now());
       var ctl=('AbortController' in window)?new AbortController():null;
       var timer=setTimeout(function(){ if(ctl){try{ctl.abort();}catch(e){}} reject(new Error('timeout')); }, BLOB_TIMEOUT_MS);
-      fetch(url+((url.indexOf('?')>-1)?'&':'?')+'boot='+Date.now(), {cache:'no-store', signal:ctl?ctl.signal:undefined})
+      fetch(target, {cache:'no-store', signal:ctl?ctl.signal:undefined})
         .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.text(); })
         .then(function(txt){
           try{
@@ -423,14 +437,17 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
   function healCache(url){
     try{ fetch(url+((url.indexOf('?')>-1)?'&':'?')+'__fresh=1', {cache:'no-store'}).catch(function(){}); }catch(e){}
   }
-  function repairFiles(list){
-    var chain=Promise.resolve();
-    list.forEach(function(u){
-      chain=chain.then(function(){ return loadViaBlob(u).then(function(){ healCache(u); }); });
-    });
-    return chain;
+  // ترمیم دومسیره برای فایل‌های خطاخورده: اول مسیر اصلی؛ اگر نشد، آینه
+  function repairResilient(u){
+    return loadViaBlob(u,false).then(
+      function(){ healCache(u); },
+      function(){ return loadViaBlob(u,true).then(function(){ healCache(u); }); }
+    );
   }
-  var t0=Date.now(), cycles=0, busy=false, stopped=false;
+  var t0=Date.now(), cycles=0, busy=false, stopped=false, mirrorUsed=false;
+  // در صفحهٔ retry (مسیر اصلی یک‌بار کامل شکست خورده) آینه زودتر فرصت می‌گیرد
+  var qsRetryPage=(location.search||'').indexOf('bootRetry=1')>-1;
+  var mirrorAfter = qsRetryPage ? Math.min(MIRROR_AFTER_MS, QMIRROR_AFTER_MS) : MIRROR_AFTER_MS;
   function cleanup(){
     stopped=true;
     hideBootStatus();
@@ -444,7 +461,7 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
     if(document.getElementById('boot-retry-card')) return;
     var d=document.createElement('div'); d.id='boot-retry-card';
     d.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(70px + env(safe-area-inset-bottom, 0px));z-index:9998;background:#1c1640;border:1px solid #f0c96a55;border-radius:18px;padding:14px 16px;text-align:center;box-shadow:0 8px 30px #0008;';
-    // [1.2.35] متنِ صادقانه — دیگر «اینترنت قطع است» دروغ نمی‌گوییم
+    // متنِ صادقانه — دیگر «اینترنت قطع است» دروغ نمی‌گوییم
     d.innerHTML='<p style="color:#cfc8ea;font-size:12.5px;line-height:1.9;margin:0 0 10px">دانلود کامل نشد — دوباره تلاش کن؛ بار دوم فایل‌ها از کش سریع‌تر می‌آیند.</p><button onclick="location.reload()" style="background:#f0c96a;color:#1a1030;border:0;border-radius:999px;padding:8px 24px;font-weight:800;font-family:inherit">🔄 تلاش مجدد</button>';
     document.body.appendChild(d);
   }
@@ -473,11 +490,23 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
         // وضعیتِ صادقانه با ثانیه‌شمار — کاربر می‌داند اپ زنده است و کار می‌کند
         showBootStatus('در حال دریافت فایل‌های برنامه… '+Math.floor(el/1000)+' ثانیه');
         var failed=miss.filter(function(u){ return classify(u)==='failed'; });
+        var stalled=(MIRROR_ON && !mirrorUsed)
+          ? miss.filter(function(u){ return classify(u)==='inflight' && el>mirrorAfter; })
+          : [];
         if(failed.length && !busy && cycles<REPAIR_MAX_CYCLES){
           cycles++; busy=true;
           showBootStatus('ترمیم خودکار: دریافت '+failed.join('، ')+' …');
-          repairFiles(failed).then(function(){ busy=false; }).catch(function(){ busy=false; });
+          var chain=Promise.resolve();
+          failed.forEach(function(u){ chain=chain.then(function(){ return repairResilient(u); }); });
+          chain.then(function(){ busy=false; }).catch(function(){ busy=false; });
           // بعد از ترمیم → بازگشت به پایش (نه failFlow!) تا فایل‌های هنوز-در-جریان فرصت برسند
+        } else if(stalled.length && !busy){
+          // [1.2.36] مسیر اصلی ۴۵ ثانیه نتیجه نداد → آینه (حداکثر یک بار در نشست)
+          mirrorUsed=true; busy=true;
+          showBootStatus('اتصال اصلی کند است؛ دریافت از مسیر جایگزین…');
+          var chain2=Promise.resolve();
+          stalled.forEach(function(u){ chain2=chain2.then(function(){ return loadViaBlob(u,true).then(function(){ healCache(u); }); }); });
+          chain2.then(function(){ busy=false; }).catch(function(){ busy=false; });
         }
         if(el>BOOT_WAIT_CAP_MS && !busy){ failFlow(); return; }
       }
@@ -486,6 +515,7 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
   }
   setTimeout(tick, FIRST_TICK_MS);
 })();
+
 
 </script>
 <div class="stars"></div>
