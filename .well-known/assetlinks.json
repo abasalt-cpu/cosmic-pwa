@@ -1,11 +1,10 @@
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "ir.cosmiccode.app",
-      "sha256_cert_fingerprints": ["60:40:68:06:07:7B:F3:4B:45:81:F0:70:40:DB:9D:9F:54:8A:16:29:43:AC:4F:EE:23:66:1F:5D:84:73:1C:FC"]
-    }
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "ir.cosmiccode.app",
+        "sha256_cert_fingerprints": ["FE:01:C2:9B:5E:87:46:C0:8B:0C:F5:51:CA:AD:83:B2:9E:D5:87:F4:8C:49:0D:CD:25:E3:8B:8F:C1:93:F7:DF"]
+      }
   },
   {
     "relation": ["check_validation"],
