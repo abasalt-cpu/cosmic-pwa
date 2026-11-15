@@ -2,14 +2,16 @@ importScripts('./js/version.js');
 const CACHE_NAME = 'cosmic-code-' + APP_VERSION;
 // [1.2.17] هشدار انتشار: مرورگرِ آپدیتِ سرویس‌ورکر را فقط با مقایسهٔ بایت‌به‌بایتِ همین فایل تشخیص می‌دهد.
 // پس با هر انتشار جدید، علاوه بر js/version.js، شمارهٔ خط «build:» پایین را هم دقیقاً همان عدد کنید.
-// build: 1.2.40
+// build: 1.3.3
 const ASSETS = ['./','./index.html','./offline.html','./privacy.html','./manifest.json','./data/data.js','./data/tables.js','./fonts/Sahel-Bold.woff2','./fonts/Sahel-Black.woff2',
 './js/cosmic_logic.js','./js/natal_chart.js','./js/zodiac.js','./js/content_modules.js','./js/version.js','./js/baby_name.js','./js/number_info.js','./js/app.js','./js/auth.js','./js/push.js',
 './icons/icon-192.png','./icons/icon-512.png','./icons/icon-192-maskable.png','./icons/icon-512-maskable.png',
 './icons/apple-touch-icon.png','./icons/favicon-32.png','./icons/favicon-16.png','./icons/hand-glow.png',
 './icons/menu/icon_app_192.png','./icons/menu/icon_app_512.png','./icons/menu/icon_baby.webp','./icons/menu/icon_gratitude.webp','./icons/menu/icon_compare.webp',
 './icons/menu/icon_elham.webp','./icons/menu/icon_hafez.webp','./icons/menu/icon_munajat.webp','./icons/menu/icon_natal.webp',
-'./icons/menu/icon_profiles.png','./icons/menu/icon_zamanbandi.webp','./icons/menu/icon_zodiac.webp'];
+'./icons/menu/icon_profiles.png','./icons/menu/icon_zamanbandi.webp','./icons/menu/icon_zodiac.webp',
+'./js/features_data.js','./js/features.js',
+'./icons/menu/icon_gift.webp','./icons/menu/icon_coffee.webp','./icons/menu/icon_tarot.webp','./icons/menu/icon_weekly.webp'];
 // [1.2.17] hafez_modern.js (۱.۵۵ مگابایت) از precache حذف شد تا نصب اولیهٔ سرویس‌ورکر سبک و کم‌خطا بماند؛
 // این فایل بار اولِ باز کردن «فال حافظ» دانلود و کش می‌شود (شاخهٔ heavy-data پایین همین کار را انجام می‌دهد).
 // [1.2.30-فیکس حیاتی] ریشهٔ «کاربر همیشه نسخهٔ قدیمی می‌بیند»: cache.addAll همه-یا-هیچ است — اگر حتی یکی

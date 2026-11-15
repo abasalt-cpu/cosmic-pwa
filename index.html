@@ -347,6 +347,8 @@ input.ic-lock{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.
     ['js/version.js',         function(){return typeof APP_VERSION!=='undefined';}],
     ['js/baby_name.js',       function(){return typeof harmonyScore==='function';}],
     ['js/number_info.js',     function(){return typeof NUM_INFO!=='undefined';}],
+    ['js/features_data.js',   function(){return typeof CC_TAROT_DECK!=='undefined';}],
+    ['js/features.js',        function(){return typeof showCoffeeFal==='function';}],
     ['js/app.js',             function(){return !!window.__bootDone;}]
   ];
   function missingBootFiles(){
@@ -556,6 +558,8 @@ window.addEventListener('resize', setHeaderHeightVar);
 <script src="js/version.js" defer></script>
 <script src="js/baby_name.js" defer></script>
 <script src="js/number_info.js" defer></script>
+<script src="js/features_data.js" defer></script>
+<script src="js/features.js" defer></script>
 <script src="js/app.js" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
