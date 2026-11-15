@@ -144,6 +144,8 @@ function hubHTML(){
         </div>
       </div>
     </div>
+    ${(typeof giftBannerHTML==='function')?giftBannerHTML():''}
+    ${(typeof occasionBannerHTML==='function')?occasionBannerHTML():''}
     <div class="grid-menu">
       <div class="menu-tile" onclick="showHafez('modern')"><img src="icons/menu/icon_hafez.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">فال حافظ</span></div>
       <div class="menu-tile" onclick="showMunajat()"><img src="icons/menu/icon_munajat.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">مناجات</span></div>
@@ -154,6 +156,7 @@ function hubHTML(){
       <div class="menu-tile" onclick="showCompareEntry()"><img src="icons/menu/icon_compare.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">مقایسه‌ی دو نفر</span></div>
       <div class="menu-tile" onclick="showBabyNameForm()"><img src="icons/menu/icon_baby.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async"><span class="label">اسم فرزند</span></div>
       <div class="menu-tile" onclick="showGratitude()"><img src="icons/menu/icon_gratitude.webp" class="icon-img" loading="lazy" width="88" height="88" decoding="async" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='icons/menu/icon_gratitude.png'}else{this.outerHTML='<div class=&quot;icon-img&quot; style=&quot;display:flex;align-items:center;justify-content:center;font-size:40px&quot;>🙏</div>'}"><span class="label">شکرگزاری</span></div>
+    ${(typeof newFeatureTilesHTML==='function')?newFeatureTilesHTML():''}
     </div>
     <div class="card banner-card">
       <span class="b-icon">🌟</span>
@@ -162,7 +165,9 @@ function hubHTML(){
     </div>`;
 }
 function showNotifications(){
+  const giftHint=(typeof ccGiftClaimedToday==='function' && !ccGiftClaimedToday())?'<div class="cc-occ" onclick="showHome()" style="cursor:pointer"><span class="og">🎁</span><div class="ot"><b>هدیه‌ی امروزت هنوز اون‌جاست!</b> از خانه بگیرش و زنجیره‌ات را ادامه بده.</div></div>':'';
   render(`${backBtn('showHome()')}<div class="card"><h2>🔔 اعلان‌ها</h2>
+      ${giftHint}
       <p class="desc">فعلاً اعلان جدیدی نداری.</p></div>`);
 }
 function showMoreMenu(){
@@ -734,13 +739,13 @@ function hasPremiumAccess(){ return isCosmicAdmin() || isGoldUser(); }
 // [دسترسی جزئی 1.2.8] دسترسی‌های ویژه‌ی تک‌تک بخش‌ها که ادمین از پنل تیک می‌زند
 // (سرور در /iap/status آرایه‌ی features را برمی‌گرداند)
 function featureGranted(f){ return Array.isArray(iapStatus.features) && iapStatus.features.indexOf(f)>=0; }
-function hasFeatureAccess(f){ return hasPremiumAccess() || featureGranted(f); }
+function hasFeatureAccess(f){ return hasPremiumAccess() || featureGranted(f) || (typeof ccGiftFeatureActive==='function' && ccGiftFeatureActive(f)); }
 // برچسب فارسی سطح دسترسی (برای متن‌های «∞» — ادمین/طلایی/ویژه)
-function premBadgeFa(){ return isCosmicAdmin()?'⚡ دسترسی ادمین':(isGoldUser()?'👑 دسترسی طلایی':'✨ دسترسی ویژه'); }
+function premBadgeFa(f){ return isCosmicAdmin()?'⚡ دسترسی ادمین':(isGoldUser()?'👑 دسترسی طلایی':((typeof ccGiftFeatureActive==='function' && ccGiftFeatureActive(f))?'🎁 هدیه‌ی امروز':'✨ دسترسی ویژه')); }
 // سهمیه‌ی رایگانِ روزانه برای بقیه‌ی کاربران (ریست روزانه، مثل فال حافظ)
 // [QUOTA 1.2.16] محاسبه‌ی کد کیهانی هم از این نسخه روزی یک‌بار رایگان است؛
 // ادمین و اعضای طلایی بی‌نهایت محاسبه دارند (درخواست صاحب اپ).
-const FEATURE_FREE_LIMITS={ zodiac:1, natal:1, compare:1, cosmic:1 };
+const FEATURE_FREE_LIMITS={ zodiac:1, natal:1, compare:1, cosmic:1, coffee:1, tarot:1 }; // [1.3.0] فال قهوه و تاروت هم روزی یک‌بار رایگان (مثل طالع‌بینی)
 function getUsageState(){
   const key='cosmicUsageState'; const today=todayStr();
   // [F3-fix الگو] خواندن امن: JSON خراب یا تاریخِ دیگر → شمارنده‌ی تازه
@@ -1799,8 +1804,8 @@ async function showHafez(mode){
   // [FAST 1.2.10] ورود به صفحه دیگر منتظر شبکه نمی‌ماند؛ با وضعیت فعلی فوراً رندر می‌شود و
   // تازه‌سازی وضعیت در پس‌زمینه انجام می‌شود (اگر نتیجه‌ی گیت عوض شود صفحه بی‌صدا رندر می‌شود).
   const modern=hafezMode==='modern';
-  const prem=hasFeatureAccess('hafez'); // ادمین/طلایی «یا» دسترسی ویژه‌ی فال = بدون محدودیت
-  const premTag=isCosmicAdmin()?'ادمین':(isGoldUser()?'طلایی':'ویژه');
+  const prem=hasFeatureAccess('hafez'); // ادمین/طلایی «یا» دسترسی ویژه‌ی فال «یا» هدیه‌ی ویژه‌ی امروز = بدون محدودیت
+  const premTag=isCosmicAdmin()?'ادمین':(isGoldUser()?'طلایی':((!isGoldUser()&&ccGiftFeatureActive('hafez'))?'🎁 هدیه‌ی امروز':'ویژه'));
   const st=getHafezDrawState(); const remaining=Math.max(0,3-st.count);
   const modernToday=getHafezModernToday();
   const falOn=typeof isDailyFalEnabled==='function' && isDailyFalEnabled();
@@ -1892,7 +1897,7 @@ async function renderHafezModernResult(id){
       <button class="btn small secondary" onclick="showFullGhazal('${id}')">📜 نمایش کل غزل</button>
       <button class="btn small secondary" onclick='shareText(${attrJson(shareTxt)})'>📤 اشتراک‌گذاری</button>
     </div>
-  </div>${hasFeatureAccess('hafez')?`<p class="small-note" style="color:#4ade80">${premBadgeFa()} — می‌تونی همین حالا یه فال جدید بگیری 🌙</p>`:'<p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>'}`;
+  </div>${hasFeatureAccess('hafez')?`<p class="small-note" style="color:#4ade80">${premBadgeFa('hafez')} — می‌تونی همین حالا یه فال جدید بگیری 🌙</p>`:'<p class="small-note">این فال امروزته — فردا می‌تونی دوباره بگیری 🌙</p>'}`;
 }
 function handleDailyFalToggle(){
   const btn=document.getElementById('fal-push-btn');

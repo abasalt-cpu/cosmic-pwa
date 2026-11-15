@@ -4,7 +4,12 @@ function simpleHash(str){let hash=0; for(let i=0;i<str.length;i++){hash=(Math.im
 function todayStr(){const d=new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
 function getZodiacSign(jalaliMonth){return ZODIAC_DATA[String(jalaliMonth)];}
 function getDailyForecast(jalaliMonth){const seed=`${jalaliMonth}-${todayStr()}`; return ZODIAC_FORECASTS[simpleHash(seed)%ZODIAC_FORECASTS.length];}
-function getDailyLuckyColor(jalaliMonth){const sign=getZodiacSign(jalaliMonth); const seed=`color-${jalaliMonth}-${todayStr()}`; return sign.colors[simpleHash(seed)%sign.colors.length];}
+// [1.3.2] رنگ خوش‌یمن از منبع واحد (ccWeekColor در features.js) — همان رنگِ «رنگ هفته» در
+// فال قهوه و طالع هفته است تا همه‌ی بخش‌ها یک رنگ بگویند و کاربر دچار تناقض نشود؛
+// اگر features.js لود نشده بود، رنگِ برج مثل قبل برگردانده می‌شود.
+function getDailyLuckyColor(jalaliMonth){
+  if(typeof ccWeekColor==='function'){ try{ return ccWeekColor(); }catch(e){} }
+  const sign=getZodiacSign(jalaliMonth); const seed=`color-${jalaliMonth}-${todayStr()}`; return sign.colors[simpleHash(seed)%sign.colors.length];}
 const ELEMENT_COMPAT={
 "آتش,آتش":[9,"دو نفر پرانرژی که هم‌دیگه رو کاملاً درک می‌کنن، ولی ممکنه رقابت هم پیش بیاد."],
 "آتش,هوا":[9,"ترکیب کلاسیک و بسیار سازگار — هوا آتش رو شعله‌ورتر می‌کنه."],
@@ -26,7 +31,7 @@ function formatHoroscope(jalaliMonth){
   const sign=getZodiacSign(jalaliMonth), forecast=getDailyForecast(jalaliMonth), color=getDailyLuckyColor(jalaliMonth);
   let extra="";
   if(sign.strengths){extra=`\n💪 نقاط قوت: ${sign.strengths}\n⚠️ نقاط ضعف: ${sign.weaknesses}\n✅ عامل مثبت: ${sign.positive_factor}\n❌ عامل منفی: ${sign.negative_factor}\n🔑 کلید شادی: ${sign.happiness_key}\n🌱 درس معنوی: ${sign.spiritual_lesson}\n`;}
-  return `${sign.emoji} طالع‌بینی امروز — برج ${sign.name}\n\n${sign.trait}\n\n🔥 عنصر: ${sign.element} — 🪐 سیاره‌ی حاکم: ${sign.ruling_planet}\n💎 سنگ برج: ${sign.stone} — 🎨 رنگ خوش‌یمن امروز: ${color}\n${extra}\n💞 عشق و رابطه: ${forecast.love}\n\n💼 کار و تلاش: ${forecast.work}\n\n🌿 سلامتی: ${forecast.health}\n\n✨ نکته‌ی امروز: ${forecast.tip}`;
+  return `${sign.emoji} طالع‌بینی امروز — برج ${sign.name}\n\n${sign.trait}\n\n🔥 عنصر: ${sign.element} — 🪐 سیاره‌ی حاکم: ${sign.ruling_planet}\n💎 سنگ برج: ${sign.stone} — 🎨 رنگ خوش‌یمن هفته: ${color}\n${extra}\n💞 عشق و رابطه: ${forecast.love}\n\n💼 کار و تلاش: ${forecast.work}\n\n🌿 سلامتی: ${forecast.health}\n\n✨ نکته‌ی امروز: ${forecast.tip}`;
 }
 function zodiacCompatibility(month1,month2){
   const s1=getZodiacSign(month1), s2=getZodiacSign(month2);
