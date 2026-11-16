@@ -112,26 +112,32 @@ function ccPickN(arr,n,rng){
   return out;
 }
 
-// ---------- [1.3.2] منبع واحدِ شانس — عدد شانس و رنگ هفته ----------
-// قبلاً فال قهوه و طالع هفته هرکدام عدد و رنگِ خودشان را داشتند و این تناقض، اعتماد کاربر را کم می‌کرد.
-// از این نسخه: یک عدد شانس و یک رنگ هفته از یک منبع کیهانی برای همه‌ی بخش‌ها (قهوه، طالع هفته،
-// طالع‌بینی روزانه) یکسان است؛ با آغاز هفته‌ی تازه عوض می‌شود و برای همه‌ی برج‌ها یکی است.
+// ---------- [1.3.4] منبع واحدِ شانس — عدد شانس و رنگ هفته، شخصی برای هر کاربر ----------
+// [1.3.2] بین بخش‌های اپ یکی شد؛ ولی نباید بین همه‌ی کاربرها هم یکی باشد.
+// پس seed = شناسه‌ی دستگاه + هفته‌ی ISO تهران: هر کاربر عدد و رنگِ مخصوصِ خودش را دارد؛
+// در طولِ هفته ثابت است، با آغاز هفته‌ی تازه عوض می‌شود و در همه‌ی بخش‌ها (قهوه، طالع هفته،
+// طالع‌بینی روزانه) برای همان کاربر یکی است — بدون تناقض.
 function ccWeekKey(){
   const t=new Date(Date.now()+12600000);
   const iw=(typeof ccIsoWeek==='function')?ccIsoWeek(t):null;
   return iw?(iw.year+'-W'+iw.week):ccTehranDateKey();
 }
-function ccLuckyNum(){ return 1+(ccHashString('cc-luckynum-'+ccWeekKey())%99); }
+function ccLuckWho(){
+  let id='';
+  try{ if(typeof getDeviceId==='function'){ const g=getDeviceId(); if(g) id=g; } }catch(e){}
+  return id||'anon';
+}
+function ccLuckyNum(){ return 1+(ccHashString('cc-luckynum-'+ccLuckWho()+'-'+ccWeekKey())%99); }
 function ccWeekColor(){
   const colors=(typeof CC_WEEK_COLORS!=='undefined'&&CC_WEEK_COLORS.length)?CC_WEEK_COLORS:['بنفشِ ستاره‌ای'];
-  return colors[ccHashString('cc-weekcolor-'+ccWeekKey())%colors.length];
+  return colors[ccHashString('cc-weekcolor-'+ccLuckWho()+'-'+ccWeekKey())%colors.length];
 }
 function ccLuckyChipsHTML(){
   return `<div class="cc-chiprow">
         <span class="chip2">🔢 عدد شانس این هفته: ${toFa(ccLuckyNum())}</span>
         <span class="chip2">🎨 رنگ هفته: ${ccWeekColor()}</span>
       </div>
-      <p class="cc-limit">🔢 عدد شانس و 🎨 رنگ هفته در همه‌ی بخش‌های اپ یکی است — از یک منبع کیهانی می‌آیند ✨</p>`;
+      <p class="cc-limit">🔢 عدد شانس و 🎨 رنگ هفته‌ی این هفته مخصوصِ خودت است — و در همه‌ی بخش‌های اپ یکی‌اند ✨</p>`;
 }
 
 // ---------- [1.3.2] هدیه‌ی ویژه‌ی امروز — هر روز یک بخشِ قفل‌دار، رندوم ----------
@@ -423,7 +429,7 @@ async function ccCoffeeInterpret(){
   const syms=ccPickN(CC_COFFEE_SYMBOLS,3,rng).map(i=>CC_COFFEE_SYMBOLS[i]);
   const open=CC_COFFEE_OPENINGS[Math.floor(rng()*CC_COFFEE_OPENINGS.length)];
   const close=CC_COFFEE_CLOSINGS[Math.floor(rng()*CC_COFFEE_CLOSINGS.length)];
-  // [1.3.2] عدد شانس و رنگ هفته از منبع واحد (ccLuckyNum/ccWeekColor) — در همه‌ی بخش‌ها یکسان
+  // [1.3.4] عدد شانس و رنگ هفته شخصی (deviceId+هفته) — در همه‌ی بخش‌ها برای همین کاربر یکسان
   const color=ccWeekColor();
   const num=ccLuckyNum();
   const res={date:ccTehranDateKey(), syms:syms, open:open, close:close, color:color, num:num};
@@ -601,7 +607,7 @@ function ccWeekPage(si){
   const rng=ccRng(seed>>>0);
   const pick=(k)=>CC_WEEK_POOLS[k][Math.floor(rng()*CC_WEEK_POOLS[k].length)];
   const overall=pick('overall'), love=pick('love'), work=pick('work'), energy=pick('energy');
-  // [1.3.2] عدد شانس و رنگ هفته از منبع واحد (ccLuckyNum/ccWeekColor) — در همه‌ی بخش‌ها یکسان
+  // [1.3.4] عدد شانس و رنگ هفته شخصی (deviceId+هفته) — در همه‌ی بخش‌ها برای همین کاربر یکسان
   const color=ccWeekColor();
   const num=ccLuckyNum();
   const occ=ccOccasionNow();
