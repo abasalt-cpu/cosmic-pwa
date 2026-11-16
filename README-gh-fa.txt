@@ -1,6 +1,6 @@
-# کد کیهانی — بستهٔ آپدیت آینهٔ گیتهاب 1.3.3
-ریپو: abasalt-cpu/cosmic-pwa (الان 1.2.40) — این ۱۰ فایل را با همان مسیرها
-در ریشهٔ ریپو آپلود کن (Add files via upload → Drag and drop → Commit):
+# کد کیهانی — بستهٔ آپدیت آینهٔ گیتهاب 1.3.4
+ریپو: abasalt-cpu/cosmic-pwa — این ۱۰ فایل را با همان مسیرها در ریشهٔ ریپو
+آپلود کن (Add files via upload → Drag and drop → Commit):
   index.html
   service-worker.js
   js/version.js
@@ -12,6 +12,6 @@
   icons/menu/icon_coffee.webp
   icons/menu/icon_tarot.webp
   icons/menu/icon_weekly.webp
-نکته: بعد از آپلود، آدرس‌های زیر باید 1.3.3 بدهند:
+نکته: بعد از آپلود، این دو باید 1.3.4 بدهند:
   https://abasalt-cpu.github.io/cosmic-pwa/js/version.js
-  https://abasalt-cpu.github.io/cosmic-pwa/service-worker.js  (build: 1.3.3)
+  https://abasalt-cpu.github.io/cosmic-pwa/service-worker.js  (build: 1.3.4)
