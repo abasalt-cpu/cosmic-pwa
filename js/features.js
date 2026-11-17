@@ -411,15 +411,17 @@ function ccCoffeePicked(inp){
   const pk=document.getElementById('cc-coffee-pick');
   if(pk) pk.textContent='📷 عکس دیگر';
 }
-// ---------- [1.3.6] تشخیصِ عکسِ فنجان — فقط عکسِ واقعیِ ته‌فنجان پذیرفته می‌شود ----------
+// ---------- [1.3.7] تشخیصِ عکسِ فنجان — فقط عکسِ واقعیِ ته‌فنجان پذیرفته می‌شود ----------
 // کاملاً آفلاین روی خودِ دستگاه: تصویر کوچک (۹۶×۹۶) و مرکز‌برش می‌شود و رنگ‌هایش تحلیل می‌شود.
-// منطق: ته‌فنجانِ واقعی در «مرکزِ» عکس قهوه‌ایِ تیره دارد و دورش فنجان/بشقاب/میزِ روشن‌تر یا
-// کفِ کرما/دست است. آستانه‌ها با ۱۷ تصویرِ آزمایشی کالیبره شده‌اند
-// (scripts/coffee_detect_calib_136.py): ۷ عکسِ فنجان → همه پذیرفته؛ ۹ عکسِ بی‌ربط
-// (آسمان، چمن، صورت، میزِ چوبی، ماشین، شب، دیوار، پوستر رنگی، خاکِ گلدان) → همه رد.
-// محدودیتِ شناخته‌شده: کیکِ شکلاتیِ روی بشقابِ سفید از نظرِ رنگ شبیه ته‌فنجان است و پذیرفته
-// می‌شود (بی‌ضرر). اگر مرورگرِ خیلی قدیمی createImageBitmap نداشته باشد، عکس پذیرفته می‌شود
-// تا فال قهوه همچنان برای همه کار کند (fail-open).
+// [1.3.7] نسخه‌ی جدید بعد از تستِ واقعی: ۳ عکسِ فنجانِ واقعیِ کاربر رد شده بود (فنجانِ دستی روی
+// میزِ چوبی، فنجان روی زیرلیوانیِ کرم، فنجان+نعلبکیِ کنارِ کادر). منطقِ قبلی فقط «مرکزِ کادر» را
+// می‌دید؛ حالا جست‌وجوی دومرحله‌ای انجام می‌شود: بهترین «لکه‌ی قهوه‌ایِ تیره» که دورش حلقه‌ی
+// روشنِ سرامیک/نعلبکی هست پیدا می‌شود — فنجان می‌تواند وسط کادر نباشد یا در دست باشد.
+// کالیبراسیون با ۱۷ تصویرِ آزمایشی + ۵ عکسِ واقعیِ کاربر (scripts/coffee_calib_final_137.py):
+// ۱۲ فنجان → همه پذیرفته؛ ۹ عکسِ بی‌ربط (آسمان، چمن، صورت، میزِ چوبی، ماشین، شب، دیوار،
+// پوستر رنگی، خاکِ گلدان) → همه رد. محدودیتِ شناخته‌شده: کیکِ شکلاتی روی بشقابِ سفید از
+// نظرِ رنگ شبیه ته‌فنجان است و پذیرفته می‌شود (بی‌ضرر). اگر مرورگرِ خیلی قدیمی
+// createImageBitmap نداشته باشد، عکس پذیرفته می‌شود تا فال قهوه همچنان کار کند (fail-open).
 async function ccLooksLikeCoffee(f){
   try{
     const bmp=await createImageBitmap(f);
@@ -430,12 +432,15 @@ async function ccLooksLikeCoffee(f){
     ctx.drawImage(bmp,(bmp.width-side)/2,(bmp.height-side)/2,side,side,0,0,S,S);
     if(bmp.close) bmp.close();
     const d=ctx.getImageData(0,0,S,S).data;
-    const N=S*S, R2=S*0.30*S*0.30;
+    const N=S*S;
+    const base=new Uint8Array(N), brt=new Uint8Array(N), skn=new Uint8Array(N);
     let cof=0,cofC=0,cofR=0,soft=0,neu=0,ccC=0,ccR=0;
     for(let py=0;py<S;py++){
       const dy=py+0.5-S/2, dy2=dy*dy;
       for(let px=0;px<S;px++){
-        const i=(py*S+px)*4, r=d[i]/255, g=d[i+1]/255, b=d[i+2]/255;
+        const i=(py*S+px)*4, idx=py*S+px;
+        const R=d[i], G=d[i+1], B=d[i+2];
+        const r=R/255, g=G/255, b=B/255;
         const mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2;
         const sat=(mx-mn)/(1-Math.abs(2*l-1)+1e-6);
         let hue=-1;
@@ -446,19 +451,68 @@ async function ccLooksLikeCoffee(f){
           if(hue<0) hue+=360;
         }
         const lum=l*100;
-        const dx=px+0.5-S/2;
-        const center=(dx*dx+dy2)<=R2;
+        // قاعده‌ی رنگ‌ها — همان زنجیره‌ی قبلی + [1.3.7] سفیدِ نزدیک (lum>=93) همیشه خنثی
+        // (اشباعِ HSL در سفیدِ نزدیک با کوچک‌ترین نویزِ دوربین منفجر می‌شود و بی‌ثبات بود)
+        if((hue>=8&&hue<=60&&sat>=0.10&&lum>=5&&lum<=55)||(lum<5&&r>=g&&g>=b-0.02)) base[idx]=1;
+        else if(hue>=8&&hue<=60&&sat>=0.10&&lum>55&&lum<=80) base[idx]=2;
+        else if((lum>=62&&sat<=0.25)||(sat<=0.12)||lum>=93) base[idx]=3;
+        // [1.3.7] سرامیک/نعلبکیِ روشن — نه سفیدِ دمیده (lum>96) تا پس‌زمینه‌ی سفیدِ خالص حلقه حساب نشود
+        if(lum>=62&&lum<=96&&sat<=0.30) brt[idx]=1;
+        // [1.3.7] پوستِ دست/صورت (برای کنار گذاشتنِ کاندیداهای پوستی — خودی/سلفی)
+        if(R>95&&G>40&&B>20&&R>G&&R>B&&(R-G)>15&&(R-B)>15&&lum>=38&&lum<=80&&sat>=0.33) skn[idx]=1;
+        const center=(px+0.5-S/2)*(px+0.5-S/2)+dy2<=S*0.30*S*0.30;
         if(center) ccC++; else ccR++;
-        const dw=(hue>=8&&hue<=60&&sat>=0.10&&lum>=5&&lum<=55)||(lum<5&&r>=g&&g>=b-0.02);
-        if(dw){ cof++; if(center)cofC++; else cofR++; }
-        else if(hue>=8&&hue<=60&&sat>=0.10&&lum>55&&lum<=80){ soft++; }
-        else if((lum>=62&&sat<=0.25)||(sat<=0.12)){ neu++; }
+        if(base[idx]===1){ cof++; if(center)cofC++; else cofR++; }
+        else if(base[idx]===2) soft++;
+        else if(base[idx]===3) neu++;
       }
     }
     const cfAll=cof/N, cfC=cofC/(ccC||1), cfR=cofR/(ccR||1), cn=neu/N, softAll=soft/N;
-    const r1=(cfC>=0.35)&&((cfC-cfR)>=0.10)&&((cfAll+cn)>=0.50);   // فنجانِ معمولی
-    const r2=(cfC>=0.45)&&(cfR<=0.15)&&((softAll>=0.35)||(cn>=0.35)); // فنجان در دست / اسپرسو
-    return !!(r1||r2);
+    // قواعدِ کلاسیکِ ۱.۳.۶ (فنجانِ وسطِ کادر) — سرِ جایشان
+    if((cfC>=0.35)&&((cfC-cfR)>=0.10)&&((cfAll+cn)>=0.50)) return true;
+    if((cfC>=0.45)&&(cfR<=0.15)&&((softAll>=0.35)||(cn>=0.35))) return true;
+    // [1.3.7] قاعده‌ی ساختاری r3: کاندیدِ «دیسکِ تیره + حلقه‌ی روشنِ دورش»
+    const candScore=function(cx,cy,rr){
+      const ri=rr*1.30, ro=rr*1.80;
+      const x0=Math.max(0,Math.floor(cx-ro)-1), x1=Math.min(S-1,Math.ceil(cx+ro)+1);
+      const y0=Math.max(0,Math.floor(cy-ro)-1), y1=Math.min(S-1,Math.ceil(cy+ro)+1);
+      let dCof=0,dArea=0,aBr=0,aArea=0,dSk=0;
+      for(let py=y0;py<=y1;py++){
+        const ddy=py+0.5-cy;
+        for(let pxx=x0;pxx<=x1;pxx++){
+          const ddx=pxx+0.5-cx, d2=ddx*ddx+ddy*ddy;
+          const idx=py*S+pxx;
+          if(d2<=rr*rr){ dArea++; if(base[idx]===1)dCof++; if(skn[idx])dSk++; }
+          else if(d2>ri*ri&&d2<=ro*ro){ aArea++; if(brt[idx])aBr++; }
+        }
+      }
+      if(dArea<60||aArea<60||dCof<20) return -1;
+      const dark=dCof/dArea;
+      if(dark<0.30||dark>0.92) return -1;      // لکه‌ی خیلی کوچک یا تقریباً یک‌دستِ تیره (مثل مو) نیست
+      if(dSk/dArea>=0.25) return -1;           // دیسکِ پوستی (صورت/انگشتِ زیاد) کنار گذاشته می‌شود
+      return dark*(aBr/aArea);
+    };
+    let best=0,bc=0,by=0,brr=0;
+    const CO=[0.14,0.22,0.30,0.38,0.46,0.54,0.62,0.70,0.78,0.86];
+    for(let a=0;a<CO.length;a++)for(let b2=0;b2<CO.length;b2++)for(let ri2=0;ri2<4;ri2++){
+      const rr=[16,22,30,38][ri2];
+      const s=candScore(CO[a]*S,CO[b2]*S,rr);
+      if(s>best){ best=s; bc=CO[a]; by=CO[b2]; brr=rr; }
+    }
+    if(best>0){ // refining دورِ بهترین کاندید
+      const rs=[Math.max(14,brr-6),Math.max(14,brr-3),brr,Math.min(38,brr+3),Math.min(38,brr+6)];
+      for(let k=-2;k<=2;k++){
+        const cxg=Math.round((bc+0.03*k)*100)/100;
+        for(let k2=-2;k2<=2;k2++){
+          const cyg=Math.round((by+0.03*k2)*100)/100;
+          for(let ri3=0;ri3<rs.length;ri3++){
+            const s=candScore(cxg*S,cyg*S,rs[ri3]);
+            if(s>best) best=s;
+          }
+        }
+      }
+    }
+    return best>=0.125;
   }catch(e){ return true; }
 }
 function ccCoffeeReject(){
