@@ -115,8 +115,9 @@ function ccPickN(arr,n,rng){
 // ---------- [1.3.4] منبع واحدِ شانس — عدد شانس و رنگ هفته، شخصی برای هر کاربر ----------
 // [1.3.2] بین بخش‌های اپ یکی شد؛ ولی نباید بین همه‌ی کاربرها هم یکی باشد.
 // پس seed = شناسه‌ی دستگاه + هفته‌ی ISO تهران: هر کاربر عدد و رنگِ مخصوصِ خودش را دارد؛
-// در طولِ هفته ثابت است، با آغاز هفته‌ی تازه عوض می‌شود و در همه‌ی بخش‌ها (قهوه، طالع هفته،
-// طالع‌بینی روزانه) برای همان کاربر یکی است — بدون تناقض.
+// در طولِ هفته ثابت است و با آغاز هفته‌ی تازه عوض می‌شود.
+// [1.3.6] نمایش فقط در «طالع هفته» است — از نتیجه‌ی قهوه و طالع‌بینی روزانه حذف شد
+// تا صفحه‌ها تمیز بمانند؛ مقدار برای یک کاربر همچنان در کل اپ یکی است.
 function ccWeekKey(){
   const t=new Date(Date.now()+12600000);
   const iw=(typeof ccIsoWeek==='function')?ccIsoWeek(t):null;
@@ -132,12 +133,13 @@ function ccWeekColor(){
   const colors=(typeof CC_WEEK_COLORS!=='undefined'&&CC_WEEK_COLORS.length)?CC_WEEK_COLORS:['بنفشِ ستاره‌ای'];
   return colors[ccHashString('cc-weekcolor-'+ccLuckWho()+'-'+ccWeekKey())%colors.length];
 }
+// [1.3.6] فقط در نتیجه‌ی «طالع هفته» استفاده می‌شود
 function ccLuckyChipsHTML(){
   return `<div class="cc-chiprow">
         <span class="chip2">🔢 عدد شانس این هفته: ${toFa(ccLuckyNum())}</span>
         <span class="chip2">🎨 رنگ هفته: ${ccWeekColor()}</span>
       </div>
-      <p class="cc-limit">🔢 عدد شانس و 🎨 رنگ هفته‌ی این هفته مخصوصِ خودت است — و در همه‌ی بخش‌های اپ یکی‌اند ✨</p>`;
+      <p class="cc-limit">🔢 عدد شانس و 🎨 رنگ هفته‌ی این هفته مخصوصِ خودت است — در طولِ هفته ثابت است و با آغازِ هفته‌ی بعد عوض می‌شود ✨</p>`;
 }
 
 // ---------- [1.3.2] هدیه‌ی ویژه‌ی امروز — هر روز یک بخشِ قفل‌دار، رندوم ----------
@@ -387,7 +389,8 @@ function showCoffeeFal(){
         <div id="cc-coffee-prev"></div>
         <button class="btn secondary" id="cc-coffee-pick" onclick="document.getElementById('cc-coffee-file').click()">📷 انتخاب عکس فنجان</button>
         <input id="cc-coffee-file" type="file" accept="image/*" style="display:none" onchange="ccCoffeePicked(this)">
-        <p class="hint">عکسِ ته فنجان را بفرست؛ نشانه‌ها از دلِ رسوب‌ها خوانده می‌شود. عکست فقط روی همین دستگاه می‌ماند و جایی فرستاده نمی‌شود.</p>
+        <p class="hint">عکس را از <b>بالای فنجان</b> و نزدیک بگیر — فقط عکسِ واقعیِ ته‌فنجان تفسیر می‌شود و عکس‌های بی‌ربط پذیرفته نمی‌شوند. عکست فقط روی همین دستگاه می‌ماند و جایی فرستاده نمی‌شود.</p>
+        <p class="hint" id="cc-coffee-err" style="display:none;color:#ff9d9d"></p>
       </div>
       ${last?`<p class="cc-limit"><a href="javascript:void(0)" onclick="ccCoffeeResultPage(ccCoffeeToday(),true)" style="color:#f0c96a">✅ فال امروزت را دوباره ببین</a></p>`:''}
       <button class="btn" id="cc-coffee-go" style="display:none; margin-top:12px" onclick="ccCoffeeInterpret()">☕ تفسیر فنجون</button>
@@ -408,8 +411,66 @@ function ccCoffeePicked(inp){
   const pk=document.getElementById('cc-coffee-pick');
   if(pk) pk.textContent='📷 عکس دیگر';
 }
+// ---------- [1.3.6] تشخیصِ عکسِ فنجان — فقط عکسِ واقعیِ ته‌فنجان پذیرفته می‌شود ----------
+// کاملاً آفلاین روی خودِ دستگاه: تصویر کوچک (۹۶×۹۶) و مرکز‌برش می‌شود و رنگ‌هایش تحلیل می‌شود.
+// منطق: ته‌فنجانِ واقعی در «مرکزِ» عکس قهوه‌ایِ تیره دارد و دورش فنجان/بشقاب/میزِ روشن‌تر یا
+// کفِ کرما/دست است. آستانه‌ها با ۱۷ تصویرِ آزمایشی کالیبره شده‌اند
+// (scripts/coffee_detect_calib_136.py): ۷ عکسِ فنجان → همه پذیرفته؛ ۹ عکسِ بی‌ربط
+// (آسمان، چمن، صورت، میزِ چوبی، ماشین، شب، دیوار، پوستر رنگی، خاکِ گلدان) → همه رد.
+// محدودیتِ شناخته‌شده: کیکِ شکلاتیِ روی بشقابِ سفید از نظرِ رنگ شبیه ته‌فنجان است و پذیرفته
+// می‌شود (بی‌ضرر). اگر مرورگرِ خیلی قدیمی createImageBitmap نداشته باشد، عکس پذیرفته می‌شود
+// تا فال قهوه همچنان برای همه کار کند (fail-open).
+async function ccLooksLikeCoffee(f){
+  try{
+    const bmp=await createImageBitmap(f);
+    const S=96, cv=document.createElement('canvas');
+    cv.width=S; cv.height=S;
+    const ctx=cv.getContext('2d',{willReadFrequently:true});
+    const side=Math.min(bmp.width,bmp.height);
+    ctx.drawImage(bmp,(bmp.width-side)/2,(bmp.height-side)/2,side,side,0,0,S,S);
+    if(bmp.close) bmp.close();
+    const d=ctx.getImageData(0,0,S,S).data;
+    const N=S*S, R2=S*0.30*S*0.30;
+    let cof=0,cofC=0,cofR=0,soft=0,neu=0,ccC=0,ccR=0;
+    for(let py=0;py<S;py++){
+      const dy=py+0.5-S/2, dy2=dy*dy;
+      for(let px=0;px<S;px++){
+        const i=(py*S+px)*4, r=d[i]/255, g=d[i+1]/255, b=d[i+2]/255;
+        const mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2;
+        const sat=(mx-mn)/(1-Math.abs(2*l-1)+1e-6);
+        let hue=-1;
+        if(mx-mn>1e-6){
+          if(mx===r) hue=60*(((g-b)/(mx-mn))%6);
+          else if(mx===g) hue=60*((b-r)/(mx-mn)+2);
+          else hue=60*((r-g)/(mx-mn)+4);
+          if(hue<0) hue+=360;
+        }
+        const lum=l*100;
+        const dx=px+0.5-S/2;
+        const center=(dx*dx+dy2)<=R2;
+        if(center) ccC++; else ccR++;
+        const dw=(hue>=8&&hue<=60&&sat>=0.10&&lum>=5&&lum<=55)||(lum<5&&r>=g&&g>=b-0.02);
+        if(dw){ cof++; if(center)cofC++; else cofR++; }
+        else if(hue>=8&&hue<=60&&sat>=0.10&&lum>55&&lum<=80){ soft++; }
+        else if((lum>=62&&sat<=0.25)||(sat<=0.12)){ neu++; }
+      }
+    }
+    const cfAll=cof/N, cfC=cofC/(ccC||1), cfR=cofR/(ccR||1), cn=neu/N, softAll=soft/N;
+    const r1=(cfC>=0.35)&&((cfC-cfR)>=0.10)&&((cfAll+cn)>=0.50);   // فنجانِ معمولی
+    const r2=(cfC>=0.45)&&(cfR<=0.15)&&((softAll>=0.35)||(cn>=0.35)); // فنجان در دست / اسپرسو
+    return !!(r1||r2);
+  }catch(e){ return true; }
+}
+function ccCoffeeReject(){
+  ccToast('☕ این عکس شبیه ته‌فنجان قهوه نیست');
+  const err=document.getElementById('cc-coffee-err');
+  if(err){ err.style.display='block'; err.textContent='☕ این عکس شبیهِ ته‌فنجانِ قهوه نیست. فنجان را برعکس کن و از بالای فنجان، نزدیک و با نورِ کافی عکس بگیر و دوباره امتحان کن.'; }
+}
 async function ccCoffeeInterpret(){
   if(!__ccCoffeeFile){ ccToast('اول عکس فنجان را انتخاب کن 📷'); return; }
+  // [1.3.6] اول تشخیصِ فنجان — سهمیه فقط وقتی کم می‌شود که عکسِ واقعیِ ته‌فنجان باشد
+  const looks=await ccLooksLikeCoffee(__ccCoffeeFile);
+  if(!looks){ ccCoffeeReject(); return; }
   if(!ccTryUse('coffee')){ showCoffeeFal(); return; }
   render(`${backBtn('showHome()')}${pageHead('☕','فال قهوه')}
     <div class="card orn center">
@@ -429,10 +490,8 @@ async function ccCoffeeInterpret(){
   const syms=ccPickN(CC_COFFEE_SYMBOLS,3,rng).map(i=>CC_COFFEE_SYMBOLS[i]);
   const open=CC_COFFEE_OPENINGS[Math.floor(rng()*CC_COFFEE_OPENINGS.length)];
   const close=CC_COFFEE_CLOSINGS[Math.floor(rng()*CC_COFFEE_CLOSINGS.length)];
-  // [1.3.4] عدد شانس و رنگ هفته شخصی (deviceId+هفته) — در همه‌ی بخش‌ها برای همین کاربر یکسان
-  const color=ccWeekColor();
-  const num=ccLuckyNum();
-  const res={date:ccTehranDateKey(), syms:syms, open:open, close:close, color:color, num:num};
+  // [1.3.6] عدد شانس/رنگ هفته دیگر در نتیجه‌ی قهوه نمایش داده نمی‌شود (فقط طالع هفته)
+  const res={date:ccTehranDateKey(), syms:syms, open:open, close:close};
   try{ localStorage.setItem('ccCoffeeLast', JSON.stringify(res)); }catch(e){}
   clearInterval(timer);
   setTimeout(()=>ccCoffeeResultPage(res,false), 2100);
@@ -451,7 +510,6 @@ function ccCoffeeResultPage(res,fromCache){
         <p>${res.open}</p>
         <p>${res.close}</p>
       </div>
-      ${ccLuckyChipsHTML()}
       <div class="cc-share-row">
         <button class="btn" onclick="ccCoffeeShare()">🖼 کارت اشتراک‌گذاری</button>
         ${ccCanUse('coffee')?`<button class="btn secondary" onclick="showCoffeeFal()">☕ فال دیگر</button>`:''}
